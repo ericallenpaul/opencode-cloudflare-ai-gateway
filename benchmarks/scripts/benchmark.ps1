@@ -13,16 +13,20 @@
   close, by re-invoking and answering "resume".
 
 .PARAMETER Benchmark
-  Benchmark folder name under benchmarks/. Default: tic-tac-toe.
+  Benchmark folder name(s) under benchmarks/. Default: tic-tac-toe.
+  Accepts a comma-separated list to run multiple targets in sequence:
+  the orchestrator runs each one end-to-end (start, tools, finish,
+  judge-run, qualitative-pass, summarize) before moving on to the next.
 
 .EXAMPLE
   .\benchmark.ps1
   .\benchmark.ps1 -Benchmark markdown-editor
+  .\benchmark.ps1 -Benchmark tic-tac-toe,markdown-editor
 #>
 
 [CmdletBinding()]
 param(
-    [string]$Benchmark = "tic-tac-toe"
+    [string[]]$Benchmark = @("tic-tac-toe")
 )
 
 $ErrorActionPreference = "Stop"
@@ -132,10 +136,37 @@ if ([Console]::IsInputRedirected) {
 }
 
 # ============================================================
+# Validate every requested benchmark target exists
+# ============================================================
+
+foreach ($b in $Benchmark) {
+    $targetDir = Join-Path $repoRoot "benchmarks\$b"
+    if (-not (Test-Path $targetDir)) {
+        throw "Unknown benchmark target: $b  (no directory at $targetDir)"
+    }
+}
+
+# ============================================================
+# Loop over each requested benchmark target
+# ============================================================
+
+$totalBenchmarks = $Benchmark.Count
+$benchmarkIndex = 0
+foreach ($currentBenchmark in $Benchmark) {
+    $benchmarkIndex++
+
+    if ($totalBenchmarks -gt 1) {
+        Write-Host ""
+        Write-Host "============================================================" -ForegroundColor Magenta
+        Write-Host ("Benchmark {0} of {1}: {2}" -f $benchmarkIndex, $totalBenchmarks, $currentBenchmark) -ForegroundColor Magenta
+        Write-Host "============================================================" -ForegroundColor Magenta
+    }
+
+# ============================================================
 # Discover any in-progress runs
 # ============================================================
 
-$resultsRunsDir = Join-Path $repoRoot "benchmarks\$Benchmark\results\runs"
+$resultsRunsDir = Join-Path $repoRoot "benchmarks\$currentBenchmark\results\runs"
 $scratchRunsDir = Join-Path $repoRoot "benchmarks\runs"
 
 $allRunIds = @()
@@ -149,7 +180,7 @@ $allRunIds = @($allRunIds | Sort-Object -Unique)
 
 $inProgress = @()
 foreach ($id in $allRunIds) {
-    $st = Get-RunState -RunId $id -Benchmark $Benchmark -RepoRoot $repoRoot
+    $st = Get-RunState -RunId $id -Benchmark $currentBenchmark -RepoRoot $repoRoot
     if ($st -ne "complete" -and $st -ne "missing") {
         $inProgress += [PSCustomObject]@{ RunId = $id; State = $st }
     }
@@ -162,7 +193,7 @@ foreach ($id in $allRunIds) {
 Write-Host ""
 Write-Host "Benchmark orchestrator" -ForegroundColor Cyan
 Write-Host "======================" -ForegroundColor Cyan
-Write-Host "  Target: $Benchmark"
+Write-Host "  Target: $currentBenchmark"
 Write-Host ""
 
 $runId = $null
@@ -214,7 +245,7 @@ if ($state -eq "fresh") {
     Write-Host "Phase 1/3: Capturing ccusage baselines (all configured tools)..." -ForegroundColor Green
     Write-Host "  RunId: $runId"
     Write-Host ""
-    & $benchRun -Phase start -Benchmark $Benchmark -RunId $runId
+    & $benchRun -Phase start -Benchmark $currentBenchmark -RunId $runId
     $state = "after-start"
 }
 
@@ -235,7 +266,7 @@ if ($state -eq "ready-for-finish") {
     Write-Host ""
     Write-Host "Phase 2/3a: Computing token deltas..." -ForegroundColor Green
     Write-Host ""
-    & $benchRun -Phase finish -RunId $runId -Benchmark $Benchmark
+    & $benchRun -Phase finish -RunId $runId -Benchmark $currentBenchmark
     $state = "after-finish"
 }
 
@@ -243,7 +274,7 @@ if ($state -eq "after-finish") {
     Write-Host ""
     Write-Host "Phase 2/3b: Running Playwright R1-R10 + capturing screenshots..." -ForegroundColor Green
     Write-Host ""
-    & $judgeRun -RunId $runId -Benchmark $Benchmark
+    & $judgeRun -RunId $runId -Benchmark $currentBenchmark
     $state = "after-judge"
 }
 
@@ -252,7 +283,7 @@ if ($state -eq "after-finish") {
 # ============================================================
 
 if ($state -eq "after-judge") {
-    $resultsDir = Join-Path $repoRoot "benchmarks\$Benchmark\results\runs\$runId"
+    $resultsDir = Join-Path $repoRoot "benchmarks\$currentBenchmark\results\runs\$runId"
     $promptFiles = Get-ChildItem -Path $resultsDir -Filter "judge-prompt-*.md" -ErrorAction SilentlyContinue
     Write-Host ""
     Write-Host "Qualitative pass needed." -ForegroundColor Yellow
@@ -281,7 +312,7 @@ if ($state -eq "after-qualitative") {
     Write-Host ""
     Write-Host "Phase 3/3: Computing composite ranking..." -ForegroundColor Green
     Write-Host ""
-    & $judgeSummarize -RunId $runId -Benchmark $Benchmark -JudgeAgent $judgeAgent
+    & $judgeSummarize -RunId $runId -Benchmark $currentBenchmark -JudgeAgent $judgeAgent
     $state = "complete"
 }
 
@@ -290,10 +321,18 @@ if ($state -eq "after-qualitative") {
 # ============================================================
 
 if ($state -eq "complete") {
-    $resultsDir = Join-Path $repoRoot "benchmarks\$Benchmark\results\runs\$runId"
+    $resultsDir = Join-Path $repoRoot "benchmarks\$currentBenchmark\results\runs\$runId"
     $finalMd    = Join-Path $resultsDir "$runId.md"
     Write-Host ""
-    Write-Host "Benchmark complete." -ForegroundColor Green
+    Write-Host "Benchmark complete: $currentBenchmark" -ForegroundColor Green
     Write-Host "  $finalMd" -ForegroundColor Yellow
+    Write-Host ""
+}
+
+} # end foreach $currentBenchmark
+
+if ($totalBenchmarks -gt 1) {
+    Write-Host ""
+    Write-Host "All $totalBenchmarks benchmarks complete." -ForegroundColor Green
     Write-Host ""
 }

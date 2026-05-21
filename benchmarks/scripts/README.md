@@ -6,11 +6,12 @@ Helper scripts for running benchmarks consistently across coding-agent tools.
 
 ```powershell
 cd "<repo>\benchmarks\scripts"
-.\benchmark.ps1                              # default target: tic-tac-toe
-.\benchmark.ps1 -Benchmark markdown-editor   # other target
+.\benchmark.ps1                                              # default target: tic-tac-toe
+.\benchmark.ps1 -Benchmark markdown-editor                   # one other target
+.\benchmark.ps1 -Benchmark tic-tac-toe,markdown-editor       # several, in sequence
 ```
 
-Single-entry orchestrator that wraps the three scripts below into one guided workflow. Three phases, two manual checkpoints:
+Single-entry orchestrator that wraps the three scripts below into one guided workflow. `-Benchmark` accepts a comma-separated list: each target runs end-to-end (start, tools, finish, judge-run, qualitative pass, summarize) before the next one begins, with a banner between them so it's clear which one you're on. Three phases, two manual checkpoints:
 
 1. **Phase 1 -- start** (script): captures ccusage baselines for all configured tools, generates a RunId, prints per-tool launch instructions.
 2. **Checkpoint A -- run the tools** (human): you launch each tool in its scratch dir, paste the prompt from PROMPT.md, let it work, exit. The orchestrator waits at a `Press ENTER to continue` prompt.

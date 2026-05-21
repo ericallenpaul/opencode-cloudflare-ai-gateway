@@ -79,8 +79,9 @@ Each benchmark target lives in its own subdirectory (e.g. `tic-tac-toe/`) with:
 
 ```powershell
 cd "<repo>\benchmarks\scripts"
-.\benchmark.ps1                              # tic-tac-toe (default)
-.\benchmark.ps1 -Benchmark markdown-editor   # any other target
+.\benchmark.ps1                                              # tic-tac-toe (default)
+.\benchmark.ps1 -Benchmark markdown-editor                   # any other target
+.\benchmark.ps1 -Benchmark tic-tac-toe,markdown-editor       # several in sequence
 ```
 
 `benchmark.ps1` wraps the three lower-level scripts (`bench-run.ps1`, `judge-run.ps1`, `judge-summarize.ps1`) into a single guided workflow:
