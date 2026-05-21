@@ -132,6 +132,29 @@ These are real fairness and measurement limitations. Don't ignore them when citi
 - [tic-tac-toe](tic-tac-toe/) -- standalone HTML tic-tac-toe, ~200-400 lines, exercises plan/execute/verify with bounded scope. **Status: first run complete (RunId `2026-05-21-0818`, all tools 10/10).**
 - [markdown-editor](markdown-editor/) -- standalone HTML markdown editor with live preview, ~300-500 lines, exercises parser design and XSS defensiveness. **Status: scaffold ready, runs pending.** Designed to expose differences between cheap and frontier models that tic-tac-toe is too simple to surface.
 
+## Adding a new benchmark target
+
+Targets are discovered by convention -- no central registry to update. A target is any directory under `benchmarks/` containing a `PROMPT.md`. To add one called `<target>` (use kebab-case):
+
+```
+benchmarks/<target>/
+├── PROMPT.md            # required -- canonical prompt fed to every tool, verbatim
+├── SPEC.md              # required -- R1-R10 acceptance criteria + quality dimensions
+├── METHODOLOGY.md       # optional -- run-procedure notes; falls back to a default if absent
+└── results/             # script-managed (auto-created on first run)
+    ├── README.md        # optional, describes the layout to readers
+    ├── comparisons.md   # optional, hand-maintained ranking log
+    └── runs/            # populated by bench-run + judge-run + judge-summarize
+
+benchmarks/scripts/judge/tests/<target>.spec.js   # required -- Playwright R1-R10 suite
+```
+
+The spec file name MUST match the target directory name exactly (kebab-case included). The judge subsystem uses `tests/<target>.spec.js` directly -- there is no map to edit.
+
+**Why the Playwright spec lives outside the target dir**: it needs to `import` from `@playwright/test`, which only resolves under `benchmarks/scripts/judge/` where `npm install` ran. Keeping the spec in `tests/` avoids needing per-target node_modules.
+
+**Easiest path** when adding a target: copy `benchmarks/tic-tac-toe/` to `benchmarks/<your-target>/`, copy `benchmarks/scripts/judge/tests/tic-tac-toe.spec.js` to `tests/<your-target>.spec.js`, then rewrite both for your target's app. Once those files exist, `benchmark.ps1 -Benchmark <your-target>` works end-to-end.
+
 ## See also
 
 - [`docs/PROBLEM.md`](../docs/PROBLEM.md) — the cost-tier thesis these benchmarks are evidence for

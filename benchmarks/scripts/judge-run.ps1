@@ -37,24 +37,6 @@ param(
 $ErrorActionPreference = "Stop"
 
 # ============================================================
-# Benchmark dispatch map
-# Add entries here when adding new targets.
-# ============================================================
-
-$BenchmarkSpecMap = @{
-    "tic-tac-toe"     = @{ Spec = "tictactoe.spec.js";          HtmlPattern = "tictactoe.html" }
-    "markdown-editor" = @{ Spec = "markdown-editor.spec.js";    HtmlPattern = "markdown.html"  }
-}
-
-if (-not $BenchmarkSpecMap.ContainsKey($Benchmark)) {
-    throw "No judge spec configured for benchmark '$Benchmark'. Add it to BenchmarkSpecMap at top of judge-run.ps1."
-}
-
-$benchmarkEntry = $BenchmarkSpecMap[$Benchmark]
-$specFile       = $benchmarkEntry.Spec
-$htmlPattern    = $benchmarkEntry.HtmlPattern
-
-# ============================================================
 # Paths
 # ============================================================
 
@@ -62,6 +44,35 @@ $htmlPattern    = $benchmarkEntry.HtmlPattern
 $repoRoot   = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $judgeDir   = Join-Path $PSScriptRoot "judge"
 $resultsDir = Join-Path $repoRoot "benchmarks\$Benchmark\results\runs\$RunId"
+$targetDir  = Join-Path $repoRoot "benchmarks\$Benchmark"
+
+# ============================================================
+# Convention-based spec discovery
+# ============================================================
+# Each target lives at benchmarks/<target>/ and its Playwright spec is at
+# benchmarks/scripts/judge/tests/<target>.spec.js. To add a new target:
+#   1. Create benchmarks/<target>/ with PROMPT.md, SPEC.md, METHODOLOGY.md
+#   2. Create tests/<target>.spec.js (Playwright deterministic R1-R10)
+# No edits to this script are required.
+
+$specFile = "$Benchmark.spec.js"
+$specPath = Join-Path $judgeDir "tests\$specFile"
+if (-not (Test-Path $specPath)) {
+    Write-Host "ERROR: no Playwright spec found for benchmark '$Benchmark'." -ForegroundColor Red
+    Write-Host "  Expected: $specPath" -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "To add this benchmark target, create the spec file at the above path." -ForegroundColor Yellow
+    Write-Host "Use tests/tic-tac-toe.spec.js as a template." -ForegroundColor Yellow
+    exit 1
+}
+
+if (-not (Test-Path $targetDir)) {
+    Write-Host "ERROR: benchmark target directory not found:" -ForegroundColor Red
+    Write-Host "  $targetDir" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "See benchmarks/README.md for the target convention." -ForegroundColor Yellow
+    exit 1
+}
 
 # ============================================================
 # Preflight checks
@@ -126,16 +137,10 @@ foreach ($toolDir in $toolDirs) {
     Write-Host "Judging: $toolName" -ForegroundColor Cyan
     Write-Host "  OutputDir:  $outputDir"
 
-    # Find HTML file -- try the benchmark-specific pattern first, then any .html
-    $htmlFile = Get-ChildItem -Path $outputDir -Filter $htmlPattern -ErrorAction SilentlyContinue |
+    # Find HTML file: any .html in output that doesn't look like a test file
+    $htmlFile = Get-ChildItem -Path $outputDir -Filter "*.html" -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -notmatch 'test' } |
         Select-Object -First 1
-
-    if (-not $htmlFile) {
-        # Fallback: any .html that doesn't look like a test file
-        $htmlFile = Get-ChildItem -Path $outputDir -Filter "*.html" -ErrorAction SilentlyContinue |
-            Where-Object { $_.Name -notmatch 'test' } |
-            Select-Object -First 1
-    }
 
     if (-not $htmlFile) {
         # Last resort: any .html

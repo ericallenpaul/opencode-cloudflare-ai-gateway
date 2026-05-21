@@ -138,11 +138,26 @@ if ([Console]::IsInputRedirected) {
 # ============================================================
 # Validate every requested benchmark target exists
 # ============================================================
+# A "target" is any directory under benchmarks/ that contains a PROMPT.md.
+# Discovery is convention-based: no central registry to update when adding
+# a new target. See benchmarks/README.md for the structure.
+
+$benchmarksDir = Join-Path $repoRoot "benchmarks"
+$availableTargets = @(Get-ChildItem -Path $benchmarksDir -Directory -ErrorAction SilentlyContinue |
+    Where-Object { Test-Path (Join-Path $_.FullName "PROMPT.md") } |
+    ForEach-Object { $_.Name })
 
 foreach ($b in $Benchmark) {
-    $targetDir = Join-Path $repoRoot "benchmarks\$b"
-    if (-not (Test-Path $targetDir)) {
-        throw "Unknown benchmark target: $b  (no directory at $targetDir)"
+    if ($availableTargets -notcontains $b) {
+        Write-Host ""
+        Write-Host "ERROR: Unknown benchmark target: $b" -ForegroundColor Red
+        Write-Host "Available targets (any benchmarks/<name>/ with a PROMPT.md):" -ForegroundColor Yellow
+        foreach ($t in $availableTargets) {
+            Write-Host "  - $t" -ForegroundColor Yellow
+        }
+        Write-Host ""
+        Write-Host "To add a new target, see 'Adding a new benchmark target' in benchmarks/README.md." -ForegroundColor Yellow
+        exit 1
     }
 }
 
