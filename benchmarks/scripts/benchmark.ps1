@@ -115,6 +115,22 @@ function Wait-ForEnter {
     [void](Read-Host "Press ENTER to continue")
 }
 
+# Safety check: this orchestrator has manual checkpoints (Read-Host pauses).
+# If stdin is redirected (piped, CI, etc.), Read-Host returns immediately and
+# the script silently skips through the human steps, producing bogus artifacts.
+# Refuse to run unprotected in that mode -- caller should invoke the
+# underlying scripts directly if they need non-interactive automation.
+if ([Console]::IsInputRedirected) {
+    Write-Host ""
+    Write-Host "ERROR: benchmark.ps1 must run in an interactive terminal." -ForegroundColor Red
+    Write-Host "  Stdin appears redirected (pipe / CI / non-tty). The manual checkpoints" -ForegroundColor Yellow
+    Write-Host "  (run-the-tools, qualitative-pass) would be skipped, producing empty" -ForegroundColor Yellow
+    Write-Host "  outputs. For non-interactive use, call bench-run.ps1, judge-run.ps1," -ForegroundColor Yellow
+    Write-Host "  and judge-summarize.ps1 directly." -ForegroundColor Yellow
+    Write-Host ""
+    exit 1
+}
+
 # ============================================================
 # Discover any in-progress runs
 # ============================================================
