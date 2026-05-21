@@ -20,6 +20,17 @@ Also: at least one prior session per tool helps ccusage's baseline diff. If a to
 
 ## Run procedure
 
+The simplest path: **one orchestrator command runs everything with two manual pauses.**
+
+```powershell
+cd "<repo>\benchmarks\scripts"
+.\benchmark.ps1
+```
+
+That wraps the three scripts below into a guided workflow, threading the RunId automatically and pausing at the two checkpoints (run-the-tools / fill-in-qualitative-scores). Auto-resumes if interrupted -- re-run the same command and choose "Resume". See [`../scripts/README.md`](../scripts/README.md) for details.
+
+The sections below describe the underlying phases for when you need to drive them individually (debugging, re-running a single phase, etc.).
+
 ### 1. Start phase — one call
 
 ```powershell

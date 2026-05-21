@@ -2,6 +2,26 @@
 
 Helper scripts for running benchmarks consistently across coding-agent tools.
 
+## benchmark.ps1 -- the one command you usually want
+
+```powershell
+cd "<repo>\benchmarks\scripts"
+.\benchmark.ps1                              # default target: tic-tac-toe
+.\benchmark.ps1 -Benchmark markdown-editor   # other target
+```
+
+Single-entry orchestrator that wraps the three scripts below into one guided workflow. Three phases, two manual checkpoints:
+
+1. **Phase 1 -- start** (script): captures ccusage baselines for all configured tools, generates a RunId, prints per-tool launch instructions.
+2. **Checkpoint A -- run the tools** (human): you launch each tool in its scratch dir, paste the prompt from PROMPT.md, let it work, exit. The orchestrator waits at a `Press ENTER to continue` prompt.
+3. **Phase 2 -- finish + judge-run** (script): computes token deltas, runs the Playwright R1-R10 suite, captures screenshots, generates per-tool `judge-prompt-<tool>.md`.
+4. **Checkpoint B -- qualitative pass** (human): paste each `judge-prompt-<tool>.md` into a multimodal coding agent of your choice; the agent fills in the 1-5 quality scores in `<tool>/judge.md`. Use the same agent across all tools for uniform bias.
+5. **Phase 3 -- summarize** (script): prompts for the judge agent name, computes the composite ranking, appends the Final Summary to `<RunId>.md`.
+
+**Auto-resume**: if you Ctrl+C or your terminal dies, re-run `benchmark.ps1`. It scans for in-progress runs, asks "Resume this one or start a new one?", and picks up at the next phase. State is detected from the on-disk artifacts (ccusage snapshots, `<RunId>.md`, `_judge-functional.json`, score completeness in each `judge.md`, final-summary marker), not from a separate state file.
+
+The underlying scripts (`bench-run.ps1`, `judge-run.ps1`, `judge-summarize.ps1`) remain available for advanced/manual use -- their sections below describe their parameters. The orchestrator just glues them together so you don't have to remember the sequence or thread the RunId between commands.
+
 ## bench-run.ps1
 
 Two-phase wrapper around `ccusage`. **One** `start` call sets up scratch directories and captures baselines for **every** tool configured at the top of the script. You then run each tool. After they've all finished, **one** `finish` call (with the same RunId) processes them all, computes deltas, copies outputs into the repo, and stubs notes.md per tool.

@@ -75,17 +75,25 @@ Each benchmark target lives in its own subdirectory (e.g. `tic-tac-toe/`) with:
 - `results/runs/<RunId>/<tool>/` — outputs from each tool in each run
 - `results/comparisons.md` — hand-maintained ranking log across runs
 
-**Per-run procedure (driven by `scripts/bench-run.ps1`, `judge-run.ps1`, and `judge-summarize.ps1`):**
+**The simple path: one orchestrator command, two manual pauses.**
 
-1. **Start**: `.\bench-run.ps1 -Phase start` -- one call. Creates scratch dirs and ccusage baselines for every configured tool. Generates a single `RunId`.
-2. **Run each tool**: follow the printed per-tool block -- cd to scratch dir, launch tool, paste `PROMPT.md`, let it run to completion.
-3. **Finish**: `.\bench-run.ps1 -Phase finish -RunId <RunId>` -- one call after all tools have exited. Computes deltas, copies outputs into `results/runs/<RunId>/`, stubs each `notes.md` with metrics pre-filled.
-4. **Functional judging**: `.\judge-run.ps1 -RunId <RunId>` -- runs the deterministic Playwright suite (R1-R10) against each tool's output, captures screenshots, stubs `<tool>/judge.md` with R1-R10 pre-filled, and writes one `judge-prompt-<tool>.md` per tool. See [`scripts/README.md`](scripts/README.md) for parameters.
-5. **Qualitative judging** (human step): paste each `judge-prompt-<tool>.md` into a multimodal agent of your choice; let it fill in the 1-5 quality scores and bug list in `<tool>/judge.md`. Use the same agent for all tools in one RunId so scoring bias is uniform.
-6. **Final summary**: `.\judge-summarize.ps1 -RunId <RunId> -JudgeAgent <name>` -- parses each tool's `judge.md`, computes a composite ranking (cost 50% / quality 30% / bugs 20%), and appends a Final Summary section to `<RunId>.md`. Idempotent. See [`scripts/README.md`](scripts/README.md) for the full weighting formula.
-7. **Optional**: add a bullet to `results/comparisons.md` with the ranking -- the cross-RunId log.
+```powershell
+cd "<repo>\benchmarks\scripts"
+.\benchmark.ps1                              # tic-tac-toe (default)
+.\benchmark.ps1 -Benchmark markdown-editor   # any other target
+```
 
-See [`tic-tac-toe/METHODOLOGY.md`](tic-tac-toe/METHODOLOGY.md) for the full play-by-play and [`scripts/README.md`](scripts/README.md) for script parameters.
+`benchmark.ps1` wraps the three lower-level scripts (`bench-run.ps1`, `judge-run.ps1`, `judge-summarize.ps1`) into a single guided workflow:
+
+1. **Phase 1 -- start** (script): captures ccusage baselines for every configured tool, generates a RunId, prints per-tool launch instructions.
+2. **Checkpoint A** (human): you launch each tool in its scratch dir, paste the prompt from `PROMPT.md`, let it work, exit. The orchestrator waits at `Press ENTER to continue`.
+3. **Phase 2 -- finish + judge-run** (script): computes token deltas, runs the deterministic Playwright R1-R10 suite, captures screenshots, generates per-tool `judge-prompt-<tool>.md`.
+4. **Checkpoint B** (human): paste each `judge-prompt-<tool>.md` into a multimodal coding agent of your choice; the agent fills in 1-5 quality scores in each `<tool>/judge.md`. Use the same agent across all tools so scoring bias is uniform.
+5. **Phase 3 -- summarize** (script): prompts for the judge agent name, computes the composite ranking (cost 50% / quality 30% / bugs 20%), appends the Final Summary block to `<RunId>.md`.
+
+**Auto-resume**: if anything interrupts the orchestrator (Ctrl+C, terminal close), re-run `benchmark.ps1`. It detects the in-progress run on disk and asks "Resume this one or start fresh?" -- no separate state file, the artifacts themselves are the state.
+
+The lower-level scripts remain available for advanced cases (re-running just one phase, debugging). See [`scripts/README.md`](scripts/README.md) for their parameters, and [`tic-tac-toe/METHODOLOGY.md`](tic-tac-toe/METHODOLOGY.md) for the full play-by-play of each phase. Optional: add a bullet to `results/comparisons.md` with your ranking as a cross-RunId log.
 
 ## Reproducibility limits (honest disclosure)
 
