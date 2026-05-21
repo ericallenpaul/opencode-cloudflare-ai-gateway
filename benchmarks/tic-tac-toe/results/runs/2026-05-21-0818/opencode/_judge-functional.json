@@ -1,0 +1,55 @@
+{
+  "tool": "opencode",
+  "htmlPath": "C:\\Users\\eric.paul\\source\\repos\\opencode-cloudflare-ai-gateway\\benchmarks\\tic-tac-toe\\results\\runs\\2026-05-21-0818\\opencode\\output\\tictactoe.html",
+  "results": {
+    "R5": {
+      "status": "PASS",
+      "reason": "Winning cell bg (rgb(0, 170, 51)) differs from non-winning (rgb(30, 30, 30))"
+    },
+    "R2": {
+      "status": "PASS",
+      "reason": "X placed first, O second, X third; occupied cell blocked; status updates"
+    },
+    "R1": {
+      "status": "PASS",
+      "reason": "9 cells rendered, no console errors on load"
+    },
+    "R6": {
+      "status": "PASS",
+      "reason": "Board empty after restart; X score preserved"
+    },
+    "R3": {
+      "status": "PASS",
+      "reason": "X win announced in status, further clicks after win ignored"
+    },
+    "R4": {
+      "status": "PASS",
+      "reason": "Draw correctly detected and announced"
+    },
+    "R7": {
+      "status": "PASS",
+      "reason": "X score: 0 -> 1 after win, 1 after reload (persisted)"
+    },
+    "R8": {
+      "status": "PASS",
+      "reason": "No external scripts or links; no resource failures; no console errors"
+    },
+    "R9": {
+      "status": "PASS",
+      "reason": "Test file found: tictactoe.test.js"
+    },
+    "R10": {
+      "status": "PASS",
+      "reason": "node --test exited 0 (all tests passed)"
+    }
+  },
+  "consoleErrors": null,
+  "jsErrors": null,
+  "screenshots": [
+    "empty.png",
+    "mid-game.png",
+    "win.png",
+    "win-highlight.png",
+    "mobile.png"
+  ]
+}

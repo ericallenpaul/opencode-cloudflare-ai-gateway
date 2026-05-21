@@ -1,0 +1,575 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tic-Tac-Toe</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --paper: #fffaf0;
+      --ink: #18212f;
+      --muted: #647083;
+      --grid: #202938;
+      --panel: #ffffff;
+      --shadow: rgba(24, 33, 47, 0.16);
+      --x: #d83f45;
+      --o: #1674a8;
+      --draw: #6f7a2d;
+      --win: #f0b429;
+      --accent: #2f9f7c;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      display: grid;
+      place-items: center;
+      padding: 28px;
+      background:
+        radial-gradient(circle at 12% 18%, rgba(47, 159, 124, 0.20), transparent 28%),
+        radial-gradient(circle at 88% 12%, rgba(216, 63, 69, 0.16), transparent 24%),
+        linear-gradient(135deg, #fffaf0 0%, #f5fbff 48%, #f3f7e6 100%);
+      color: var(--ink);
+      font-family: "Trebuchet MS", "Gill Sans", Candara, sans-serif;
+    }
+
+    .app {
+      width: min(100%, 680px);
+      display: grid;
+      gap: 18px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 18px;
+    }
+
+    h1 {
+      margin: 0;
+      color: var(--grid);
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(2.1rem, 7vw, 4.7rem);
+      font-weight: 900;
+      line-height: 0.9;
+      letter-spacing: 0;
+    }
+
+    .status {
+      min-width: 150px;
+      padding: 12px 14px;
+      border: 2px solid var(--grid);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: 5px 5px 0 var(--grid);
+      color: var(--grid);
+      font-size: 1rem;
+      font-weight: 900;
+      text-align: center;
+    }
+
+    .scores {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .score {
+      min-height: 78px;
+      display: grid;
+      align-content: center;
+      gap: 4px;
+      padding: 12px;
+      border: 2px solid var(--grid);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.82);
+      box-shadow: 3px 3px 0 rgba(32, 41, 56, 0.18);
+      text-align: center;
+    }
+
+    .score .label {
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 900;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    .score .value {
+      color: var(--grid);
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 2rem;
+      font-weight: 900;
+      line-height: 1;
+    }
+
+    .game-area {
+      display: grid;
+      gap: 16px;
+      justify-items: center;
+    }
+
+    .board-wrap {
+      position: relative;
+      width: min(100%, 500px);
+      aspect-ratio: 1;
+      padding: 12px;
+      border: 3px solid var(--grid);
+      border-radius: 8px;
+      background:
+        linear-gradient(45deg, rgba(32, 41, 56, 0.04) 25%, transparent 25%),
+        linear-gradient(-45deg, rgba(32, 41, 56, 0.04) 25%, transparent 25%),
+        var(--paper);
+      background-size: 22px 22px;
+      box-shadow: 9px 9px 0 var(--grid);
+    }
+
+    .board {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-rows: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .cell {
+      width: 100%;
+      min-width: 0;
+      border: 3px solid var(--grid);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.92);
+      color: var(--grid);
+      cursor: pointer;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(3rem, 17vw, 6.2rem);
+      font-weight: 900;
+      line-height: 1;
+      box-shadow: inset 0 -8px 0 rgba(32, 41, 56, 0.08);
+      transition: transform 140ms ease, background-color 140ms ease, box-shadow 140ms ease;
+    }
+
+    .cell:not(:disabled):hover {
+      background: #fff3d0;
+      box-shadow: inset 0 -8px 0 rgba(47, 159, 124, 0.16);
+      transform: translateY(-2px);
+    }
+
+    .cell:focus-visible {
+      outline: 4px solid var(--accent);
+      outline-offset: 3px;
+    }
+
+    .cell:disabled {
+      cursor: default;
+    }
+
+    .cell[data-player="X"] {
+      color: var(--x);
+    }
+
+    .cell[data-player="O"] {
+      color: var(--o);
+    }
+
+    .cell.winner {
+      background: #fff0b8;
+      box-shadow: inset 0 0 0 6px rgba(240, 180, 41, 0.42);
+    }
+
+    .win-stroke {
+      position: absolute;
+      z-index: 2;
+      display: block;
+      border-radius: 999px;
+      background: var(--win);
+      box-shadow: 0 0 0 3px rgba(32, 41, 56, 0.88), 0 3px 0 rgba(32, 41, 56, 0.18);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 140ms ease;
+    }
+
+    .win-stroke[data-line="0-1-2"],
+    .win-stroke[data-line="3-4-5"],
+    .win-stroke[data-line="6-7-8"] {
+      left: 8%;
+      width: 84%;
+      height: 10px;
+      transform: translateY(-50%);
+    }
+
+    .win-stroke[data-line="0-3-6"],
+    .win-stroke[data-line="1-4-7"],
+    .win-stroke[data-line="2-5-8"] {
+      top: 8%;
+      width: 10px;
+      height: 84%;
+      transform: translateX(-50%);
+    }
+
+    .win-stroke[data-line="0-1-2"] { top: 18.5%; opacity: 1; }
+    .win-stroke[data-line="3-4-5"] { top: 50%; opacity: 1; }
+    .win-stroke[data-line="6-7-8"] { top: 81.5%; opacity: 1; }
+    .win-stroke[data-line="0-3-6"] { left: 18.5%; opacity: 1; }
+    .win-stroke[data-line="1-4-7"] { left: 50%; opacity: 1; }
+    .win-stroke[data-line="2-5-8"] { left: 81.5%; opacity: 1; }
+
+    .win-stroke[data-line="0-4-8"],
+    .win-stroke[data-line="2-4-6"] {
+      top: 50%;
+      left: 50%;
+      width: 118%;
+      height: 10px;
+      opacity: 1;
+    }
+
+    .win-stroke[data-line="0-4-8"] {
+      transform: translate(-50%, -50%) rotate(45deg);
+    }
+
+    .win-stroke[data-line="2-4-6"] {
+      transform: translate(-50%, -50%) rotate(-45deg);
+    }
+
+    .controls {
+      display: flex;
+      justify-content: center;
+    }
+
+    .restart {
+      min-height: 48px;
+      padding: 0 22px;
+      border: 2px solid var(--grid);
+      border-radius: 8px;
+      background: var(--grid);
+      color: #ffffff;
+      cursor: pointer;
+      font: inherit;
+      font-weight: 900;
+      box-shadow: 4px 4px 0 var(--win);
+      transition: transform 140ms ease, box-shadow 140ms ease;
+    }
+
+    .restart:hover {
+      box-shadow: 2px 2px 0 var(--win);
+      transform: translate(2px, 2px);
+    }
+
+    .restart:focus-visible {
+      outline: 4px solid var(--accent);
+      outline-offset: 3px;
+    }
+
+    @media (max-width: 560px) {
+      body {
+        padding: 18px;
+      }
+
+      .topbar {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .status {
+        min-width: 0;
+        box-shadow: 4px 4px 0 var(--grid);
+      }
+
+      .scores {
+        gap: 8px;
+      }
+
+      .score {
+        min-height: 66px;
+        padding: 10px 6px;
+      }
+
+      .score .label {
+        font-size: 0.68rem;
+      }
+
+      .score .value {
+        font-size: 1.7rem;
+      }
+
+      .board-wrap {
+        padding: 9px;
+        box-shadow: 6px 6px 0 var(--grid);
+      }
+
+      .board {
+        gap: 8px;
+      }
+
+      .cell {
+        border-width: 2px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app" aria-label="Tic-tac-toe game">
+    <header class="topbar">
+      <h1>Tic Tac Toe</h1>
+      <div class="status" id="status" aria-live="polite">X's turn</div>
+    </header>
+
+    <section class="scores" aria-label="Score tracker">
+      <div class="score">
+        <span class="label">X wins</span>
+        <span class="value" data-score="X">0</span>
+      </div>
+      <div class="score">
+        <span class="label">O wins</span>
+        <span class="value" data-score="O">0</span>
+      </div>
+      <div class="score">
+        <span class="label">Draws</span>
+        <span class="value" data-score="draws">0</span>
+      </div>
+    </section>
+
+    <section class="game-area" aria-label="Game board">
+      <div class="board-wrap">
+        <div class="board" role="grid" aria-label="Tic-tac-toe board">
+          <button class="cell" type="button" role="gridcell" data-cell-index="0"></button>
+          <button class="cell" type="button" role="gridcell" data-cell-index="1"></button>
+          <button class="cell" type="button" role="gridcell" data-cell-index="2"></button>
+          <button class="cell" type="button" role="gridcell" data-cell-index="3"></button>
+          <button class="cell" type="button" role="gridcell" data-cell-index="4"></button>
+          <button class="cell" type="button" role="gridcell" data-cell-index="5"></button>
+          <button class="cell" type="button" role="gridcell" data-cell-index="6"></button>
+          <button class="cell" type="button" role="gridcell" data-cell-index="7"></button>
+          <button class="cell" type="button" role="gridcell" data-cell-index="8"></button>
+        </div>
+        <span class="win-stroke" id="win-stroke" aria-hidden="true"></span>
+      </div>
+
+      <div class="controls">
+        <button class="restart" id="restart" type="button">Restart</button>
+      </div>
+    </section>
+  </main>
+
+  <script id="game-logic">
+    (function (global) {
+      const SCORE_KEY = 'ticTacToeScores';
+      const DEFAULT_SCORES = Object.freeze({ X: 0, O: 0, draws: 0 });
+      const WIN_LINES = [
+        [0, 1, 2],
+        [3, 4, 5],
+        [6, 7, 8],
+        [0, 3, 6],
+        [1, 4, 7],
+        [2, 5, 8],
+        [0, 4, 8],
+        [2, 4, 6],
+      ];
+
+      function cleanCount(value) {
+        const count = Number(value);
+        return Number.isFinite(count) && count >= 0 ? Math.floor(count) : 0;
+      }
+
+      function normalizeScores(scores) {
+        const source = scores || DEFAULT_SCORES;
+        return {
+          X: cleanCount(source.X),
+          O: cleanCount(source.O),
+          draws: cleanCount(source.draws),
+        };
+      }
+
+      function createScoreStore(storage) {
+        return {
+          load() {
+            if (!storage) {
+              return normalizeScores();
+            }
+
+            try {
+              const raw = storage.getItem(SCORE_KEY);
+              return raw ? normalizeScores(JSON.parse(raw)) : normalizeScores();
+            } catch (error) {
+              return normalizeScores();
+            }
+          },
+          save(scores) {
+            const normalized = normalizeScores(scores);
+
+            if (storage) {
+              try {
+                storage.setItem(SCORE_KEY, JSON.stringify(normalized));
+              } catch (error) {
+                return normalized;
+              }
+            }
+
+            return normalized;
+          },
+        };
+      }
+
+      function recordResult(scores, result) {
+        const next = normalizeScores(scores);
+
+        if (result.status === 'win' && result.winner === 'X') {
+          next.X += 1;
+        } else if (result.status === 'win' && result.winner === 'O') {
+          next.O += 1;
+        } else if (result.status === 'draw') {
+          next.draws += 1;
+        }
+
+        return next;
+      }
+
+      function evaluateBoard(board) {
+        for (const line of WIN_LINES) {
+          const [a, b, c] = line;
+          if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+            return {
+              status: 'win',
+              winner: board[a],
+              line: line.slice(),
+              lineKey: line.join('-'),
+            };
+          }
+        }
+
+        if (board.every(Boolean)) {
+          return {
+            status: 'draw',
+            winner: null,
+            line: null,
+            lineKey: null,
+          };
+        }
+
+        return {
+          status: 'playing',
+          winner: null,
+          line: null,
+          lineKey: null,
+        };
+      }
+
+      global.TicTacToeLogic = {
+        SCORE_KEY,
+        WIN_LINES,
+        createScoreStore,
+        evaluateBoard,
+        recordResult,
+      };
+    })(window);
+  </script>
+
+  <script>
+    (function () {
+      const logic = window.TicTacToeLogic;
+      const cells = Array.from(document.querySelectorAll('[data-cell-index]'));
+      const status = document.getElementById('status');
+      const restart = document.getElementById('restart');
+      const winStroke = document.getElementById('win-stroke');
+      const scoreElements = {
+        X: document.querySelector('[data-score="X"]'),
+        O: document.querySelector('[data-score="O"]'),
+        draws: document.querySelector('[data-score="draws"]'),
+      };
+      const scoreStore = logic.createScoreStore(window.localStorage);
+
+      let board = Array(9).fill('');
+      let currentPlayer = 'X';
+      let result = logic.evaluateBoard(board);
+      let scores = scoreStore.load();
+
+      function renderScores() {
+        scoreElements.X.textContent = scores.X;
+        scoreElements.O.textContent = scores.O;
+        scoreElements.draws.textContent = scores.draws;
+      }
+
+      function renderStatus() {
+        if (result.status === 'win') {
+          status.textContent = result.winner + ' wins';
+        } else if (result.status === 'draw') {
+          status.textContent = 'Draw';
+        } else {
+          status.textContent = currentPlayer + "'s turn";
+        }
+      }
+
+      function renderCells() {
+        cells.forEach(function (cell, index) {
+          const value = board[index];
+          cell.textContent = value;
+          cell.dataset.player = value;
+          cell.disabled = result.status !== 'playing' || Boolean(value);
+          cell.classList.toggle('winner', Boolean(result.line && result.line.includes(index)));
+
+          if (value) {
+            cell.setAttribute('aria-label', 'Cell ' + (index + 1) + ', ' + value);
+          } else {
+            cell.setAttribute('aria-label', 'Cell ' + (index + 1) + ', empty, ' + currentPlayer + "'s turn");
+          }
+        });
+      }
+
+      function renderWinStroke() {
+        if (result.status === 'win') {
+          winStroke.dataset.line = result.lineKey;
+        } else {
+          winStroke.removeAttribute('data-line');
+        }
+      }
+
+      function render() {
+        renderScores();
+        renderStatus();
+        renderCells();
+        renderWinStroke();
+      }
+
+      function finishTurn() {
+        result = logic.evaluateBoard(board);
+
+        if (result.status === 'win' || result.status === 'draw') {
+          scores = scoreStore.save(logic.recordResult(scores, result));
+        } else {
+          currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+        }
+
+        render();
+      }
+
+      cells.forEach(function (cell) {
+        cell.addEventListener('click', function () {
+          const index = Number(cell.dataset.cellIndex);
+
+          if (board[index] || result.status !== 'playing') {
+            return;
+          }
+
+          board[index] = currentPlayer;
+          finishTurn();
+        });
+      });
+
+      restart.addEventListener('click', function () {
+        board = Array(9).fill('');
+        currentPlayer = 'X';
+        result = logic.evaluateBoard(board);
+        render();
+      });
+
+      render();
+    })();
+  </script>
+</body>
+</html>

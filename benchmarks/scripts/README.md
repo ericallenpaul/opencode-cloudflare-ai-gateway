@@ -1,0 +1,185 @@
+# benchmarks/scripts
+
+Helper scripts for running benchmarks consistently across coding-agent tools.
+
+## bench-run.ps1
+
+Two-phase wrapper around `ccusage`. **One** `start` call sets up scratch directories and captures baselines for **every** tool configured at the top of the script. You then run each tool. After they've all finished, **one** `finish` call (with the same RunId) processes them all, computes deltas, copies outputs into the repo, and stubs notes.md per tool.
+
+### Tool configuration
+
+The list of tools is defined at the top of `bench-run.ps1`:
+
+```powershell
+$Tools = @(
+    [PSCustomObject]@{ Name = "claude";   Launch = "claude" }
+    [PSCustomObject]@{ Name = "codex";    Launch = "codex" }
+    [PSCustomObject]@{ Name = "opencode"; Launch = "opencode --model openai-via-gateway/gpt-5" }
+)
+```
+
+To add a new agent (e.g. a future Gemini CLI), add an entry — no parameter changes needed.
+
+### Usage
+
+```powershell
+cd "C:\path\to\opencode-cloudflare-ai-gateway\benchmarks\scripts"
+
+# Phase 1 -- ONE call. Captures baselines for ALL configured tools.
+.\bench-run.ps1 -Phase start
+
+# Script prints labeled instructions per tool, e.g.:
+#
+# CLAUDE
+# ======
+#   1. cd "<repo>\benchmarks\runs\<RunId>\claude"
+#   2. claude
+#   3. Paste the prompt from <repo>\benchmarks\tic-tac-toe\PROMPT.md
+#   4. Let the agent run to completion
+#
+# CODEX
+# =====
+#   ... same pattern ...
+#
+# OPENCODE
+# ========
+#   ... same pattern ...
+#
+# AFTER ALL TOOLS FINISH
+# ======================
+#   & "<repo>\benchmarks\scripts\bench-run.ps1" -Phase finish -RunId <run-id>
+
+# Phase 2 -- ONE call after every tool has exited. Processes all configured tools.
+& "<repo>\benchmarks\scripts\bench-run.ps1" -Phase finish -RunId <run-id>
+
+# To redo / process just one tool, add -Tool:
+& "<repo>\benchmarks\scripts\bench-run.ps1" -Phase finish -RunId <run-id> -Tool opencode
+```
+
+### What it captures (per tool, in each tool's scratch dir)
+
+| File | What it is |
+|---|---|
+| `_ccusage-before.json` / `.txt` | Full ccusage session list before the run |
+| `_ccusage-after.json` / `.txt` | Same, after the run |
+| `_start-time.txt` / `_end-time.txt` | ISO timestamps |
+| `_run-id.txt` | The RunId that ties this tool's session to its sibling tools' sessions |
+| `_delta.json` | Computed delta: new sessions, totals, models used, wall clock |
+| `_delta-summary.txt` | Human-readable version of the delta |
+
+The finish phase copies all of these (plus the agent's generated files) into `benchmarks/<target>/results/runs/<RunId>/<Tool>/` and stubs a `notes.md` for human scoring.
+
+### Parameters
+
+- **`-Phase start | finish`** (required)
+- **`-RunId <id>`** — required for finish. Start auto-generates `yyyy-MM-dd-HHmm` if omitted.
+- **`-Tool <name>`** — optional. On finish, restricts processing to that one tool (useful when re-running). On start, ignored (start always sets up every configured tool).
+- **`-BaseDir <path>`** — where scratch dirs live. Default: `<repo>/benchmarks/runs` (gitignored). Override if you want them elsewhere.
+- **`-Benchmark <name>`** — folder under `benchmarks/` for results copy. Default: `tic-tac-toe`.
+- **`-NoCopy`** — skip the copy-into-results step at finish.
+
+### What it does NOT do
+
+- **Doesn't launch the tool for you.** Each tool's REPL has its own permission flow that needs human eyes. The script prints exact commands.
+- **Doesn't score against SPEC.md.** Quality scoring stays human — see the per-target SPEC.md.
+- **Doesn't pull CF AI Gateway analytics.** For OpenCode runs, the gateway dashboard is the authoritative cost source; cross-check there.
+
+### Requirements
+
+- Node.js / npm (for `npx -y ccusage@latest`). bun works too if you'd rather use `bunx ccusage` — adapt the helper accordingly.
+- PowerShell 7+.
+- Each tool installed and reachable on `$PATH`.
+
+### Troubleshooting
+
+**"no new sessions detected" after finish:**
+- Make sure the agent fully exited (some tools write their session log on exit).
+- ccusage may not have indexed yet. Wait 30s and rerun finish (it overwrites the after-snapshot).
+- Compare `_ccusage-before.json` and `_ccusage-after.json` directly to confirm.
+
+**Models field empty in the summary:**
+- ccusage's JSON shape varies by tool/version. Check the raw `_ccusage-after.json` for the actual field names.
+
+**Quoted-path errors when pasting the finish command:**
+- PowerShell requires the call operator `&` to invoke a quoted script path. The start phase's printed commands always include it.
+
+## `judge-run.ps1` -- functional + qualitative judgment
+
+Runs the two-layer judge against a completed benchmark run. Layer 1 is a deterministic Playwright suite (R1-R10). Layer 2 is a qualitative AI pass using a pre-substituted prompt template you paste into any multimodal agent.
+
+### Pre-requirements (one-time)
+
+```powershell
+cd "<repo>\benchmarks\scripts\judge"
+npm install
+npx playwright install chromium
+```
+
+### Usage
+
+```powershell
+& "<repo>\benchmarks\scripts\judge-run.ps1" -RunId <run-id>
+```
+
+The script detects tool subdirectories under `benchmarks/<target>/results/runs/<RunId>/` automatically. No `-Tools` flag needed.
+
+### What it produces
+
+For each tool's directory (`results/runs/<RunId>/<tool>/`):
+
+| File | What it is |
+|---|---|
+| `_judge-functional.json` | R1-R10 results, console errors, screenshot list |
+| `_screenshots/empty.png` | Board on first load |
+| `_screenshots/mid-game.png` | Board mid-game |
+| `_screenshots/win.png` | Board after a win |
+| `_screenshots/mobile.png` | Board at 375x812 viewport |
+| `judge.md` | Pre-filled stub ready for qualitative agent pass |
+
+At the RunId level (`results/runs/<RunId>/`):
+
+| File | What it is |
+|---|---|
+| `<RunId>-judge.md` | Cross-tool R1-R10 grid + quality score placeholders |
+| `judge-prompt-<tool>.md` | One file per tool -- JUDGE-PROMPT.md with all placeholders pre-substituted, ready to paste |
+
+### Qualitative pass
+
+After `judge-run.ps1` completes, you have one `judge-prompt-<tool>.md` file per tool. Launch any multimodal agent (with access to screenshots), paste the contents of one file, and let it fill in the soft scores (1-5 across quality dimensions) and observations in the corresponding `<tool>/judge.md`. Use the same agent for all tools in one RunId so the scoring bias is uniform. If you compare qualitative scores across RunIds where different agents judged, note which agent did the judging in each.
+
+## `judge-summarize.ps1` -- final summary at the bottom of `<RunId>.md`
+
+Parses each tool's `judge.md` after the qualitative pass is complete, computes a composite ranking, and appends a Final Summary section to `<RunId>.md`. Re-running the script replaces the existing block cleanly -- it is bounded by `<!-- JUDGE-SUMMARY-START -->` / `<!-- JUDGE-SUMMARY-END -->` sentinel markers, so the operation is idempotent.
+
+### Usage
+
+```powershell
+& "<repo>\benchmarks\scripts\judge-summarize.ps1" -RunId <run-id> -JudgeAgent <name> [-Benchmark <name>]
+```
+
+`-JudgeAgent` is required -- it gets recorded in the methodology note inside the summary so the judging model is always traceable. Examples: `claude-opus-4-7`, `gpt-5 (via opencode)`.
+
+### Composite ranking
+
+Scores are weighted **cost 50% / quality 30% / bugs 20%**. Higher composite = better.
+
+| Component | Formula | Perfect score |
+|---|---|---|
+| Cost score | `minCost / thisCost` | 1.0 (cheapest tool) |
+| Quality score | `quality_avg / 5` | 1.0 (all 5s) |
+| Bug score | `1 / (1 + bug_count)` | 1.0 (zero bugs) |
+
+### Score parsing
+
+The script supports both formats that `judge.md` files may use:
+
+- Bullet form: `- Readability: 4`
+- Table form: `| Readability | 4 | ... |`
+
+### Guard rails
+
+The script refuses to run if any tool's `judge.md` is missing scores -- it prints which dimension(s) are blank for which tool so you know exactly what still needs filling in.
+
+### Files touched
+
+Only `<RunId>.md`. The script does not modify `judge.md` files, `_judge-functional.json`, or any other artifact.

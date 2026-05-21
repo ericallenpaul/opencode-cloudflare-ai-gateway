@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tic-Tac-Toe</title>
+  <style>
+    /* Inline CSS, grid board */
+    :root { --cell: 120px; --gap: 8px; }
+    body { font-family: system-ui, Arial, sans-serif; display:flex; min-height:100vh; align-items:center; justify-content:center; background:#111; color:#eee; }
+    .wrap { text-align:center; }
+    .board { display:grid; grid-template-columns: repeat(3, var(--cell)); grid-template-rows: repeat(3, var(--cell)); gap: var(--gap); margin: 16px auto; }
+    .cell { background:#1e1e1e; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:64px; cursor:pointer; user-select:none; transition:background .15s ease; }
+    .cell:hover { background:#262626; }
+    .cell.win { background:#0a3; color:#fff; box-shadow: 0 0 0 2px #0a3 inset; }
+    .panel { display:flex; gap:12px; align-items:center; justify-content:center; flex-wrap:wrap; }
+    button { background:#2d2d2d; color:#eee; border:1px solid #444; padding:8px 14px; border-radius:8px; cursor:pointer; }
+    button:hover { background:#383838; }
+    .status { min-height: 1.5em; font-weight:600; }
+    .scores { display:flex; gap:16px; justify-content:center; margin-top:8px; font-variant-numeric: tabular-nums; }
+    .scores .label { color:#aaa; }
+  </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>Tic-Tac-Toe</h1>
+      <div class="panel">
+        <div class="status" id="status">X to move</div>
+        <button id="restart">Restart</button>
+        <button id="resetScores" title="Reset persisted scores">Reset Scores</button>
+      </div>
+      <div class="board" id="board" aria-label="Tic-Tac-Toe Board" role="grid"></div>
+      <div class="scores" id="scores">
+        <div><span class="label">X wins:</span> <span id="scoreX">0</span></div>
+        <div><span class="label">O wins:</span> <span id="scoreO">0</span></div>
+        <div><span class="label">Draws:</span> <span id="scoreD">0</span></div>
+      </div>
+    </div>
+
+    <script>
+    // LOGIC_EXPORT_START
+    // Pure game logic and score helpers exposed to globalThis.TicTacToe
+    (function(){
+      const winningLines = [
+        [0,1,2],[3,4,5],[6,7,8], // rows
+        [0,3,6],[1,4,7],[2,5,8], // cols
+        [0,4,8],[2,4,6]          // diags
+      ];
+      function calcWinner(board){
+        for (const [a,b,c] of winningLines){
+          const v = board[a];
+          if (v && v === board[b] && v === board[c]){
+            return { winner: v, line: [a,b,c] };
+          }
+        }
+        return { winner: null, line: null };
+      }
+      function isDraw(board){
+        const anyEmpty = board.some(v => !v);
+        if (anyEmpty) return false;
+        const { winner } = calcWinner(board);
+        return !winner;
+      }
+      function loadScore(storage){
+        const parse = (k)=>{ const v = storage && storage.getItem ? storage.getItem(k) : null; return v==null?0: (parseInt(v,10)||0); };
+        return { x: parse('ttt.x'), o: parse('ttt.o'), d: parse('ttt.d') };
+      }
+      function saveScore(storage, s){
+        if (!storage || !storage.setItem) return;
+        storage.setItem('ttt.x', String(s.x|0));
+        storage.setItem('ttt.o', String(s.o|0));
+        storage.setItem('ttt.d', String(s.d|0));
+      }
+      globalThis.TicTacToe = { winningLines, calcWinner, isDraw, loadScore, saveScore };
+    })();
+    // LOGIC_EXPORT_END
+
+    // UI wiring (completed after logic passes tests)
+    (function(){
+      const boardEl = document.getElementById('board');
+      const statusEl = document.getElementById('status');
+      const restartBtn = document.getElementById('restart');
+      const resetScoresBtn = document.getElementById('resetScores');
+      const scoreXEl = document.getElementById('scoreX');
+      const scoreOEl = document.getElementById('scoreO');
+      const scoreDEl = document.getElementById('scoreD');
+
+      const state = { board: Array(9).fill(''), xToMove: true, gameOver: false, score: TicTacToe.loadScore(localStorage) };
+
+      function renderScores(){ scoreXEl.textContent = state.score.x; scoreOEl.textContent = state.score.o; scoreDEl.textContent = state.score.d; }
+      function setStatus(msg){ statusEl.textContent = msg; }
+      function cellEl(i){ return boardEl.querySelector(`[data-idx="${i}"]`); }
+      function clearWinHighlights(){ boardEl.querySelectorAll('.cell.win').forEach(c=>c.classList.remove('win')); }
+
+      function renderBoard(){
+        boardEl.innerHTML = '';
+        for(let i=0;i<9;i++){
+          const d=document.createElement('div'); d.className='cell'; d.setAttribute('role','gridcell'); d.dataset.idx=String(i); d.textContent=state.board[i];
+          d.addEventListener('click', ()=>onCell(i));
+          boardEl.appendChild(d);
+        }
+        clearWinHighlights();
+      }
+
+      function onCell(i){
+        if (state.gameOver || state.board[i]) return;
+        state.board[i] = state.xToMove ? 'X' : 'O';
+        state.xToMove = !state.xToMove;
+        const res = TicTacToe.calcWinner(state.board);
+        renderBoard();
+        if (res.winner){
+          state.gameOver = true;
+          setStatus(`${res.winner} wins!`);
+          res.line.forEach(idx=> cellEl(idx).classList.add('win'));
+          if (res.winner==='X') state.score.x++; else state.score.o++;
+          TicTacToe.saveScore(localStorage, state.score); renderScores();
+        } else if (TicTacToe.isDraw(state.board)){
+          state.gameOver = true; setStatus(`Draw.`); state.score.d++; TicTacToe.saveScore(localStorage, state.score); renderScores();
+        } else {
+          setStatus(`${state.xToMove? 'X':'O'} to move`);
+        }
+      }
+
+      function restart(){ state.board = Array(9).fill(''); state.xToMove = true; state.gameOver=false; setStatus('X to move'); renderBoard(); }
+      function resetScores(){ state.score = {x:0,o:0,d:0}; TicTacToe.saveScore(localStorage,state.score); renderScores(); }
+
+      restartBtn.addEventListener('click', restart);
+      resetScoresBtn.addEventListener('click', resetScores);
+
+      renderScores();
+      renderBoard();
+      setStatus('X to move');
+    })();
+    </script>
+  </body>
+  </html>

@@ -1,0 +1,43 @@
+# Verification reports (timestamped, regenerated on every run)
+scripts/verify-models-*.md
+scripts/verify-models-*.json
+
+# Benchmark scratch dirs -- ccusage snapshots, agent's working copy of files,
+# per-run sidecars. Curated copies of each run live in benchmarks/<target>/results/runs/.
+benchmarks/runs/
+
+# Codex session transcripts -- bench-run.ps1's "best-effort copy" used to grab
+# any codex session whose mtime fell in the run window, which inadvertently
+# pulled in unrelated work sessions (ccusage indexing bumps mtimes). Always
+# exclude regardless of where they land; copy the right one manually if you
+# specifically need a session log committed.
+**/_session-transcript/
+
+# Playwright runtime state (regenerated on every run)
+benchmarks/scripts/judge/last-run.json
+benchmarks/scripts/judge/test-results/
+
+# Local opencode configs (don't commit user-specific copies if anyone drops one here)
+opencode.json
+opencode.jsonc
+
+# Node / Bun (if anyone runs npm/bun install in the repo by mistake)
+node_modules/
+package-lock.json
+bun.lock
+bun.lockb
+
+# Editor / OS noise
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Env files — should never be committed; this repo doesn't use them but
+# guard against future authors who might
+.env
+.env.*
+!.env.example

@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Tic-Tac-Toe</title>
+<style>
+  :root {
+    --bg: #1e1e2e;
+    --panel: #2a2a3e;
+    --cell: #313244;
+    --cell-hover: #45475a;
+    --text: #cdd6f4;
+    --muted: #a6adc8;
+    --x-color: #89b4fa;
+    --o-color: #f38ba8;
+    --win: #f9e2af;
+    --win-text: #1e1e2e;
+    --accent: #94e2d5;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    padding: 20px;
+  }
+  h1 {
+    margin: 0 0 10px;
+    font-weight: 600;
+    letter-spacing: 1px;
+  }
+  #status {
+    min-height: 1.6em;
+    margin-bottom: 16px;
+    font-size: 1.15rem;
+    color: var(--muted);
+  }
+  #board {
+    display: grid;
+    grid-template-columns: repeat(3, 90px);
+    grid-template-rows: repeat(3, 90px);
+    gap: 8px;
+    background: var(--panel);
+    padding: 8px;
+    border-radius: 12px;
+  }
+  .cell {
+    background: var(--cell);
+    border: none;
+    border-radius: 8px;
+    font-size: 2.6rem;
+    font-weight: 700;
+    cursor: pointer;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s ease, transform 0.1s ease;
+    font-family: inherit;
+  }
+  .cell:hover:not(:disabled):not(.win) { background: var(--cell-hover); }
+  .cell:disabled { cursor: default; }
+  .cell.x { color: var(--x-color); }
+  .cell.o { color: var(--o-color); }
+  .cell.win {
+    background: var(--win);
+    color: var(--win-text);
+    animation: pop 0.3s ease;
+  }
+  @keyframes pop {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+  }
+  #controls {
+    margin-top: 18px;
+  }
+  button.action {
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  button.action:hover { filter: brightness(1.1); }
+  button.action.secondary {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--muted);
+    margin-left: 8px;
+  }
+  #scoreboard {
+    margin-top: 22px;
+    display: flex;
+    gap: 24px;
+    background: var(--panel);
+    padding: 12px 24px;
+    border-radius: 10px;
+  }
+  .score {
+    text-align: center;
+    min-width: 60px;
+  }
+  .score .label {
+    font-size: 0.85rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .score .value {
+    font-size: 1.5rem;
+    font-weight: 700;
+  }
+  .score.x .value { color: var(--x-color); }
+  .score.o .value { color: var(--o-color); }
+</style>
+</head>
+<body>
+<h1>Tic-Tac-Toe</h1>
+<div id="status">X's turn</div>
+<div id="board" role="grid" aria-label="Tic-tac-toe board"></div>
+<div id="controls">
+  <button class="action" id="restart">Restart</button>
+  <button class="action secondary" id="reset-scores">Reset Scores</button>
+</div>
+<div id="scoreboard">
+  <div class="score x"><div class="label">X Wins</div><div class="value" id="score-x">0</div></div>
+  <div class="score draws"><div class="label">Draws</div><div class="value" id="score-draws">0</div></div>
+  <div class="score o"><div class="label">O Wins</div><div class="value" id="score-o">0</div></div>
+</div>
+
+<script>
+  // === Game logic (mirror of tictactoe.logic.js) ===
+  const WINNING_LINES = [
+    [0,1,2],[3,4,5],[6,7,8],
+    [0,3,6],[1,4,7],[2,5,8],
+    [0,4,8],[2,4,6],
+  ];
+
+  function checkWinner(board) {
+    for (const line of WINNING_LINES) {
+      const [a,b,c] = line;
+      if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+        return { winner: board[a], line };
+      }
+    }
+    return null;
+  }
+
+  function getGameStatus(board) {
+    const result = checkWinner(board);
+    if (result) return { status: 'won', winner: result.winner, line: result.line };
+    if (board.every(cell => cell !== null)) return { status: 'draw', winner: null, line: null };
+    return { status: 'in_progress', winner: null, line: null };
+  }
+
+  // === State ===
+  const STORAGE_KEY = 'ttt-scores-v1';
+
+  const state = {
+    board: Array(9).fill(null),
+    currentPlayer: 'X',
+    gameOver: false,
+    winningLine: null,
+    scores: loadScores(),
+  };
+
+  function loadScores() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return { X: 0, O: 0, draws: 0 };
+      const parsed = JSON.parse(raw);
+      return {
+        X: Number.isInteger(parsed.X) ? parsed.X : 0,
+        O: Number.isInteger(parsed.O) ? parsed.O : 0,
+        draws: Number.isInteger(parsed.draws) ? parsed.draws : 0,
+      };
+    } catch (e) {
+      return { X: 0, O: 0, draws: 0 };
+    }
+  }
+
+  function saveScores() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state.scores));
+    } catch (e) {
+      // localStorage may be disabled (private mode, file:// in some browsers) — ignore
+    }
+  }
+
+  // === DOM wiring ===
+  const boardEl = document.getElementById('board');
+  const statusEl = document.getElementById('status');
+  const restartBtn = document.getElementById('restart');
+  const resetScoresBtn = document.getElementById('reset-scores');
+  const scoreXEl = document.getElementById('score-x');
+  const scoreOEl = document.getElementById('score-o');
+  const scoreDrawsEl = document.getElementById('score-draws');
+
+  function buildBoard() {
+    boardEl.innerHTML = '';
+    for (let i = 0; i < 9; i++) {
+      const btn = document.createElement('button');
+      btn.className = 'cell';
+      btn.dataset.index = String(i);
+      btn.setAttribute('aria-label', `Cell ${i + 1}`);
+      btn.addEventListener('click', () => handleCellClick(i));
+      boardEl.appendChild(btn);
+    }
+  }
+
+  function handleCellClick(i) {
+    if (state.gameOver) return;
+    if (state.board[i] !== null) return;
+    state.board[i] = state.currentPlayer;
+    const result = getGameStatus(state.board);
+    if (result.status === 'won') {
+      state.gameOver = true;
+      state.winningLine = result.line;
+      state.scores[result.winner] += 1;
+      saveScores();
+    } else if (result.status === 'draw') {
+      state.gameOver = true;
+      state.scores.draws += 1;
+      saveScores();
+    } else {
+      state.currentPlayer = state.currentPlayer === 'X' ? 'O' : 'X';
+    }
+    render();
+  }
+
+  function restart() {
+    state.board = Array(9).fill(null);
+    state.currentPlayer = 'X';
+    state.gameOver = false;
+    state.winningLine = null;
+    render();
+  }
+
+  function resetScores() {
+    state.scores = { X: 0, O: 0, draws: 0 };
+    saveScores();
+    render();
+  }
+
+  function render() {
+    const cells = boardEl.querySelectorAll('.cell');
+    cells.forEach((cell, i) => {
+      const value = state.board[i];
+      cell.textContent = value || '';
+      cell.classList.remove('x', 'o', 'win');
+      if (value === 'X') cell.classList.add('x');
+      if (value === 'O') cell.classList.add('o');
+      if (state.winningLine && state.winningLine.includes(i)) cell.classList.add('win');
+      cell.disabled = state.gameOver || value !== null;
+    });
+
+    if (state.gameOver) {
+      if (state.winningLine) {
+        const winner = state.board[state.winningLine[0]];
+        statusEl.textContent = `${winner} wins!`;
+      } else {
+        statusEl.textContent = "It's a draw.";
+      }
+    } else {
+      statusEl.textContent = `${state.currentPlayer}'s turn`;
+    }
+
+    scoreXEl.textContent = String(state.scores.X);
+    scoreOEl.textContent = String(state.scores.O);
+    scoreDrawsEl.textContent = String(state.scores.draws);
+  }
+
+  restartBtn.addEventListener('click', restart);
+  resetScoresBtn.addEventListener('click', resetScores);
+
+  buildBoard();
+  render();
+</script>
+</body>
+</html>

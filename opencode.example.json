@@ -1,0 +1,132 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "ollama/granite4:7b-a1b-h",
+  "lsp": {},
+  "mcp": {
+    "context7": { "type": "remote", "url": "https://mcp.context7.com/mcp", "enabled": true },
+    "cloudflare-docs": { "type": "remote", "url": "https://docs.mcp.cloudflare.com/mcp", "enabled": true },
+    "snyk": { "type": "local", "command": ["npx", "-y", "snyk@latest", "mcp"], "enabled": true }
+  },
+  "provider": {
+    "ollama": {
+      "name": "Ollama (local)",
+      "npm": "@ai-sdk/openai-compatible",
+      "options": {
+        "baseURL": "http://127.0.0.1:11434/v1"
+      },
+      "models": {
+        "granite4:7b-a1b-h": { "name": "granite4:7b-a1b-h" },
+        "qwen3-coder:30b": { "name": "qwen3-coder:30b" }
+      }
+    },
+    "anthropic-via-gateway": {
+      "name": "Anthropic (via Cloudflare AI Gateway)",
+      "npm": "@ai-sdk/anthropic",
+      "options": {
+        "baseURL": "https://gateway.ai.cloudflare.com/v1/{env:CF_ACCOUNT_ID}/{env:CF_GATEWAY_NAME}/anthropic",
+        "apiKey": "{env:CF_AIG_TOKEN}",
+        "headers": {
+          "cf-aig-metadata": "{\"app\":\"{env:OPENCODE_APP_TAG}\",\"user\":\"{env:OPENCODE_USER_TAG}\"}"
+        }
+      },
+      "models": {
+        "claude-sonnet-4-6": { "name": "claude-sonnet-4-6" },
+        "claude-sonnet-4-5": { "name": "claude-sonnet-4-5" },
+        "claude-opus-4-6": { "name": "claude-opus-4-6" },
+        "claude-opus-4-5": { "name": "claude-opus-4-5" },
+        "claude-haiku-4-5": { "name": "claude-haiku-4-5" }
+      }
+    },
+    "openai-via-gateway": {
+      "name": "OpenAI (via Cloudflare AI Gateway)",
+      "npm": "@ai-sdk/openai",
+      "options": {
+        "baseURL": "https://gateway.ai.cloudflare.com/v1/{env:CF_ACCOUNT_ID}/{env:CF_GATEWAY_NAME}/openai",
+        "apiKey": "{env:CF_AIG_TOKEN}",
+        "headers": {
+          "cf-aig-metadata": "{\"app\":\"{env:OPENCODE_APP_TAG}\",\"user\":\"{env:OPENCODE_USER_TAG}\"}"
+        }
+      },
+      "models": {
+        "gpt-5": { "name": "gpt-5" },
+        "gpt-5-mini": { "name": "gpt-5-mini" },
+        "gpt-4.1-mini": { "name": "gpt-4.1-mini" },
+        "gpt-4o-mini": { "name": "gpt-4o-mini" }
+      }
+    },
+    "google-via-gateway": {
+      "name": "Google (via Cloudflare AI Gateway)",
+      "npm": "@ai-sdk/google",
+      "options": {
+        "baseURL": "https://gateway.ai.cloudflare.com/v1/{env:CF_ACCOUNT_ID}/{env:CF_GATEWAY_NAME}/google-ai-studio/v1beta",
+        "apiKey": "{env:CF_AIG_TOKEN}",
+        "headers": {
+          "cf-aig-metadata": "{\"app\":\"{env:OPENCODE_APP_TAG}\",\"user\":\"{env:OPENCODE_USER_TAG}\"}"
+        }
+      },
+      "models": {
+        "gemini-2.5-pro": { "name": "gemini-2.5-pro" },
+        "gemini-2.5-flash": { "name": "gemini-2.5-flash" }
+      }
+    },
+    "workers-ai-via-gateway": {
+      "name": "Cloudflare Workers AI (via Cloudflare AI Gateway)",
+      "npm": "@ai-sdk/openai-compatible",
+      "options": {
+        "baseURL": "https://gateway.ai.cloudflare.com/v1/{env:CF_ACCOUNT_ID}/{env:CF_GATEWAY_NAME}/workers-ai/v1",
+        "apiKey": "{env:CF_AIG_TOKEN}",
+        "headers": {
+          "cf-aig-metadata": "{\"app\":\"{env:OPENCODE_APP_TAG}\",\"user\":\"{env:OPENCODE_USER_TAG}\"}"
+        }
+      },
+      "models": {
+        "@cf/qwen/qwen2.5-coder-32b-instruct": { "name": "@cf/qwen/qwen2.5-coder-32b-instruct" },
+        "@cf/meta/llama-3.3-70b-instruct-fp8-fast": { "name": "@cf/meta/llama-3.3-70b-instruct-fp8-fast" },
+        "@cf/deepseek-ai/deepseek-r1-distill-qwen-32b": { "name": "@cf/deepseek-ai/deepseek-r1-distill-qwen-32b" }
+      }
+    }
+  },
+  "agent": {
+    "build": {
+      "prompt": "For code symbol lookups (classes, functions, types, methods): prefer the lsp tool when available. For lsp.workspaceSymbol, the filePath argument must be an EXISTING FILE (not a directory) with the language extension matching your search — e.g. any '.cs' file when searching for C# symbols, '.ts' for TypeScript, '.py' for Python. The file's only purpose is to select which LSP server runs the query; the query itself searches the entire workspace. If you don't know a concrete file path, run glob first to find one, then call lsp.workspaceSymbol. Use lsp.goToDefinition / lsp.findReferences / lsp.hover for navigation once you have a starting file:line:character. Fall back to grep only when the lsp tool isn't in your toolset, or for non-symbol text searches (strings, comments, configs).\n\nSuperpowers skills are available — invoke them when the work matches: superpowers:brainstorming before designing new features or making non-trivial decisions; superpowers:writing-plans before multi-step changes; superpowers:test-driven-development before implementation; superpowers:systematic-debugging for non-trivial bugs (NOT for symbol lookups — that's lsp); superpowers:verification-before-completion before claiming work is done; superpowers:requesting-code-review and superpowers:receiving-code-review around review points; superpowers:finishing-a-development-branch when wrapping up. Skills self-describe when to use them — check their descriptions for the exact trigger.",
+      "tools": {
+        "lsp": true
+      }
+    },
+    "local": {
+      "description": "Tier 1: free local inference via Ollama. Read-only tools.",
+      "model": "ollama/granite4:7b-a1b-h",
+      "mode": "primary",
+      "prompt": "For code symbol lookups (classes, functions, types, methods): prefer the lsp tool when available. For lsp.workspaceSymbol, the filePath argument must be an EXISTING FILE (not a directory) with the language extension matching your search — e.g. any '.cs' file when searching for C# symbols, '.ts' for TypeScript, '.py' for Python. The file's only purpose is to select which LSP server runs the query; the query itself searches the entire workspace. If you don't know a concrete file path, run glob first to find one, then call lsp.workspaceSymbol. Use lsp.goToDefinition / lsp.findReferences / lsp.hover for navigation once you have a starting file:line:character. Fall back to grep only when the lsp tool isn't in your toolset, or for non-symbol text searches (strings, comments, configs).",
+      "tools": {
+        "write": false,
+        "edit": false,
+        "bash": false,
+        "task": false,
+        "webfetch": false,
+        "websearch": false,
+        "todowrite": false,
+        "lsp": true,
+        "skill": false
+      }
+    },
+    "oss": {
+      "description": "Tier 2: cheap OSS workhorse via CF Workers AI through the gateway.",
+      "model": "workers-ai-via-gateway/@cf/qwen/qwen2.5-coder-32b-instruct",
+      "mode": "primary",
+      "prompt": "For code symbol lookups (classes, functions, types, methods): prefer the lsp tool when available. For lsp.workspaceSymbol, the filePath argument must be an EXISTING FILE (not a directory) with the language extension matching your search — e.g. any '.cs' file when searching for C# symbols, '.ts' for TypeScript, '.py' for Python. The file's only purpose is to select which LSP server runs the query; the query itself searches the entire workspace. If you don't know a concrete file path, run glob first to find one, then call lsp.workspaceSymbol. Use lsp.goToDefinition / lsp.findReferences / lsp.hover for navigation once you have a starting file:line:character. Fall back to grep only when the lsp tool isn't in your toolset, or for non-symbol text searches (strings, comments, configs).",
+      "tools": {
+        "lsp": true
+      }
+    },
+    "frontier": {
+      "description": "Tier 3: frontier reasoning model. Default gpt-5 (OpenAI). Switch to anthropic-via-gateway/claude-sonnet-4-6 or claude-opus-4-6 as desired.",
+      "model": "openai-via-gateway/gpt-5",
+      "mode": "primary",
+      "prompt": "For code symbol lookups (classes, functions, types, methods): prefer the lsp tool when available. For lsp.workspaceSymbol, the filePath argument must be an EXISTING FILE (not a directory) with the language extension matching your search — e.g. any '.cs' file when searching for C# symbols, '.ts' for TypeScript, '.py' for Python. The file's only purpose is to select which LSP server runs the query; the query itself searches the entire workspace. If you don't know a concrete file path, run glob first to find one, then call lsp.workspaceSymbol. Use lsp.goToDefinition / lsp.findReferences / lsp.hover for navigation once you have a starting file:line:character. Fall back to grep only when the lsp tool isn't in your toolset, or for non-symbol text searches (strings, comments, configs).",
+      "tools": {
+        "lsp": true
+      }
+    }
+  }
+}
