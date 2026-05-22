@@ -279,3 +279,29 @@ This is a discipline gap, not a capability gap. The gpt-5 model that powers open
 **Fix applied**: the build-agent prompt in `opencode.example.json` now includes explicit deliverable-discipline language up front: "Place files EXACTLY where specified... do NOT nest into subdirectories unless asked... READMEs MUST include sections on usage/test-command/scope/security-model... re-read the prompt's deliverable list before claiming complete... `superpowers:verification-before-completion` is non-negotiable on any prompt with named deliverables." Worth re-running the markdown-editor benchmark after this change to measure whether the gap closes -- if it does, the lesson is that cheap-tier models can match frontier-tier *on this kind of work* with the right agent-level scaffolding.
 
 **Lesson generalized**: the tiered story isn't just "use cheap models for cheap work." It's "use cheap models with strong agent-level discipline for work that fits in their capability envelope." When a cheap model underperforms, audit whether it's a knowledge limit (real escalation needed) or a discipline limit (prompt fix sufficient) before assuming you need to spend more on inference.
+
+## Concrete prompt rules land, abstract ones don't
+
+Re-running the markdown-editor benchmark with the deliverable-discipline prompt fix surfaced something specific about how LLMs respond to prompt-level rules. The fix contained two distinct kinds of instruction:
+
+1. **Concrete, mechanically-verifiable**: "Place files EXACTLY where specified -- do NOT nest into subdirectories. If the prompt says a test file you can run with `node --test`, it means a single file at the root, not a test directory."
+2. **Abstract, content-quality**: "READMEs MUST include sections on usage, test command, scope, and security model. A one-line README is never sufficient."
+
+The re-run measured them separately. Result:
+
+- **Concrete rule LANDED.** opencode's tests went from `output/tests/markdown.test.js` to `output/markdown.test.js`. R9/R10 went from FAIL to PASS automatically. The agent followed the structural rule cleanly.
+- **Abstract rule DID NOT LAND.** opencode's README this time was `# Self-contained Markdown Editor` -- byte-identical to the previous run. Same one-line README, same Documentation score of 1/5. The "MUST include sections X, Y, Z" instruction simply did not propagate to the agent's output.
+
+The pattern: rules an LLM can comply with mechanically (place this file here, name it this) get followed. Rules that require the LLM to evaluate its own output ("is this README sufficient?") leave room for the model to declare "yes" with whatever it produced.
+
+**The fix that follows from this**: replace the abstract README rule with a concrete template. Instead of "MUST include sections X, Y, Z," the prompt now says "Write README.md with EXACTLY these top-level headings, in this order: ## Usage / ## Running the tests / ## What is implemented / ## What is NOT implemented / ## Security model. Each section must have at least 3 sentences. A README under 30 lines is incomplete." The agent can now mechanically count sections and lines; there's no room to half-comply.
+
+**Lesson generalized**: when an agent prompt isn't producing the output you want, check whether your rule is mechanically verifiable. "Be thorough" is wishful. "5 sections, 3 sentences each, 30 lines minimum" is enforceable. Make every quality instruction look like the second form.
+
+## Frontier tools have meaningful run-to-run variance too -- not just cheap-tier
+
+The same re-run also showed Claude (opus 4.7) regressing from 9/10 R1-R10 (run 0837) to 3/10 (run 0951) on the SAME prompt. R2-R8 all failed because the preview pane never updated when Playwright typed into the textarea -- claude wired the live-preview to an event that doesn't fire on programmatic `page.fill()` (likely `keydown` or `keypress` rather than `input`). The app probably works for a human typing letter-by-letter, but a Playwright test catches it as broken.
+
+Two takeaways:
+- Frontier tools are NOT immune to producing broken software. The Playwright deterministic layer is the only thing that catches this kind of regression -- a qualitative agent reading source might assume "well-structured HTML must work" and never notice.
+- The cost-tier story doesn't just say "cheap models are good enough sometimes." It says "cheap models can be MORE reliable than frontier models on functional correctness when the cheap-tier setup is mature." opencode held 10/10 R1-R10 across both runs in this benchmark; claude went 9 -> 3. Codex held 10/10 too. The cheap-tier-via-gateway path was equal to or better than frontier-direct on this work.
