@@ -2,6 +2,8 @@
 
 End-to-end setup, ~30 minutes if Cloudflare and Ollama are already in place. Most of that is "wait for `ollama pull`" and dashboard clicks. Tested on Windows 11 with PowerShell 7; the steps translate cleanly to macOS/Linux — the only Windows-specific bits are env var commands.
 
+> **Shortcut**: at any point during this walkthrough -- and especially when you think you're done -- run `scripts/check-setup.ps1` (or `.sh`) to confirm every prerequisite is in place. It walks 9 required + 3 optional checks and prints exact fix commands for anything missing. Pass `-InstallConfig` (or `--install-config`) to also copy `opencode.example.json` into your opencode config dir with a backup of any existing file. See [`scripts/README.md`](../scripts/README.md) for details.
+
 ## Prerequisites
 
 | Thing | How to check |

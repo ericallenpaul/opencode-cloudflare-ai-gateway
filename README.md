@@ -33,6 +33,22 @@ Plus the gateway-routed catalog: Claude Sonnet/Opus/Haiku 4-5 & 4-6, GPT-5 famil
 
 ## Quick start
 
+The fastest way to know whether you have everything in place is to run the diagnostic:
+
+```powershell
+# Windows
+.\scripts\check-setup.ps1
+```
+
+```bash
+# macOS / Linux / Git Bash
+./scripts/check-setup.sh
+```
+
+It walks every prerequisite (opencode CLI, env vars, opencode.json, superpowers plugin wired up, MCP servers configured, ollama + granite4 model) and prints a PASS/FAIL per item with the exact fix command for anything missing. Pass `-InstallConfig` / `--install-config` and it will copy `opencode.example.json` into place (with a backup of any existing config). Pure diagnostic otherwise -- no env-var writes, no npm installs.
+
+If you'd rather walk through manually, the full sequence is:
+
 1. **Prerequisites:** OpenCode installed (`npm install -g opencode-ai`), Ollama running locally with at least `granite4:7b-a1b-h` pulled, a Cloudflare account with AI Gateway enabled and provider API keys stored in BYOK.
 2. **Set three env vars** (Windows user scope, one-time):
    ```powershell

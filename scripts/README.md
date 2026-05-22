@@ -1,6 +1,45 @@
 # scripts/
 
-Verification scripts for the opencode-cloudflare-ai-gateway setup. Two flavors:
+Two diagnostic tools, each with parallel PowerShell + Bash implementations.
+
+## check-setup -- "am I ready to use this repo?"
+
+`check-setup.ps1` (Windows) / `check-setup.sh` (macOS / Linux / Git Bash) walks every prerequisite in order and prints a PASS/FAIL per item with the exact fix command for anything missing. Pure diagnostic by default -- no env-var writes, no npm installs, no system changes. Pass `-InstallConfig` (PS) / `--install-config` (Bash) to ALSO copy `opencode.example.json` into place at `~/.config/opencode/opencode.json` (with a backup of any existing file).
+
+Checks performed (in order):
+
+1. OpenCode CLI on PATH
+2. Node.js >= 18
+3. CF_ACCOUNT_ID env var set
+4. CF_GATEWAY_NAME env var set
+5. CF_AIG_TOKEN env var set (reports length only -- value never logged)
+6. OPENCODE_EXPERIMENTAL_LSP_TOOL == "true"
+7. opencode.json exists at `~/.config/opencode/opencode.json`
+8. Superpowers plugin installed AND wired up in opencode.json's `plugin` array
+9. MCP servers configured (context7 required; cloudflare-docs and snyk optional)
+10. Ollama running (optional -- local tier won't work without it)
+11. granite4 model pulled in Ollama (optional)
+12. PowerShell 7+ / Bash 4+ (defensive self-check)
+
+Exit code 0 only if all REQUIRED checks pass. Optional failures emit warnings but don't fail the run.
+
+```powershell
+# Windows
+.\check-setup.ps1                  # diagnostic only
+.\check-setup.ps1 -InstallConfig   # also copy opencode.example.json into place (with backup)
+```
+
+```bash
+# macOS / Linux / Git Bash
+./check-setup.sh                   # diagnostic only
+./check-setup.sh --install-config  # also copy opencode.example.json into place (with backup)
+```
+
+Run this FIRST before `verify-models` -- `check-setup` confirms the environment is in place; `verify-models` confirms the configured models are actually reachable through the gateway.
+
+## verify-models -- "are the models I configured reachable?"
+
+Two flavors:
 
 | Script | Platform | Dependencies |
 |---|---|---|
@@ -9,7 +48,7 @@ Verification scripts for the opencode-cloudflare-ai-gateway setup. Two flavors:
 
 Both do the exact same thing: read `opencode.json`, walk every model entry in every configured provider, send a tiny "say hi" request through the appropriate gateway/local endpoint, and write pass/fail reports as both Markdown and JSON.
 
-## Usage
+## verify-models usage
 
 **Windows:**
 
