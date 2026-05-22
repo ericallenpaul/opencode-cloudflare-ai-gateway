@@ -264,3 +264,18 @@ Caught this during a pre-push secret sweep before the initial commit went to the
 Claude's session storage is per-encoded-project-dir so its transcript copy stays scoped correctly. OpenCode's is in a SQLite DB and requires manual `opencode export <session-id>`, which sidesteps the issue.
 
 **Lesson generalized**: any "copy whatever's recent" heuristic that reads from a global directory is one indexer mtime-bump away from leaking unrelated data. When in doubt, require explicit identifiers (session IDs, project paths) over time-based heuristics.
+
+## OpenCode's cost win comes paired with a discipline gap that prompt nudges can close
+
+First markdown-editor benchmark run surfaced a real pattern. OpenCode (gpt-5 via this gateway) produced functionally correct app logic -- same parser correctness, same XSS handling, same R1-R8 PASS as claude (opus 4.7) and codex (gpt-5 direct). But it scored 2.6 / 5 on the qualitative dimensions vs 4.4 / 4.6 for the frontier-direct tools. The gap was almost entirely about deliverable discipline rather than coding capability:
+
+- Tests were placed at `output/tests/markdown.test.js` instead of `output/markdown.test.js` -- the prompt asked for "a test file you can run with `node --test`" which we interpret as a single file at root. OpenCode's nesting cost it R9 and R10 even though the tests themselves were well-formed and would have passed if invoked from the right path.
+- `README.md` was a single line (`# Self-contained Markdown Editor`) despite the SPEC asking for usage, test command, scope-in/out, and security model writeup. Both frontier tools wrote 50+ line READMEs covering all of that.
+- Mobile responsive layout was skipped (no `@media` query, 1fr/1fr grid persists at narrow widths, content wraps mid-word). Both other tools handled it.
+- `superpowers:verification-before-completion` was invoked per the prompt but evidently didn't actually run the tests -- the test-file-location issue would have been caught immediately by an `exit code != 0` from `node --test`.
+
+This is a discipline gap, not a capability gap. The gpt-5 model that powers opencode's build agent demonstrably knows how to write a `@media` query and a thorough README -- it just elected not to. The frontier tools' equivalent quality scores reflect more diligent prompt-following, not different model knowledge of markdown rendering.
+
+**Fix applied**: the build-agent prompt in `opencode.example.json` now includes explicit deliverable-discipline language up front: "Place files EXACTLY where specified... do NOT nest into subdirectories unless asked... READMEs MUST include sections on usage/test-command/scope/security-model... re-read the prompt's deliverable list before claiming complete... `superpowers:verification-before-completion` is non-negotiable on any prompt with named deliverables." Worth re-running the markdown-editor benchmark after this change to measure whether the gap closes -- if it does, the lesson is that cheap-tier models can match frontier-tier *on this kind of work* with the right agent-level scaffolding.
+
+**Lesson generalized**: the tiered story isn't just "use cheap models for cheap work." It's "use cheap models with strong agent-level discipline for work that fits in their capability envelope." When a cheap model underperforms, audit whether it's a knowledge limit (real escalation needed) or a discipline limit (prompt fix sufficient) before assuming you need to spend more on inference.
