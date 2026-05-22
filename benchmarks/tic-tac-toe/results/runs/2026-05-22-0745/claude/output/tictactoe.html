@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Tic-Tac-Toe</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: #1a1d24;
+    color: #e6e8eb;
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem 1rem;
+  }
+  h1 { margin: 0 0 1rem; font-weight: 600; letter-spacing: 0.05em; }
+  #status {
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
+    min-height: 1.5em;
+    text-align: center;
+  }
+  #board {
+    display: grid;
+    grid-template-columns: repeat(3, 6rem);
+    grid-template-rows: repeat(3, 6rem);
+    gap: 6px;
+    background: #2a2f3a;
+    padding: 6px;
+    border-radius: 8px;
+  }
+  .cell {
+    background: #3a4150;
+    border: none;
+    border-radius: 4px;
+    font-size: 3rem;
+    font-weight: 700;
+    color: #e6e8eb;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+    font-family: inherit;
+  }
+  .cell:hover:not(:disabled) { background: #4a5263; }
+  .cell:disabled { cursor: default; }
+  .cell.x { color: #6fb1ff; }
+  .cell.o { color: #ff9b6f; }
+  .cell.win { background: #2d6b3a; animation: pulse 0.6s ease-in-out; }
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.08); }
+  }
+  #scoreboard {
+    display: flex;
+    gap: 2rem;
+    margin: 1.5rem 0 1rem;
+    font-size: 1rem;
+  }
+  .score { text-align: center; }
+  .score-label { color: #9aa3b2; font-size: 0.85rem; letter-spacing: 0.05em; }
+  .score-value { font-size: 1.75rem; font-weight: 600; margin-top: 0.25rem; }
+  #score-x .score-value { color: #6fb1ff; }
+  #score-o .score-value { color: #ff9b6f; }
+  #score-draws .score-value { color: #c9a96f; }
+  .buttons { display: flex; gap: 0.75rem; }
+  button.action {
+    background: #3a4150;
+    color: #e6e8eb;
+    border: none;
+    padding: 0.6rem 1.2rem;
+    font-size: 0.95rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s;
+  }
+  button.action:hover { background: #4a5263; }
+  button.action.danger:hover { background: #6b3a3a; }
+</style>
+</head>
+<body>
+<h1>Tic-Tac-Toe</h1>
+<div id="status" aria-live="polite">X's turn</div>
+<div id="board" role="grid" aria-label="Tic-tac-toe board"></div>
+<div id="scoreboard">
+  <div class="score" id="score-x">
+    <div class="score-label">X WINS</div>
+    <div class="score-value" data-score="X">0</div>
+  </div>
+  <div class="score" id="score-draws">
+    <div class="score-label">DRAWS</div>
+    <div class="score-value" data-score="draws">0</div>
+  </div>
+  <div class="score" id="score-o">
+    <div class="score-label">O WINS</div>
+    <div class="score-value" data-score="O">0</div>
+  </div>
+</div>
+<div class="buttons">
+  <button class="action" id="restart-btn">Restart Round</button>
+  <button class="action danger" id="reset-scores-btn">Reset Scores</button>
+</div>
+
+<script>
+// ---- Pure logic (exported via globalThis for Node test runner) ----
+const WIN_LINES = [
+  [0,1,2],[3,4,5],[6,7,8],
+  [0,3,6],[1,4,7],[2,5,8],
+  [0,4,8],[2,4,6]
+];
+
+function checkWinner(board) {
+  for (const line of WIN_LINES) {
+    const [a,b,c] = line;
+    if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+      return { winner: board[a], line: line };
+    }
+  }
+  return { winner: null, line: null };
+}
+
+function isDraw(board) {
+  return board.every(cell => cell !== null) && checkWinner(board).winner === null;
+}
+
+// Expose for Node vm context (test runner). `globalThis` exists in both browser and Node.
+globalThis.checkWinner = checkWinner;
+globalThis.isDraw = isDraw;
+
+// ---- DOM/localStorage wiring (skipped when loaded outside the browser) ----
+if (typeof document !== 'undefined') {
+  const SCORES_KEY = 'tictactoe.scores';
+
+  let board, currentPlayer, gameOver, scores;
+  let cellEls = [];
+  const statusEl = document.getElementById('status');
+  const boardEl = document.getElementById('board');
+  const restartBtn = document.getElementById('restart-btn');
+  const resetScoresBtn = document.getElementById('reset-scores-btn');
+
+  function loadScores() {
+    try {
+      const raw = localStorage.getItem(SCORES_KEY);
+      if (!raw) return { X: 0, O: 0, draws: 0 };
+      const parsed = JSON.parse(raw);
+      return {
+        X: Number(parsed.X) || 0,
+        O: Number(parsed.O) || 0,
+        draws: Number(parsed.draws) || 0
+      };
+    } catch (e) {
+      return { X: 0, O: 0, draws: 0 };
+    }
+  }
+
+  function saveScores() {
+    try {
+      localStorage.setItem(SCORES_KEY, JSON.stringify(scores));
+    } catch (e) { /* localStorage unavailable, ignore */ }
+  }
+
+  function renderScores() {
+    document.querySelectorAll('[data-score]').forEach(el => {
+      const key = el.getAttribute('data-score');
+      el.textContent = String(scores[key] ?? 0);
+    });
+  }
+
+  function buildBoard() {
+    boardEl.innerHTML = '';
+    cellEls = [];
+    for (let i = 0; i < 9; i++) {
+      const btn = document.createElement('button');
+      btn.className = 'cell';
+      btn.setAttribute('role', 'gridcell');
+      btn.setAttribute('aria-label', `Cell ${i + 1}`);
+      btn.dataset.index = String(i);
+      btn.addEventListener('click', () => handleCellClick(i));
+      boardEl.appendChild(btn);
+      cellEls.push(btn);
+    }
+  }
+
+  function renderBoard(winningLine) {
+    for (let i = 0; i < 9; i++) {
+      const el = cellEls[i];
+      const val = board[i];
+      el.textContent = val ?? '';
+      el.classList.toggle('x', val === 'X');
+      el.classList.toggle('o', val === 'O');
+      el.classList.toggle('win', !!(winningLine && winningLine.includes(i)));
+      el.disabled = !!val || gameOver;
+    }
+  }
+
+  function setStatus(text) {
+    statusEl.textContent = text;
+  }
+
+  function handleCellClick(i) {
+    if (gameOver || board[i]) return;
+    board[i] = currentPlayer;
+
+    const result = checkWinner(board);
+    if (result.winner) {
+      gameOver = true;
+      scores[result.winner] += 1;
+      saveScores();
+      renderScores();
+      renderBoard(result.line);
+      setStatus(`${result.winner} wins!`);
+      return;
+    }
+    if (isDraw(board)) {
+      gameOver = true;
+      scores.draws += 1;
+      saveScores();
+      renderScores();
+      renderBoard(null);
+      setStatus("Draw!");
+      return;
+    }
+    currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+    renderBoard(null);
+    setStatus(`${currentPlayer}'s turn`);
+  }
+
+  function restartRound() {
+    board = [null, null, null, null, null, null, null, null, null];
+    currentPlayer = 'X';
+    gameOver = false;
+    renderBoard(null);
+    setStatus("X's turn");
+  }
+
+  function resetScores() {
+    scores = { X: 0, O: 0, draws: 0 };
+    saveScores();
+    renderScores();
+  }
+
+  restartBtn.addEventListener('click', restartRound);
+  resetScoresBtn.addEventListener('click', resetScores);
+
+  scores = loadScores();
+  buildBoard();
+  renderScores();
+  restartRound();
+}
+</script>
+</body>
+</html>

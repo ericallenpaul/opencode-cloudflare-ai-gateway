@@ -64,19 +64,30 @@ Full walkthrough with screenshots and gotchas: [`docs/SETUP.md`](docs/SETUP.md).
 
 ## Validation: does the tiered setup actually save money?
 
-Short answer: yes, dramatically -- at least on the first benchmark run.
+Short answer: yes, dramatically -- and the headline is stable across runs.
 
-`benchmarks/tic-tac-toe` ran all three tools against the same prompt and acceptance criteria (R1-R10 functional tests via Playwright). All three produced working apps. All three passed 10/10 criteria.
+`benchmarks/tic-tac-toe` has been run twice now, identical prompt and identical R1-R10 acceptance criteria each time. Both runs across all three tools:
 
-| Tool | Wall | Cost (USD) | Effective Input | Output | R1-R10 |
-|---|---:|---:|---:|---:|---:|
-| opencode | 5m 18s | $0.28 | 622K | 10.9K | 10/10 |
-| codex | 9m 48s | $1.97 | 1.38M | 26.6K | 10/10 |
-| claude | 9m 34s | $2.91 | 3.25M | 30.9K | 10/10 |
+| Tool | Run 1 (05-21) | Run 2 (05-22) | Stable? |
+|---|---|---|---|
+|  | cost / wall / R1-R10 / quality avg | cost / wall / R1-R10 / quality avg |  |
+| **opencode** | $0.28 / 5m18s / 10/10 / 3.0 | $0.25 / 7m02s / 10/10 / 3.2 | yes |
+| codex | $1.97 / 9m48s / 10/10 / 4.8 | $2.18 / 11m06s / 10/10 / 4.6 | yes |
+| claude | $2.91 / 9m34s / 10/10 / 4.8 | $1.60 / 8m56s / 9/10 / 4.4 | claude swung |
 
-RunId `2026-05-21-0818`. opencode ran GPT-5 via this repo's gateway stack. codex ran GPT-5 (CLI mis-reports as "gpt-5.5" in session records -- actual model is GPT-5). claude ran claude-opus-4-7.
+Models: opencode ran GPT-5 via this repo's gateway stack. codex ran GPT-5 (CLI mis-reports as "gpt-5.5" in session records). claude ran claude-opus-4-7. Quality avg = mean across the 5 quality dimensions (1-5 each), filled in by an agent in the qualitative-judge pass.
 
-Bottom line: **~10x cost reduction vs Claude Code, ~7x vs Codex CLI, identical functional outcome.**
+What was the same both runs:
+- **opencode is cheapest by 6-10x** -- never close to the frontier-direct tools on cost.
+- **opencode and codex held 10/10 functional R1-R10** -- working apps.
+- **opencode's composite rank is #1 both times** (composite weights cost 50%, quality 30%, bugs 20%).
+- **Frontier tools produce higher-quality code** (quality avg ~4.4-4.8) than opencode (~3.0-3.2). The cost reduction comes with a real, measurable polish gap.
+
+What swung between runs (run-to-run noise the methodology warns about):
+- Claude got 45% cheaper run-over-run AND lost one R1-R10 criterion. Likely a prompt-cache state difference between runs combined with model nondeterminism.
+- Claude vs codex flipped 2nd/3rd in the composite ranking.
+
+Bottom line: **~6-10x cost reduction vs Claude Code, consistently across two runs, paying for it with somewhat lower-polish output.** That trade-off is the whole point of the tiered approach -- use cheap tiers when "working" is good enough, escalate to frontier when polish is the bottleneck.
 
 Three caveats worth knowing before citing these numbers:
 
@@ -84,7 +95,7 @@ Three caveats worth knowing before citing these numbers:
 - **Different plugin stacks.** Claude's stack includes claude-mem, which pre-loads a memory blob on the first turn -- this inflates effective input significantly. "OpenCode is cheaper" partly means "OpenCode's startup context is leaner," not only "its models are cheaper."
 - **Cost figures are API-retail-equivalent.** ccusage computes what you would pay at public API rates. If you're on a Claude Pro/Max subscription or running BYOK through the gateway, your actual bill looks different.
 
-Full caveats list (8 total) and methodology: [`benchmarks/README.md`](benchmarks/README.md). Full run data: [`benchmarks/tic-tac-toe/results/runs/2026-05-21-0818/2026-05-21-0818.md`](benchmarks/tic-tac-toe/results/runs/2026-05-21-0818/2026-05-21-0818.md).
+Full caveats list (8 total) and methodology: [`benchmarks/README.md`](benchmarks/README.md). Per-run data: [`runs/2026-05-21-0818`](benchmarks/tic-tac-toe/results/runs/2026-05-21-0818/2026-05-21-0818.md), [`runs/2026-05-22-0745`](benchmarks/tic-tac-toe/results/runs/2026-05-22-0745/2026-05-22-0745.md). Ranking log across all runs: [`comparisons.md`](benchmarks/tic-tac-toe/results/comparisons.md).
 
 ## Why one gateway in front of everything
 

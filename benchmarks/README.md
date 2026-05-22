@@ -4,17 +4,21 @@ Reproducible benchmarks that measure **cost, time, and quality** of building the
 
 ## Headline result so far
 
-RunId `2026-05-21-0818` -- tic-tac-toe. All three tools passed all 10 functional acceptance criteria (R1-R10, Playwright-verified).
+Two completed runs of `tic-tac-toe`, identical prompt and acceptance criteria each time. Models: opencode ran GPT-5 via this repo's gateway stack; codex ran GPT-5 (CLI mis-reports as "gpt-5.5" in session records); claude ran claude-opus-4-7.
 
-| Tool | Wall | Cost (USD) | Effective Input | Output | Model | R1-R10 |
-|---|---:|---:|---:|---:|---|---:|
-| opencode | 5m 18s | $0.28 | 622K | 10.9K | gpt-5 | 10/10 |
-| codex | 9m 48s | $1.97 | 1.38M | 26.6K | gpt-5 (mis-reported as "gpt-5.5" in session records) | 10/10 |
-| claude | 9m 34s | $2.91 | 3.25M | 30.9K | claude-opus-4-7 | 10/10 |
+| Tool | Run 1 (05-21) cost / wall / R1-R10 | Run 2 (05-22) cost / wall / R1-R10 | Quality avg (run 1 / run 2) |
+|---|---|---|---|
+| **opencode** | $0.28 / 5m18s / 10/10 | $0.25 / 7m02s / 10/10 | 3.0 / 3.2 |
+| codex | $1.97 / 9m48s / 10/10 | $2.18 / 11m06s / 10/10 | 4.8 / 4.6 |
+| claude | $2.91 / 9m34s / 10/10 | $1.60 / 8m56s / 9/10 | 4.8 / 4.4 |
 
-**Effective Input** = `inputTokens + cacheReadTokens + cacheWriteTokens` -- what the model actually saw, normalized across tools with different caching strategies. See "Caveats and limitations" below before drawing conclusions from these numbers.
+**Effective Input** (per-run details linked below) = `inputTokens + cacheReadTokens + cacheWriteTokens` -- what the model actually saw, normalized across tools with different caching strategies.
 
-Full data: [`tic-tac-toe/results/runs/2026-05-21-0818/2026-05-21-0818.md`](tic-tac-toe/results/runs/2026-05-21-0818/2026-05-21-0818.md).
+What stayed stable: opencode is cheapest by 6-10x in both runs, opencode and codex both held 10/10 functional R1-R10 both runs, opencode held composite rank #1 both runs. Frontier tools scored higher on quality (~4.4-4.8 vs opencode ~3.0-3.2).
+
+What swung run-over-run (the nondeterminism the methodology warns about): claude got 45% cheaper but dropped one functional criterion, claude vs codex flipped 2nd/3rd on the composite ranking.
+
+Full per-run data: [`runs/2026-05-21-0818`](tic-tac-toe/results/runs/2026-05-21-0818/2026-05-21-0818.md), [`runs/2026-05-22-0745`](tic-tac-toe/results/runs/2026-05-22-0745/2026-05-22-0745.md). Cross-run ranking log: [`tic-tac-toe/results/comparisons.md`](tic-tac-toe/results/comparisons.md). See "Caveats and limitations" below before citing any of these numbers.
 
 ## Prerequisites
 

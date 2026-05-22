@@ -16,4 +16,5 @@ The ranking is a composite of cost (ccusage), wall-clock time, and quality scori
 
 <!-- newest first -->
 
-- 2026-05-21-0818 -- #1 opencode, #2 codex, #3 claude  -- all 10/10 R1-R10; opencode 10x cheaper than claude at identical functional outcome; qualitative AI scoring pending
+- 2026-05-22-0745 -- #1 opencode, #2 claude, #3 codex  -- opencode 10/10 R1-R10 at $0.25 (6-9x cheaper than the others); claude dropped to 9/10 (one regression) and got 45% cheaper run-over-run; codex stayed 10/10 but most expensive. Claude vs codex 2nd/3rd ordering flipped from run 1.
+- 2026-05-21-0818 -- #1 opencode, #2 codex, #3 claude  -- all 10/10 R1-R10; opencode 10x cheaper than claude at identical functional outcome; qualitative scoring puts opencode 3.0/5 vs frontier tools 4.8/5 (real polish gap, but small per-tool cost difference doesn't justify the price).
