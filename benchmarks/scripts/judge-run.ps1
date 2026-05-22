@@ -537,15 +537,37 @@ foreach ($tr in $toolResults) {
 Write-Host ""
 
 # ============================================================
+# Generate per-tool pre-substituted judge-prompt-<tool>.md files
+# ============================================================
+# JUDGE-PROMPT.md is a template with {{REPO_ROOT}}, {{RUN_ID}}, {{TOOL}},
+# {{BENCHMARK}} placeholders. For each tool processed, write a ready-to-
+# paste file at runs/<RunId>/judge-prompt-<tool>.md so the user doesn't
+# have to do manual substitution before pasting into their chosen agent.
+
+$promptTemplatePath = Join-Path $judgeDir "JUDGE-PROMPT.md"
+$generatedPromptFiles = @()
+if (Test-Path $promptTemplatePath) {
+    $template = Get-Content -Raw -Path $promptTemplatePath
+    foreach ($tr in ($toolResults | Where-Object { -not $_.Skipped })) {
+        $rendered = $template `
+            -replace '\{\{REPO_ROOT\}\}', $repoRoot `
+            -replace '\{\{RUN_ID\}\}',   $RunId `
+            -replace '\{\{TOOL\}\}',     $tr.Tool `
+            -replace '\{\{BENCHMARK\}\}', $Benchmark
+        $outPath = Join-Path $resultsDir "judge-prompt-$($tr.Tool).md"
+        Set-Content -Encoding utf8 -Path $outPath -Value $rendered
+        $generatedPromptFiles += $outPath
+    }
+}
+
+# ============================================================
 # Next steps block
 # ============================================================
-
-$promptPath = Join-Path $judgeDir "JUDGE-PROMPT.md"
 
 Write-Host "NEXT STEPS" -ForegroundColor Cyan
 Write-Host "==========" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "1. Per-tool judge.md stubs:" -ForegroundColor White
+Write-Host "1. Per-tool judge.md stubs (functional R1-R10 pre-filled):" -ForegroundColor White
 foreach ($tr in ($toolResults | Where-Object { -not $_.Skipped })) {
     Write-Host "     $($tr.JudgeMdPath)" -ForegroundColor Yellow
 }
@@ -553,13 +575,12 @@ Write-Host ""
 Write-Host "2. Cross-tool comparison:" -ForegroundColor White
 Write-Host "     $crossToolMd" -ForegroundColor Yellow
 Write-Host ""
-Write-Host "3. Qualitative agent prompt:" -ForegroundColor White
-Write-Host "     $promptPath" -ForegroundColor Yellow
-Write-Host ""
-Write-Host "   For each tool, substitute in the prompt:" -ForegroundColor DarkGray
-Write-Host "     {{REPO_ROOT}} -> $repoRoot" -ForegroundColor DarkGray
-Write-Host "     {{RUN_ID}}   -> $RunId" -ForegroundColor DarkGray
-foreach ($tr in ($toolResults | Where-Object { -not $_.Skipped })) {
-    Write-Host "     {{TOOL}}    -> $($tr.Tool)" -ForegroundColor DarkGray
+Write-Host "3. Ready-to-paste qualitative prompts (one per tool, placeholders already substituted):" -ForegroundColor White
+foreach ($f in $generatedPromptFiles) {
+    Write-Host "     $f" -ForegroundColor Yellow
 }
+Write-Host ""
+Write-Host "   Open each one in a multimodal coding agent. The agent will fill in the soft" -ForegroundColor DarkGray
+Write-Host "   scores in the corresponding <tool>/judge.md. Use the SAME agent across all" -ForegroundColor DarkGray
+Write-Host "   tools so scoring bias stays uniform." -ForegroundColor DarkGray
 Write-Host ""
