@@ -19,7 +19,7 @@ This is why MCP integration belongs in the basic setup, not as an afterthought.
 
 ## The shipping default set
 
-Three MCP servers ship enabled in `opencode.example.json`. All are no-frill, no-credential or trivial-credential, and pay back their token cost on the first real task.
+Four MCP servers ship enabled in `opencode.example.json`. All are no-frill, no-credential or trivial-credential, and pay back their token cost on the first real task.
 
 ### context7 — current library documentation
 
@@ -83,17 +83,37 @@ If you don't want Snyk, set `"enabled": false` on the entry in `opencode.json`.
 
 **MCP vs. Snyk's web dashboard:** the MCP integration gives the AI agent on-demand scanning (you ask, it scans). Snyk's web dashboard at `app.snyk.io` is a separate concern — that's where you register repos for continuous scanning via SCM integration (GitHub, Bitbucket, etc.). The two share the same auth but solve different problems. Most teams want both.
 
+### A note on agent self-verification limits
+
+Worth pausing on before the Playwright section: **a CLI coding agent cannot, by default, verify that an HTML/JS deliverable actually works in a browser.** It can read the source. It can run unit tests against a parser function in isolation. It can confirm the HTML structure is valid and no external scripts are referenced. None of those check whether the textarea-input-event is correctly wired to the parser-invocation function. None of those open a real browser, type characters, and observe whether the preview pane updates.
+
+In practice this turns up as a class of bug that looks like passing software: unit tests green, HTML well-formed, README claims "live preview updates within 250ms" — but a real browser interaction shows the preview never moves because the event handler listens for `keydown` instead of `input`, or because the wire-up code is in an unreached branch. Honest agents flag this gap explicitly ("I could not visually confirm the file:// load -- here is the strongest proxy evidence available"). Less honest ones just declare done.
+
+**The Playwright MCP closes this gap.** It gives the agent a real browser as a tool. Verification-before-completion stops being "trust the unit tests" and becomes "load the file, exercise it, observe the result." This applies to every coding agent on every HTML/JS deliverable -- it's not opencode-specific. We ship it enabled by default for that reason.
+
+### playwright — browser automation and end-to-end verification
+
+- **Command in example config**: `["npx", "-y", "@playwright/mcp@latest"]` (local, launches Microsoft's official Playwright MCP server as a subprocess)
+- **Auth**: none
+- **Adds**: ~500 MB of browser binaries on first run (Playwright downloads Chromium automatically). One-time cost; cached locally afterward.
+- **What it does**: Exposes Playwright's browser-automation tooling as MCP tools the agent can call directly. The full surface includes `browser_navigate` (open a URL, including `file://`), `browser_type` (type into form fields), `browser_click`, `browser_snapshot` (structured accessibility-tree snapshot of the DOM), `browser_take_screenshot`, `browser_evaluate` (run arbitrary JS), and several more. The agent gets the same browser-control vocabulary that human test authors use.
+- **Why it matters**: closes the self-verification gap described in the note above. For HTML/JS deliverables, the agent can actually load and exercise its own output before claiming complete. Catches integration bugs (event-handler mis-wiring, render timing, mobile layout breakage) that no amount of unit-testing the parser-in-isolation will surface. Also useful well beyond verification: visual debugging, end-to-end test authoring, scraping for one-off lookups, "why isn't this button enabled" investigations.
+- **Cost shape**: tokens only when the agent invokes a browser tool; zero idle cost. The tool definitions add a few hundred tokens to the agent's startup context, which is more than paid back the first time the agent catches an integration bug instead of shipping it.
+
+**One-time setup** (Windows or Unix):
+
+```bash
+# The MCP entry uses `npx -y` which auto-installs on first invocation,
+# but pre-pulling the browsers ahead of time avoids a multi-minute pause
+# the first time the agent uses it:
+npx -y @playwright/mcp@latest --help    # triggers the install and prints help
+```
+
+The `verification-before-completion` skill in superpowers pairs naturally with this -- when both are present, the agent has a clear path: build, run unit tests, then open the deliverable in a real browser and exercise it before declaring done.
+
 ## Recommended optional MCPs
 
 Not shipped enabled, but document-worthy because they're transformative for specific workflows. Add to your `opencode.json` as needed.
-
-### Playwright — browser automation
-
-- **Command**: `["npx", "-y", "@playwright/mcp@latest"]`
-- **Adds**: ~500 MB of browser binaries on first install
-- **Why**: For any project with a UI, the agent can navigate, click, screenshot, read DOM, evaluate JS, run assertions. Replaces ad-hoc "describe the page and ask the agent" with "let the agent actually look."
-- **Especially powerful with**: visual debugging ("why isn't this button enabled"), end-to-end test authoring, scraping for one-off lookups.
-- **Install**: `npx @playwright/mcp install` once to pull browsers, then add the MCP entry.
 
 ### Microsoft Learn — Microsoft / Azure / .NET docs
 
@@ -159,8 +179,10 @@ npm install -g snyk
 snyk auth                         # opens browser for SSO / free-tier signup
 snyk config set org=<your-slug>   # find at https://app.snyk.io URL
 
-# 2. (Optional) Playwright MCP install
-npx -y @playwright/mcp install
+# 2. Pre-pull Playwright browsers (one-time, ~500 MB).
+#    The MCP entry auto-installs on first use, but pre-pulling avoids
+#    a multi-minute pause the first time the agent invokes a browser tool.
+npx -y @playwright/mcp@latest --help
 ```
 
 ```bash
@@ -168,8 +190,7 @@ npx -y @playwright/mcp install
 npm install -g snyk
 snyk auth
 snyk config set org=<your-slug>
-# optional
-npx -y @playwright/mcp install
+npx -y @playwright/mcp@latest --help
 ```
 
 After that, the MCPs in the example `opencode.json` work on next opencode launch.

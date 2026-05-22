@@ -375,7 +375,7 @@ if (-not $configExists) {
         $cfg = Get-Content $CONFIG_FILE -Raw | ConvertFrom-Json -ErrorAction Stop
         $mcpObj = $cfg.mcp
 
-        $wantedMcps = @("context7", "cloudflare-docs", "snyk")
+        $wantedMcps = @("context7", "cloudflare-docs", "snyk", "playwright")
         $present    = @()
         $missing    = @()
 

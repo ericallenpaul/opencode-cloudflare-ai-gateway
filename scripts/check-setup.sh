@@ -354,7 +354,7 @@ elif ! command -v jq >/dev/null 2>&1; then
   info_line "        Install jq to enable MCP config checks: https://jqlang.github.io/jq/"
   add_result "$idx" "$label" 0 0 "skipped -- jq not installed"
 else
-  wanted_mcps=("context7" "cloudflare-docs" "snyk")
+  wanted_mcps=("context7" "cloudflare-docs" "snyk" "playwright")
   present_mcps=()
   missing_mcps=()
 
