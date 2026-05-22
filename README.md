@@ -83,9 +83,9 @@ What was the same both runs:
 - **opencode's composite rank is #1 both times** (composite weights cost 50%, quality 30%, bugs 20%).
 - **Frontier tools produce higher-quality code** (quality avg ~4.4-4.8) than opencode (~3.0-3.2). The cost reduction comes with a real, measurable polish gap.
 
-What swung between runs (run-to-run noise the methodology warns about):
+Where claude didn't stay stable (the kind of run-to-run noise the methodology warns about):
 - Claude got 45% cheaper run-over-run AND lost one R1-R10 criterion. Likely a prompt-cache state difference between runs combined with model nondeterminism.
-- Claude vs codex flipped 2nd/3rd in the composite ranking.
+- Claude vs codex flipped 2nd/3rd in the composite ranking as a result.
 
 Bottom line: **~6-10x cost reduction vs Claude Code, consistently across two runs, paying for it with somewhat lower-polish output.** That trade-off is the whole point of the tiered approach -- use cheap tiers when "working" is good enough, escalate to frontier when polish is the bottleneck.
 

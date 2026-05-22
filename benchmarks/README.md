@@ -16,7 +16,7 @@ Two completed runs of `tic-tac-toe`, identical prompt and acceptance criteria ea
 
 What stayed stable: opencode is cheapest by 6-10x in both runs, opencode and codex both held 10/10 functional R1-R10 both runs, opencode held composite rank #1 both runs. Frontier tools scored higher on quality (~4.4-4.8 vs opencode ~3.0-3.2).
 
-What swung run-over-run (the nondeterminism the methodology warns about): claude got 45% cheaper but dropped one functional criterion, claude vs codex flipped 2nd/3rd on the composite ranking.
+Where the numbers didn't stay stable run-over-run (the kind of nondeterminism the methodology warns about): claude got 45% cheaper but dropped one functional criterion, and claude vs codex flipped 2nd/3rd on the composite ranking as a result.
 
 Full per-run data: [`runs/2026-05-21-0818`](tic-tac-toe/results/runs/2026-05-21-0818/2026-05-21-0818.md), [`runs/2026-05-22-0745`](tic-tac-toe/results/runs/2026-05-22-0745/2026-05-22-0745.md). Cross-run ranking log: [`tic-tac-toe/results/comparisons.md`](tic-tac-toe/results/comparisons.md). See "Caveats and limitations" below before citing any of these numbers.
 
