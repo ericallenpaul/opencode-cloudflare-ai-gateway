@@ -80,9 +80,9 @@ Full walkthrough with screenshots and gotchas: [`docs/SETUP.md`](docs/SETUP.md).
 
 ## Validation: does the tiered setup actually save money?
 
-Short answer: yes, dramatically -- and the headline is stable across runs.
+Short answer: **yes on cost, with a measurable quality gap on harder work that we're actively iterating to close.** Two benchmark targets, four completed runs to date, every run published with the data and the agent config version in effect.
 
-`benchmarks/tic-tac-toe` has been run twice now, identical prompt and identical R1-R10 acceptance criteria each time. Both runs across all three tools:
+`benchmarks/tic-tac-toe` has been run twice, identical prompt and identical R1-R10 acceptance criteria each time. Both runs across all three tools:
 
 | Tool | Run 1 (05-21) | Run 2 (05-22) | Stable? |
 |---|---|---|---|
@@ -103,7 +103,27 @@ Where claude didn't stay stable (the kind of run-to-run noise the methodology wa
 - Claude got 45% cheaper run-over-run AND lost one R1-R10 criterion. Likely a prompt-cache state difference between runs combined with model nondeterminism.
 - Claude vs codex flipped 2nd/3rd in the composite ranking as a result.
 
-Bottom line: **~6-10x cost reduction vs Claude Code, consistently across two runs, paying for it with somewhat lower-polish output.** That trade-off is the whole point of the tiered approach -- use cheap tiers when "working" is good enough, escalate to frontier when polish is the bottleneck.
+Bottom line on tic-tac-toe: **~6-10x cost reduction vs Claude Code, consistently across two runs, paying for it with somewhat lower-polish output.** That trade-off is the whole point of the tiered approach -- use cheap tiers when "working" is good enough, escalate to frontier when polish is the bottleneck.
+
+### A harder benchmark surfaces the trade-off more starkly
+
+`benchmarks/markdown-editor` is a deliberately harder target -- parser correctness, XSS handling, live-preview event wiring, ~300-500 LOC. Two runs completed:
+
+| | run 1 (opencode config v1) | run 2 (opencode config v2) |
+|---|---|---|
+| opencode R1-R10 / quality / cost | 8/10 (tests nested in subdir) / 2.6 / $0.25 | **10/10** (file-layout discipline landed) / 2.6 / $0.52 |
+| codex R1-R10 / quality / cost | 10/10 / 4.6 / $1.97 | 10/10 / 4.6 / $2.12 |
+| claude R1-R10 / quality / cost | 10/10 / 4.4 / $1.60 | 3/10 (live-preview wired to wrong DOM event) / 4.4 / $1.43 |
+
+What this benchmark surfaced that tic-tac-toe couldn't:
+
+- **Cost-tier still wins on cost** -- 3-5x cheaper than frontier-direct with 10/10 functional R1-R10 in run 2.
+- **Documentation quality is the real cost-tier gap.** Opencode wrote a one-line README both runs despite the SPEC asking for usage / test command / scope / security model sections. Frontier tools wrote 50-130 line READMEs.
+- **Frontier tools have meaningful run-to-run variance too.** Claude's 10/10 → 3/10 swing was a real integration bug -- the live-preview was wired to a keyboard event that doesn't fire on programmatic input. Opencode (the cheap-tier path) shipped working software in the same run where claude (frontier-direct) shipped broken software.
+
+Between runs we updated opencode's build-agent prompt to add deliverable-discipline rules. The file-layout rule landed (R9/R10 fix). The abstract README rule did not. Config v3 (template-driven README + Playwright MCP for browser-level self-verification) is queued for run 3.
+
+**Iteration lineage with commit hashes is documented in [`benchmarks/README.md` → "How we've iterated the opencode config"](benchmarks/README.md).** The benchmark itself (SPEC.md, PROMPT.md, R1-R10 Playwright assertions) has never changed between runs -- only the agent's instructions about how to follow them. A skeptical reader can verify this via `git log -p` on those files. The repo's commitment: tune the tool, not the test.
 
 Three caveats worth knowing before citing these numbers:
 
@@ -111,7 +131,10 @@ Three caveats worth knowing before citing these numbers:
 - **Different plugin stacks.** Claude's stack includes claude-mem, which pre-loads a memory blob on the first turn -- this inflates effective input significantly. "OpenCode is cheaper" partly means "OpenCode's startup context is leaner," not only "its models are cheaper."
 - **Cost figures are API-retail-equivalent.** ccusage computes what you would pay at public API rates. If you're on a Claude Pro/Max subscription or running BYOK through the gateway, your actual bill looks different.
 
-Full caveats list (8 total) and methodology: [`benchmarks/README.md`](benchmarks/README.md). Per-run data: [`runs/2026-05-21-0818`](benchmarks/tic-tac-toe/results/runs/2026-05-21-0818/2026-05-21-0818.md), [`runs/2026-05-22-0745`](benchmarks/tic-tac-toe/results/runs/2026-05-22-0745/2026-05-22-0745.md). Ranking log across all runs: [`comparisons.md`](benchmarks/tic-tac-toe/results/comparisons.md).
+Full caveats list (8 total) and methodology: [`benchmarks/README.md`](benchmarks/README.md). Per-run data:
+
+- tic-tac-toe: [`runs/2026-05-21-0818`](benchmarks/tic-tac-toe/results/runs/2026-05-21-0818/2026-05-21-0818.md), [`runs/2026-05-22-0745`](benchmarks/tic-tac-toe/results/runs/2026-05-22-0745/2026-05-22-0745.md), [`comparisons.md`](benchmarks/tic-tac-toe/results/comparisons.md)
+- markdown-editor: [`runs/2026-05-22-0837`](benchmarks/markdown-editor/results/runs/2026-05-22-0837/2026-05-22-0837.md), [`runs/2026-05-22-0951`](benchmarks/markdown-editor/results/runs/2026-05-22-0951/2026-05-22-0951.md), [`comparisons.md`](benchmarks/markdown-editor/results/comparisons.md)
 
 ## Why one gateway in front of everything
 
