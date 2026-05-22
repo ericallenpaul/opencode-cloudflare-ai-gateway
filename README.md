@@ -73,7 +73,7 @@ Short answer: yes, dramatically -- and the headline is stable across runs.
 |  | cost / wall / R1-R10 / quality avg | cost / wall / R1-R10 / quality avg |  |
 | **opencode** | $0.28 / 5m18s / 10/10 / 3.0 | $0.25 / 7m02s / 10/10 / 3.2 | yes |
 | codex | $1.97 / 9m48s / 10/10 / 4.8 | $2.18 / 11m06s / 10/10 / 4.6 | yes |
-| claude | $2.91 / 9m34s / 10/10 / 4.8 | $1.60 / 8m56s / 9/10 / 4.4 | claude swung |
+| claude | $2.91 / 9m34s / 10/10 / 4.8 | $1.60 / 8m56s / 9/10 / 4.4 | no (see below) |
 
 Models: opencode ran GPT-5 via this repo's gateway stack. codex ran GPT-5 (CLI mis-reports as "gpt-5.5" in session records). claude ran claude-opus-4-7. Quality avg = mean across the 5 quality dimensions (1-5 each), filled in by an agent in the qualitative-judge pass.
 
