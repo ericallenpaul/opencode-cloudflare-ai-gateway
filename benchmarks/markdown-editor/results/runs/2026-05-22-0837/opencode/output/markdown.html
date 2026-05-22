@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Self-contained Markdown Editor</title>
+  <style>
+    :root { color-scheme: light dark; }
+    html, body { height: 100%; margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+    .container { display: grid; grid-template-columns: 1fr 1fr; height: 100%; }
+    .pane { display: flex; flex-direction: column; min-height: 0; }
+    .pane header { padding: 8px 12px; border-bottom: 1px solid #ccc; font-weight: 600; }
+    .editor { width: 100%; height: 100%; border: none; padding: 12px; resize: none; font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; box-sizing: border-box; }
+    .preview { padding: 12px; overflow: auto; }
+    .preview pre { background: rgba(127,127,127,0.15); padding: 10px; border-radius: 6px; overflow: auto; }
+    .preview code { background: rgba(127,127,127,0.15); padding: 1px 4px; border-radius: 4px; }
+    .split { border-left: 1px solid #ccc; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <section class="pane">
+      <header>Markdown</header>
+      <textarea id="md" class="editor" placeholder="# Hello\n\nType markdown…"></textarea>
+    </section>
+    <section class="pane split">
+      <header>Preview</header>
+      <div id="preview" class="preview"></div>
+    </section>
+  </div>
+
+  <script>
+    // Minimal, XSS-safe markdown renderer (same logic as tests, duplicated inline)
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+    function sanitizeUrl(url) {
+      const u = String(url || '').trim();
+      const lower = u.toLowerCase();
+      if (lower.startsWith('http://') || lower.startsWith('https://') || lower.startsWith('mailto:')) {
+        return u.replace(/["&<>]/g, c => ({ '"': '&quot;', '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+      }
+      return null;
+    }
+    function renderInline(text) {
+      let s = escapeHtml(text);
+      const codeParts = [];
+      s = s.replace(/`([^`]+)`/g, (_m, code) => {
+        const idx = codeParts.push('<code>' + code + '</code>') - 1;
+        return '\u0000C' + idx + '\u0000';
+      });
+      s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_m, txt, url) => {
+        const safe = sanitizeUrl(url);
+        if (!safe) return _m;
+        return '<a href="' + safe + '">' + txt + '</a>';
+      });
+      s = s.replace(/(\*{3}|_{3})(.+?)\1/g, (_m, _mkr, inner) => '<strong><em>' + inner + '</em></strong>');
+      s = s.replace(/(\*{2}|__)(.+?)\1/g, (_m, _mkr, inner) => '<strong>' + inner + '</strong>');
+      s = s.replace(/(\*|_)([^\s][\s\S]*?)\1/g, (_m, _mkr, inner) => '<em>' + inner + '</em>');
+      s = s.replace(/\u0000C(\d+)\u0000/g, (_m, i) => codeParts[Number(i)]);
+      return s;
+    }
+    function renderParagraph(lines) {
+      const text = lines.join(' ').trim();
+      if (text === '') return '';
+      return '<p>' + renderInline(text) + '</p>';
+    }
+    function parseList(lines, start) {
+      const itemRe = /^(\s*)(?:([*+-])|(\d+)\.)\s+(.+)$/;
+      let i = start;
+      const first = lines[i].match(itemRe);
+      if (!first) return null;
+      const rootType = first[2] ? 'ul' : 'ol';
+      let html = '<' + rootType + '>';
+      while (i < lines.length) {
+        const m = lines[i].match(itemRe);
+        if (!m) break;
+        const type = m[2] ? 'ul' : 'ol';
+        if (type !== rootType && m[1].length < 2) break;
+        if (m[1].length >= 2) {
+          const nestedStart = i;
+          const nestedItems = [];
+          while (i < lines.length) {
+            const n = lines[i].match(itemRe);
+            if (!n || n[1].length < 2) break;
+            if ((n[2] ? 'ul' : 'ol') !== 'ul') break;
+            nestedItems.push(n[4]);
+            i++;
+          }
+          if (nestedItems.length) {
+            html += '<ul>' + nestedItems.map(t => '<li>' + renderInline(t) + '</li>').join('') + '</ul>';
+          } else {
+            if (i === nestedStart) i++;
+          }
+          continue;
+        }
+        html += '<li>' + renderInline(m[4]);
+        let j = i + 1;
+        const nested = [];
+        while (j < lines.length) {
+          const n = lines[j].match(itemRe);
+          if (!n || n[1].length < 2) break;
+          if ((n[2] ? 'ul' : 'ol') !== 'ul') break;
+          nested.push(n[4]);
+          j++;
+        }
+        if (nested.length) {
+          html += '<ul>' + nested.map(t => '<li>' + renderInline(t) + '</li>').join('') + '</ul>';
+          i = j;
+        } else {
+          i++;
+        }
+        html += '</li>';
+      }
+      html += '</' + rootType + '>';
+      return { html, nextIndex: i };
+    }
+    function renderMarkdown(md) {
+      const lines = String(md || '').split(/\r?\n/);
+      const out = [];
+      let i = 0;
+      while (i < lines.length) {
+        const line = lines[i];
+        if (/^```/.test(line)) {
+          i++;
+          const code = [];
+          while (i < lines.length && !/^```/.test(lines[i])) { code.push(lines[i]); i++; }
+          if (i < lines.length && /^```/.test(lines[i])) i++;
+          out.push('<pre><code>' + escapeHtml(code.join('\n')) + '</code></pre>');
+          continue;
+        }
+        if (/^>\s?/.test(line)) {
+          const q = [];
+          while (i < lines.length && /^>\s?/.test(lines[i])) { q.push(lines[i].replace(/^>\s?/, '')); i++; }
+          const inner = renderMarkdown(q.join('\n'));
+          out.push('<blockquote>' + inner + '</blockquote>');
+          continue;
+        }
+        const listParsed = parseList(lines, i);
+        if (listParsed) { out.push(listParsed.html); i = listParsed.nextIndex; continue; }
+        const hm = line.match(/^(#{1,6})\s+(.+)$/);
+        if (hm) { const level = hm[1].length; out.push('<h' + level + '>' + renderInline(hm[2]) + '</h' + level + '>'); i++; continue; }
+        if (line.trim() === '') { out.push(''); i++; continue; }
+        const para = [];
+        while (i < lines.length) {
+          const l = lines[i];
+          if (l.trim() === '' || /^```/.test(l) || /^>\s?/.test(l) || /^(#{1,6})\s+/.test(l) || /^(\s*)(?:([*+-])|(\d+)\.)\s+/.test(l)) break;
+          para.push(l); i++;
+        }
+        out.push(renderParagraph(para));
+      }
+      return out.join('\n');
+    }
+
+    // Wire up live preview with ~200ms debounce
+    const textarea = document.getElementById('md');
+    const preview = document.getElementById('preview');
+    let t = 0;
+    function scheduleRender() {
+      clearTimeout(t);
+      t = setTimeout(() => { preview.innerHTML = renderMarkdown(textarea.value); }, 200);
+    }
+    textarea.addEventListener('input', scheduleRender);
+    // Initial content
+    textarea.value = `# Markdown Editor\n\n- Live preview (~200ms debounce)\n- Safe links: [example](https://example.com)\n- Emphasis: *em*, **strong**, ***both***\n- Code: \`inline\` and:\n\n\`\`\`\nconsole.log('<safe>');\n\`\`\`\n\n> Blockquote here`;
+    scheduleRender();
+  </script>
+</body>
+</html>

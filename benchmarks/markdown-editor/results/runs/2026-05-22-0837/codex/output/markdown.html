@@ -1,0 +1,581 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Markdown Editor</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #17211d;
+      --muted: #69746e;
+      --paper: #f6f2e9;
+      --panel: #fffdf7;
+      --panel-strong: #efe5d1;
+      --rule: #d8cdbb;
+      --accent: #1f6f5b;
+      --accent-strong: #b84835;
+      --code: #263238;
+      --code-bg: #eef2ee;
+      --shadow: 0 18px 50px rgba(38, 45, 40, 0.14);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      min-height: 100%;
+    }
+
+    body {
+      margin: 0;
+      background:
+        linear-gradient(135deg, rgba(31, 111, 91, 0.10), transparent 34%),
+        linear-gradient(315deg, rgba(184, 72, 53, 0.11), transparent 28%),
+        var(--paper);
+      color: var(--ink);
+      font-family: Aptos, "Segoe UI", Candara, sans-serif;
+    }
+
+    .app-shell {
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      min-height: 100vh;
+      padding: 24px;
+      gap: 18px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .mark {
+      display: grid;
+      place-items: center;
+      width: 42px;
+      height: 42px;
+      border: 1px solid var(--rule);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      color: var(--accent);
+      font: 800 20px/1 Georgia, serif;
+    }
+
+    h1 {
+      margin: 0;
+      font: 700 clamp(1.25rem, 2vw, 1.8rem)/1.1 Georgia, "Times New Roman", serif;
+      letter-spacing: 0;
+    }
+
+    .status {
+      color: var(--muted);
+      font-size: 0.9rem;
+      white-space: nowrap;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      min-height: 0;
+      border: 1px solid var(--rule);
+      background: rgba(255, 253, 247, 0.72);
+      box-shadow: var(--shadow);
+    }
+
+    .pane {
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      min-width: 0;
+      min-height: 0;
+    }
+
+    .pane + .pane {
+      border-left: 1px solid var(--rule);
+    }
+
+    .pane-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 46px;
+      padding: 0 16px;
+      border-bottom: 1px solid var(--rule);
+      background: var(--panel-strong);
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    textarea {
+      width: 100%;
+      height: 100%;
+      min-height: 520px;
+      resize: none;
+      border: 0;
+      outline: none;
+      padding: 22px;
+      background: var(--panel);
+      color: var(--ink);
+      font: 15px/1.55 "Cascadia Mono", Consolas, "Courier New", monospace;
+      tab-size: 2;
+    }
+
+    textarea:focus {
+      box-shadow: inset 0 0 0 2px rgba(31, 111, 91, 0.34);
+    }
+
+    .preview {
+      min-height: 520px;
+      overflow: auto;
+      padding: 22px 26px 48px;
+      background: #fffefa;
+    }
+
+    .preview > :first-child {
+      margin-top: 0;
+    }
+
+    .preview h1,
+    .preview h2,
+    .preview h3,
+    .preview h4,
+    .preview h5,
+    .preview h6 {
+      margin: 1.15em 0 0.45em;
+      color: var(--ink);
+      font-family: Georgia, "Times New Roman", serif;
+      letter-spacing: 0;
+      line-height: 1.15;
+    }
+
+    .preview h1 { font-size: 2rem; }
+    .preview h2 { font-size: 1.55rem; }
+    .preview h3 { font-size: 1.3rem; }
+    .preview h4 { font-size: 1.12rem; }
+    .preview h5 { font-size: 1rem; }
+    .preview h6 { font-size: 0.92rem; color: var(--muted); }
+
+    .preview p,
+    .preview li,
+    .preview blockquote {
+      font-size: 1rem;
+      line-height: 1.65;
+    }
+
+    .preview a {
+      color: var(--accent);
+      font-weight: 700;
+      text-decoration-thickness: 0.12em;
+      text-underline-offset: 0.18em;
+    }
+
+    .preview blockquote {
+      margin: 1.1rem 0;
+      padding: 0.15rem 0 0.15rem 1rem;
+      border-left: 4px solid var(--accent-strong);
+      color: #39453f;
+      background: rgba(184, 72, 53, 0.06);
+    }
+
+    .preview ul,
+    .preview ol {
+      padding-left: 1.45rem;
+    }
+
+    .preview li + li {
+      margin-top: 0.22rem;
+    }
+
+    .preview code {
+      padding: 0.12em 0.34em;
+      border: 1px solid #d7ddd7;
+      background: var(--code-bg);
+      color: var(--code);
+      font-family: "Cascadia Mono", Consolas, "Courier New", monospace;
+      font-size: 0.92em;
+    }
+
+    .preview pre {
+      overflow: auto;
+      padding: 16px;
+      border: 1px solid #cfd8d2;
+      background: #17211d;
+      color: #f3f6f1;
+    }
+
+    .preview pre code {
+      display: block;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: inherit;
+      white-space: pre;
+    }
+
+    @media (max-width: 780px) {
+      .app-shell {
+        padding: 14px;
+      }
+
+      .topbar {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .workspace {
+        grid-template-columns: 1fr;
+      }
+
+      .pane + .pane {
+        border-left: 0;
+        border-top: 1px solid var(--rule);
+      }
+
+      textarea,
+      .preview {
+        min-height: 42vh;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="mark" aria-hidden="true">M</div>
+        <h1>Markdown Editor</h1>
+      </div>
+      <div class="status" id="render-status" aria-live="polite">Ready</div>
+    </header>
+
+    <main class="workspace">
+      <section class="pane editor-pane" aria-labelledby="editor-title">
+        <div class="pane-header" id="editor-title">Markdown</div>
+        <textarea id="markdown-input" spellcheck="false"># Markdown Editor
+
+Write **bold**, *italic*, _italic_, ***bold italic***, and `inline code`.
+
+- One unordered item
+  - One nested item
+* Another marker
++ A third marker
+
+1. First ordered item
+2. Second ordered item
+
+> Blockquotes render as a separate block.
+> Consecutive quote lines stay together.
+
+```
+const raw = "&lt;script&gt;not active&lt;/script&gt;";
+```
+
+[Jump to preview](#preview)</textarea>
+      </section>
+
+      <section class="pane preview-pane" aria-labelledby="preview-title">
+        <div class="pane-header" id="preview-title">Preview</div>
+        <div class="preview" id="preview" tabindex="0"></div>
+      </section>
+    </main>
+  </div>
+
+  <script id="markdown-engine">
+(function (global) {
+  'use strict';
+
+  function escapeHtml(value) {
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function renderInline(source) {
+    var codeSpans = [];
+    var linkSpans = [];
+    var text = String(source).replace(/`([^`\n]+)`/g, function (_, code) {
+      var token = '\u0000CODE' + codeSpans.length + '\u0000';
+      codeSpans.push(escapeHtml(code));
+      return token;
+    });
+
+    text = text.replace(/\[([^\]\n]+)\]\(([^)\s]+)\)/g, function (_, label, url) {
+      if (!isSafeUrl(url)) {
+        return label;
+      }
+
+      var token = '\u0000LINK' + linkSpans.length + '\u0000';
+      linkSpans.push({ label: label, url: url.trim() });
+      return token;
+    });
+
+    text = escapeHtml(text)
+      .replace(/\*\*\*([\s\S]+?)\*\*\*/g, '<strong><em>$1</em></strong>')
+      .replace(/\*\*([\s\S]+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>')
+      .replace(/_([^_\n]+)_/g, '<em>$1</em>');
+
+    text = text.replace(/\u0000LINK(\d+)\u0000/g, function (_, index) {
+      var link = linkSpans[Number(index)];
+      return '<a href="' + escapeHtml(link.url) + '">' + renderInline(link.label) + '</a>';
+    });
+
+    return text.replace(/\u0000CODE(\d+)\u0000/g, function (_, index) {
+      return '<code>' + codeSpans[Number(index)] + '</code>';
+    });
+  }
+
+  function decodeUrlEntities(value) {
+    return String(value)
+      .replace(/&#x([0-9a-f]+);?/gi, function (_, code) {
+        return String.fromCodePoint(parseInt(code, 16));
+      })
+      .replace(/&#([0-9]+);?/g, function (_, code) {
+        return String.fromCodePoint(parseInt(code, 10));
+      })
+      .replace(/&colon;?/gi, ':')
+      .replace(/&tab;?/gi, '\t')
+      .replace(/&newline;?/gi, '\n');
+  }
+
+  function isSafeUrl(url) {
+    var value = String(url || '').trim();
+    var normalized = decodeUrlEntities(value).replace(/[\u0000-\u001f\u007f\s]+/g, '').toLowerCase();
+    var scheme = normalized.match(/^([a-z][a-z0-9+.-]*):/);
+
+    if (!value) {
+      return false;
+    }
+
+    if (!scheme) {
+      return true;
+    }
+
+    return scheme[1] === 'http' || scheme[1] === 'https' || scheme[1] === 'mailto' || scheme[1] === 'tel';
+  }
+
+  function isBlank(line) {
+    return /^[ \t]*$/.test(line);
+  }
+
+  function isFence(line) {
+    return /^[ \t]*```/.test(line);
+  }
+
+  function isHeading(line) {
+    return /^(#{1,6})[ \t]+(.+)$/.test(line);
+  }
+
+  function isBlockquote(line) {
+    return /^[ \t]*>[ \t]?/.test(line);
+  }
+
+  function unorderedMatch(line) {
+    return /^([ \t]*)([-*+])[ \t]+(.+)$/.exec(line);
+  }
+
+  function orderedMatch(line) {
+    return /^[ \t]*\d+\.[ \t]+(.+)$/.exec(line);
+  }
+
+  function indentWidth(indent) {
+    return String(indent || '').replace(/\t/g, '  ').length;
+  }
+
+  function startsBlock(line) {
+    return isBlank(line) || isFence(line) || isHeading(line) || isBlockquote(line) || unorderedMatch(line) || orderedMatch(line);
+  }
+
+  function renderUnorderedList(lines, start) {
+    var html = ['<ul>'];
+    var index = start;
+
+    while (index < lines.length) {
+      var match = unorderedMatch(lines[index]);
+      if (!match || indentWidth(match[1]) > 1) {
+        break;
+      }
+
+      var item = renderInline(match[3].trim());
+      index += 1;
+
+      if (index < lines.length) {
+        var nested = [];
+        while (index < lines.length) {
+          var nestedMatch = unorderedMatch(lines[index]);
+          if (!nestedMatch || indentWidth(nestedMatch[1]) < 2) {
+            break;
+          }
+          nested.push('<li>' + renderInline(nestedMatch[3].trim()) + '</li>');
+          index += 1;
+        }
+
+        if (nested.length) {
+          item += '\n<ul>\n' + nested.join('\n') + '\n</ul>';
+        }
+      }
+
+      html.push('<li>' + item + '</li>');
+    }
+
+    html.push('</ul>');
+    return { html: html.join('\n'), next: index };
+  }
+
+  function renderOrderedList(lines, start) {
+    var html = ['<ol>'];
+    var index = start;
+
+    while (index < lines.length) {
+      var match = orderedMatch(lines[index]);
+      if (!match) {
+        break;
+      }
+      html.push('<li>' + renderInline(match[1].trim()) + '</li>');
+      index += 1;
+    }
+
+    html.push('</ol>');
+    return { html: html.join('\n'), next: index };
+  }
+
+  function renderMarkdown(markdown) {
+    var lines = String(markdown || '').replace(/\r\n?/g, '\n').split('\n');
+    var output = [];
+    var index = 0;
+
+    while (index < lines.length) {
+      var line = lines[index];
+
+      if (isBlank(line)) {
+        index += 1;
+        continue;
+      }
+
+      if (isFence(line)) {
+        var code = [];
+        index += 1;
+        while (index < lines.length && !isFence(lines[index])) {
+          code.push(lines[index]);
+          index += 1;
+        }
+        if (index < lines.length) {
+          index += 1;
+        }
+        output.push('<pre><code>' + escapeHtml(code.join('\n')) + '</code></pre>');
+        continue;
+      }
+
+      var heading = /^(#{1,6})[ \t]+(.+)$/.exec(line);
+      if (heading) {
+        var level = heading[1].length;
+        output.push('<h' + level + '>' + renderInline(heading[2].trim()) + '</h' + level + '>');
+        index += 1;
+        continue;
+      }
+
+      if (isBlockquote(line)) {
+        var quoteLines = [];
+        while (index < lines.length && isBlockquote(lines[index])) {
+          quoteLines.push(lines[index].replace(/^[ \t]*>[ \t]?/, ''));
+          index += 1;
+        }
+        output.push('<blockquote>\n' + renderMarkdown(quoteLines.join('\n')) + '\n</blockquote>');
+        continue;
+      }
+
+      if (unorderedMatch(line) && indentWidth(unorderedMatch(line)[1]) <= 1) {
+        var unordered = renderUnorderedList(lines, index);
+        output.push(unordered.html);
+        index = unordered.next;
+        continue;
+      }
+
+      if (orderedMatch(line)) {
+        var ordered = renderOrderedList(lines, index);
+        output.push(ordered.html);
+        index = ordered.next;
+        continue;
+      }
+
+      var paragraph = [];
+      while (index < lines.length && !startsBlock(lines[index])) {
+        paragraph.push(lines[index].trim());
+        index += 1;
+      }
+      output.push('<p>' + renderInline(paragraph.join(' ')) + '</p>');
+    }
+
+    return output.join('\n');
+  }
+
+  global.MarkdownEditor = {
+    escapeHtml: escapeHtml,
+    isSafeUrl: isSafeUrl,
+    renderInline: renderInline,
+    renderMarkdown: renderMarkdown
+  };
+})(typeof window !== 'undefined' ? window : globalThis);
+  </script>
+  <script>
+(function () {
+  'use strict';
+
+  var LIVE_PREVIEW_DELAY_MS = 120;
+
+  function initEditor() {
+    var input = document.getElementById('markdown-input');
+    var preview = document.getElementById('preview');
+    var status = document.getElementById('render-status');
+    var timer = 0;
+
+    if (!input || !preview || !window.MarkdownEditor) {
+      return;
+    }
+
+    function render() {
+      preview.innerHTML = window.MarkdownEditor.renderMarkdown(input.value);
+      if (status) {
+        status.textContent = 'Updated';
+      }
+    }
+
+    function scheduleRender() {
+      if (status) {
+        status.textContent = 'Editing';
+      }
+      window.clearTimeout(timer);
+      timer = window.setTimeout(render, LIVE_PREVIEW_DELAY_MS);
+    }
+
+    window.MarkdownEditor.LIVE_PREVIEW_DELAY_MS = LIVE_PREVIEW_DELAY_MS;
+    input.addEventListener("input", scheduleRender);
+    render();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initEditor);
+  } else {
+    initEditor();
+  }
+})();
+  </script>
+</body>
+</html>
