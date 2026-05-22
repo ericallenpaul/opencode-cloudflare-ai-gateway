@@ -131,10 +131,22 @@ These are real fairness and measurement limitations. Don't ignore them when citi
 
 8. **One RunId is one data point.** Model nondeterminism can shift cost and time by 10-30% across identical re-runs. Treat any single RunId as evidence of direction, not as a published benchmark result. The `comparisons.md` files are structured to accumulate rankings across multiple runs so patterns can emerge over time.
 
+## How we've iterated the opencode config
+
+This repo is a working OSS reference setup, not a one-shot publication. The benchmark exists to surface gaps in the agent configuration, and the gaps then get fixed. Every change to the opencode build-agent prompt or to the example MCP set is committed with a stated reason and is traceable to the benchmark observation that motivated it. **The benchmark itself -- SPEC.md, PROMPT.md, the R1-R10 Playwright assertions -- has never changed between runs.** The line we hold is *tune the tool, not the test.* Every completed run is published in the relevant `comparisons.md` -- including the ones where opencode underperformed -- so a reader can audit the lineage rather than take a single cherry-picked run on faith.
+
+Config versions to date (each `comparisons.md` entry tags which version a run used):
+
+- **Config v1 (baseline)**: LSP nudge + superpowers skill reference, no deliverable-discipline rules. Used for `tic-tac-toe` runs `2026-05-21-0818` and `2026-05-22-0745`, and `markdown-editor` run `2026-05-22-0837`. The markdown-editor run under v1 exposed: opencode placed tests in a `tests/` subdirectory (cost R9 and R10 even though the tests passed), wrote a one-line README, and the verification-before-completion skill didn't catch the test-location issue because it didn't actually run `node --test`.
+- **Config v2 (deliverable-discipline)**: explicit prompt rules added -- "place files at root, do not nest in subdirectories" plus an abstract rule about README sections. Commit [`9b592ac`](../../../commit/9b592ac). Used for `markdown-editor` run `2026-05-22-0951`. Result: the file-layout rule landed cleanly (R9/R10 went FAIL -> PASS, opencode hit 10/10 functional), but the abstract README rule did NOT land -- opencode shipped a byte-identical one-line README to the previous run. The lesson, documented in [LEARNINGS.md](../docs/LEARNINGS.md): concrete mechanically-verifiable rules land, abstract content-quality rules don't.
+- **Config v3 (template-driven README + Playwright MCP)**: replaced the abstract README rule with a concrete template (exact list of section headings, minimum line count, minimum sentence count per section) AND promoted Playwright MCP from "recommended optional" to a shipping default so the agent can self-verify HTML/JS deliverables in a real browser. Commits [`f6998a7`](../../../commit/f6998a7) and [`668038c`](../../../commit/668038c). To be used for the next `markdown-editor` run. Hypothesis being tested: explicit template + browser self-verification together close the remaining qualitative gap between opencode and frontier-direct tools.
+
+A reader who's skeptical that we're tuning to make opencode look better can verify directly: the SPEC and PROMPT and Playwright assertions are byte-identical across all runs (check the git history). What changes between versions is only the agent's instructions about how to follow them. That's the legitimate direction of iteration -- improving an agent setup against a fixed bar -- not training to the test.
+
 ## Current benchmark targets
 
 - [tic-tac-toe](tic-tac-toe/) -- standalone HTML tic-tac-toe, ~200-400 lines, exercises plan/execute/verify with bounded scope. **Status: first run complete (RunId `2026-05-21-0818`, all tools 10/10).**
-- [markdown-editor](markdown-editor/) -- standalone HTML markdown editor with live preview, ~300-500 lines, exercises parser design and XSS defensiveness. **Status: scaffold ready, runs pending.** Designed to expose differences between cheap and frontier models that tic-tac-toe is too simple to surface.
+- [markdown-editor](markdown-editor/) -- standalone HTML markdown editor with live preview, ~300-500 lines, exercises parser design and XSS defensiveness. **Status: two runs complete (`2026-05-22-0837` under opencode config v1, `2026-05-22-0951` under config v2).** Run v2 fixed the file-layout discipline (opencode 10/10 functional) but not README depth; config v3 (template-driven README + Playwright MCP for self-verification) is queued for the next run. See [comparisons.md](markdown-editor/results/comparisons.md) and "How we've iterated the opencode config" above.
 
 ## Adding a new benchmark target
 
