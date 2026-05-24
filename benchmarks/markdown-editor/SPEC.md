@@ -25,7 +25,13 @@ These don't count for "complete" but reveal differences between tools beyond raw
 - **Test breadth** -- do the agent-written tests cover XSS? Nested lists? Code-fence variants? Multi-paragraph blockquotes?
 - **UX polish** -- visual hierarchy of preview, sensible defaults (monospace for code, indent for nested lists), reasonable scroll behavior, line-wrap in textarea
 - **Defensiveness** -- XSS, huge input (paste a 5000-line markdown doc, doesn't freeze), malformed markdown (unclosed code fences, mismatched emphasis markers)
-- **Documentation** -- README explains the implemented subset, what's NOT implemented, and states the security model (sanitizer used? hand-rolled escaping? library?)
+- **Documentation (scored 0-5 as the COUNT of required README sections present; mechanical, not holistic)**:
+  1. README exists with a meaningful title beyond the project name alone (a single H1 stub does NOT count).
+  2. Explains how to open the deliverable (e.g., `open markdown.html` or `file://...`).
+  3. Provides the EXACT test command (e.g., `node --test markdown.test.js`).
+  4. Lists the implemented markdown subset AND explicitly states what is NOT implemented.
+  5. States the security model (sanitizer used? hand-rolled escaping? library?).
+  A README that contains only a title scores 0. Each missing section costs 1 point. This dimension scores the README file only; inline code comments and test-file descriptions do not contribute (they are reflected in Readability and Test breadth instead).
 
 ## What we explicitly DON'T care about for scoring
 
