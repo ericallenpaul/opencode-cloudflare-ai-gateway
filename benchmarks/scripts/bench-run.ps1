@@ -73,6 +73,11 @@ param(
 
     [string]$Benchmark = "tic-tac-toe",
 
+    # Optional comma-separated list of tool names to include. If omitted in the
+    # start phase, prompts interactively. Validated against the $Tools config.
+    # Example: -IncludeTools claude,opencode
+    [string[]]$IncludeTools,
+
     [switch]$NoCopy,
 
     # By default, finish reuses the existing _ccusage-after.json sidecar if
@@ -147,6 +152,58 @@ function Test-ToolReachable {
     }
 }
 
+function Select-Tools {
+    param(
+        [Parameter(Mandatory)][object[]]$ConfiguredTools,
+        [string[]]$IncludeTools
+    )
+
+    # Map tool name -> bool (selected or not). Maintain $ConfiguredTools order.
+    $orderedNames = @($ConfiguredTools | ForEach-Object { $_.Name })
+    $isSelected = [ordered]@{}
+    foreach ($n in $orderedNames) { $isSelected[$n] = $false }
+
+    if ($IncludeTools -and $IncludeTools.Count -gt 0) {
+        $unknown = @($IncludeTools | Where-Object { $orderedNames -notcontains $_ })
+        if ($unknown.Count -gt 0) {
+            throw "Unknown tool name(s) in -IncludeTools: $($unknown -join ', '). Configured tools: $($orderedNames -join ', ')"
+        }
+        foreach ($n in $IncludeTools) { $isSelected[$n] = $true }
+    } else {
+        Write-Host ""
+        Write-Host "Select which tools to include in this benchmark run." -ForegroundColor Cyan
+        Write-Host "(For any tool you exclude, you'll be asked to record a one-line reason.)" -ForegroundColor DarkGray
+        foreach ($n in $orderedNames) {
+            $ans = Read-Host "  Include $n? [Y/n]"
+            $isSelected[$n] = ($ans -notmatch '^[nN]')
+        }
+    }
+
+    $selected = @($orderedNames | Where-Object { $isSelected[$_] })
+    if ($selected.Count -eq 0) {
+        throw "At least one tool must be selected. Aborting."
+    }
+
+    $skipped = [ordered]@{}
+    $unselected = @($orderedNames | Where-Object { -not $isSelected[$_] })
+    if ($unselected.Count -gt 0 -and (-not $IncludeTools)) {
+        Write-Host ""
+        Write-Host "Record a one-line reason for each excluded tool (visible in the run summary):" -ForegroundColor Cyan
+        foreach ($n in $unselected) {
+            $reason = Read-Host "  Reason for skipping $n"
+            if ([string]::IsNullOrWhiteSpace($reason)) { $reason = "no reason given" }
+            $skipped[$n] = $reason.Trim()
+        }
+    } elseif ($unselected.Count -gt 0) {
+        # Non-interactive path: use a placeholder reason
+        foreach ($n in $unselected) {
+            $skipped[$n] = "excluded via -IncludeTools (non-interactive)"
+        }
+    }
+
+    return @{ Selected = $selected; Skipped = $skipped }
+}
+
 # ccusage JSON shape varies by tool/version -- look up by candidate keys
 function Get-Field {
     param(
@@ -196,9 +253,24 @@ if ($Phase -eq "start") {
     Write-Host "  Tools:     $($validToolNames -join ', ')"
     Write-Host ""
 
+    $selection = Select-Tools -ConfiguredTools $Tools -IncludeTools $IncludeTools
+    Write-Host ""
+    Write-Host "Selected: $($selection.Selected -join ', ')" -ForegroundColor Green
+    if ($selection.Skipped.Count -gt 0) {
+        Write-Host "Skipped:"
+        foreach ($k in $selection.Skipped.Keys) {
+            Write-Host "  $k -- $($selection.Skipped[$k])" -ForegroundColor DarkGray
+        }
+    }
+    Write-Host ""
+
+    # Build the runtime tool list (only selected). Preserve the launch metadata
+    # from the original $Tools so the per-tool printing below stays unchanged.
+    $runtimeTools = @($Tools | Where-Object { $selection.Selected -contains $_.Name })
+
     Write-Host "Preflight: verifying each tool CLI is reachable..." -ForegroundColor DarkGray
     $preflightFailures = @()
-    foreach ($t in $Tools) {
+    foreach ($t in $runtimeTools) {
         $check = Test-ToolReachable -ToolName $t.Name -VersionCommand "$($t.Name) --version"
         if ($check.Ok) {
             Write-Host "  $($t.Name): OK ($($check.Detail))" -ForegroundColor DarkGray
@@ -219,25 +291,33 @@ if ($Phase -eq "start") {
         }
     }
 
-    # Auth/quota confirm: --version only catches "CLI missing"; it does NOT catch
-    # an expired subscription or exhausted API tokens (those fail later, mid-run,
-    # producing an empty output dir that the judge marks SKIP). Force the human
-    # to confirm before we open the bench window.
-    Write-Host ""
+    $runIdDir = Join-Path $BaseDir $RunId
+    New-Item -ItemType Directory -Force -Path $runIdDir | Out-Null
+    $runConfig = [ordered]@{
+        runId       = $RunId
+        benchmark   = $Benchmark
+        selected    = $selection.Selected
+        skipped     = $selection.Skipped
+        selectedAt  = (Get-NowIso)
+    }
+    $runConfigPath = Join-Path $runIdDir "_run-config.json"
+    $runConfig | ConvertTo-Json -Depth 5 | Set-Content -Encoding utf8 $runConfigPath
+    Write-Host "Wrote run config: $runConfigPath" -ForegroundColor DarkGray
+
     Write-Host "Auth/quota check (manual): the preflight above only confirms each CLI is on PATH." -ForegroundColor DarkGray
     Write-Host "  It does NOT verify subscription state or API token balance." -ForegroundColor DarkGray
-    Write-Host "  Before continuing, confirm each tool can actually produce a token:" -ForegroundColor DarkGray
-    Write-Host "    - claude:   subscription active and not over usage cap?" -ForegroundColor DarkGray
-    Write-Host "    - codex:    API tokens available (the run-3 silent failure mode)?" -ForegroundColor DarkGray
-    Write-Host "    - opencode: gateway BYOK keys reachable (env vars + CF gateway up)?" -ForegroundColor DarkGray
-    $authResp = Read-Host "Are all configured tools authenticated and within quota? [y/N]"
+    Write-Host "  Before continuing, confirm each selected tool can actually produce a token:" -ForegroundColor DarkGray
+    foreach ($t in $runtimeTools) {
+        Write-Host "    - $($t.Name)" -ForegroundColor DarkGray
+    }
+    $authResp = Read-Host "Are all selected tools authenticated and within quota? [y/N]"
     if ($authResp -notmatch '^[Yy]') {
         Write-Host "Aborting start phase. Resolve auth/quota issues and re-run." -ForegroundColor Red
         exit 1
     }
     Write-Host ""
 
-    foreach ($t in $Tools) {
+    foreach ($t in $runtimeTools) {
         $name   = $t.Name
         $runDir = Join-Path $BaseDir "$RunId\$name"
         New-Item -ItemType Directory -Force -Path $runDir | Out-Null
@@ -253,7 +333,7 @@ if ($Phase -eq "start") {
     Write-Host "Baselines captured. Per-tool instructions:" -ForegroundColor Green
     Write-Host ""
 
-    foreach ($t in $Tools) {
+    foreach ($t in $runtimeTools) {
         $name      = $t.Name
         $launch    = $t.Launch
         $runDir    = Join-Path $BaseDir "$RunId\$name"
