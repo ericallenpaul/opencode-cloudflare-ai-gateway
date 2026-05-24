@@ -95,6 +95,21 @@ if (-not (Test-Path $resultsDir)) {
     exit 1
 }
 
+$runConfigPath = Join-Path $resultsDir "_run-config.json"
+$skippedTools  = [ordered]@{}
+if (Test-Path $runConfigPath) {
+    try {
+        $runConfig = Get-Content $runConfigPath -Raw -Encoding utf8 | ConvertFrom-Json
+        if ($runConfig.skipped) {
+            foreach ($p in $runConfig.skipped.PSObject.Properties) {
+                $skippedTools[$p.Name] = [string]$p.Value
+            }
+        }
+    } catch {
+        Write-Host "WARNING: failed to parse $runConfigPath -- treating as pre-v5 run." -ForegroundColor Yellow
+    }
+}
+
 $nodeModules = Join-Path $judgeDir "node_modules"
 if (-not (Test-Path $nodeModules)) {
     Write-Host "ERROR: node_modules not found in judge directory." -ForegroundColor Red
@@ -322,6 +337,25 @@ Remove-Item Env:\MARKDOWN_TOOL_NAME         -ErrorAction SilentlyContinue
 Remove-Item Env:\MARKDOWN_TESTS             -ErrorAction SilentlyContinue
 
 # ============================================================
+# Append v5 skipped tools (from _run-config.json) to $toolResults
+# ============================================================
+
+foreach ($skipName in $skippedTools.Keys) {
+    $toolResults += [PSCustomObject]@{
+        Tool          = $skipName
+        Skipped       = $true
+        SkipReason    = $skippedTools[$skipName]
+        HtmlPath      = $null
+        TestFile      = $null
+        PlaywrightOk  = $false
+        R9Status      = 'N/A'
+        R10Status     = 'N/A'
+        JudgeJsonPath = $null
+        JudgeMdPath   = $null
+    }
+}
+
+# ============================================================
 # Helper: read results from judge JSON safely
 # ============================================================
 
@@ -495,7 +529,17 @@ foreach ($dim in @('Readability', 'Test breadth', 'UX polish', 'Defensiveness', 
     $mdLines += $row
 }
 
-$mdLines += ""
+$skipFootnote = @($toolResults | Where-Object { $_.Skipped -and $_.SkipReason })
+if ($skipFootnote.Count -gt 0) {
+    $mdLines += ""
+    $mdLines += "### Skipped tools"
+    $mdLines += ""
+    foreach ($s in $skipFootnote) {
+        $mdLines += "- **$($s.Tool)** -- $($s.SkipReason)"
+    }
+    $mdLines += ""
+}
+
 $mdLines += "## Artifacts"
 $mdLines += ""
 $mdLines += "| Tool | HTML | Functional JSON | Screenshots | Judge stub |"
