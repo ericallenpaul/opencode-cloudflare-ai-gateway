@@ -883,8 +883,24 @@ Write-Host "  BaseDir: $BaseDir"
 Write-Host "  Tools:   $((($toolsToProcess | ForEach-Object Name)) -join ', ')"
 Write-Host ""
 
+# Load skipped tool names from _run-config.json (written by start phase, v5+).
+# Tools listed under "skipped" were intentionally excluded from this run; the
+# loop skips them silently (no throw) so finish-all still completes cleanly.
+$skippedNames = @()
+$runConfigPath = Join-Path (Join-Path $BaseDir $RunId) "_run-config.json"
+if (Test-Path $runConfigPath) {
+    $rc = Get-Content $runConfigPath -Raw -Encoding utf8 | ConvertFrom-Json
+    if ($rc.skipped) {
+        $skippedNames = @($rc.skipped.PSObject.Properties.Name)
+    }
+}
+
 $rows = @()
 foreach ($t in $toolsToProcess) {
+    if ($skippedNames -contains $t.Name) {
+        Write-Host "  [skip] $($t.Name) marked skipped in _run-config.json" -ForegroundColor DarkGray
+        continue
+    }
     $runDirForTool = Join-Path $BaseDir "$RunId\$($t.Name)"
     if (-not (Test-Path $runDirForTool)) {
         Write-Host "  [skip] no scratch dir for $($t.Name): $runDirForTool" -ForegroundColor Yellow

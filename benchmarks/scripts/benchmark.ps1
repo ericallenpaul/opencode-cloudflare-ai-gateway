@@ -26,7 +26,12 @@
 
 [CmdletBinding()]
 param(
-    [string[]]$Benchmark = @("tic-tac-toe")
+    [string[]]$Benchmark = @("tic-tac-toe"),
+
+    # Optional comma-separated list of tool names to include in this run. If
+    # omitted, bench-run.ps1's start phase prompts interactively. Forwarded
+    # verbatim to bench-run.ps1 -Phase start -IncludeTools ...
+    [string[]]$IncludeTools
 )
 
 $ErrorActionPreference = "Stop"
@@ -110,6 +115,20 @@ function Get-RunState {
         return "complete"
     }
     return "after-qualitative"
+}
+
+function Get-RunConfig {
+    param(
+        [Parameter(Mandatory)][string]$RunId,
+        [Parameter(Mandatory)][string]$RepoRoot
+    )
+    # Prefer the scratch copy (written first by start); fall back to the
+    # results copy (written by finish). Returns $null for pre-v5 runs.
+    $scratchPath = Join-Path $RepoRoot "benchmarks\runs\$RunId\_run-config.json"
+    if (Test-Path $scratchPath) {
+        return Get-Content $scratchPath -Raw -Encoding utf8 | ConvertFrom-Json
+    }
+    return $null
 }
 
 function Wait-ForEnter {
@@ -260,7 +279,11 @@ if ($state -eq "fresh") {
     Write-Host "Phase 1/3: Capturing ccusage baselines (all configured tools)..." -ForegroundColor Green
     Write-Host "  RunId: $runId"
     Write-Host ""
-    & $benchRun -Phase start -Benchmark $currentBenchmark -RunId $runId
+    if ($IncludeTools) {
+        & $benchRun -Phase start -Benchmark $currentBenchmark -RunId $runId -IncludeTools $IncludeTools
+    } else {
+        & $benchRun -Phase start -Benchmark $currentBenchmark -RunId $runId
+    }
     $state = "after-start"
 }
 
@@ -269,7 +292,13 @@ if ($state -eq "fresh") {
 # ============================================================
 
 if ($state -eq "after-start") {
-    Wait-ForEnter "Run each tool per the instructions above. Exit each one cleanly. When all are done, press ENTER."
+    $runConfig = Get-RunConfig -RunId $runId -RepoRoot $repoRoot
+    if ($runConfig -and $runConfig.selected) {
+        $toolList = ($runConfig.selected -join ', ')
+        Wait-ForEnter "Run these tools per the instructions above: $toolList. Exit each one cleanly. When ALL of them are done, press ENTER."
+    } else {
+        Wait-ForEnter "Run each tool per the instructions above. Exit each one cleanly. When all are done, press ENTER."
+    }
     $state = "ready-for-finish"
 }
 
