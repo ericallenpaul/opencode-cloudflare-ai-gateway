@@ -130,15 +130,20 @@ If no bugs found: write "None found."
   immutable state snapshots, no shared mutable global state leakage.
 
 ### Documentation
-- **1**: No README, no comments, no explanation of how to run tests.
-- **2**: README exists but is minimal (e.g., just "open the html file").
-- **3**: README explains how to open the deliverable AND how to run tests with
-  the exact command.
-- **4**: README explains what was built, known limitations, and test coverage.
-  Inline comments explain non-obvious logic.
-- **5**: README is clear enough for a non-engineer. Inline comments explain
-  every design decision. Test file has a brief description of what each test
-  covers.
+The Documentation score is the COUNT (0-5) of these five required README sections that are present. This is mechanical -- read the README file and tick off sections. Do NOT factor in inline comments or test-file descriptions; those belong to Readability and Test breadth respectively.
+
+- **Section 1**: README exists with a meaningful title beyond the project name alone (a single-H1 stub does NOT count -- it must be followed by at least one substantive paragraph or section).
+- **Section 2**: Explains how to open the deliverable (`open markdown.html`, `file://...`, or a "double-click the html" instruction).
+- **Section 3**: Provides the EXACT test command (e.g., `node --test markdown.test.js`).
+- **Section 4**: Lists the implemented markdown subset AND explicitly states what is NOT implemented.
+- **Section 5**: States the security model (sanitizer used? hand-rolled escaping? library?).
+
+Worked examples:
+- README is just `# Markdown Editor` and nothing else: **0** (section 1 fails -- title alone is not meaningful content).
+- README has the title plus an open instruction only: **2**.
+- README has all five sections: **5**.
+
+When you fill in the score, justify it by listing which section numbers were present and which were missing.
 
 ---
 
@@ -177,7 +182,7 @@ _Evaluated: [date you ran this]_
 | Test breadth  | [1-5] | [one sentence]                       |
 | UX polish     | [1-5] | [one sentence]                       |
 | Defensiveness | [1-5] | [one sentence]                       |
-| Documentation | [1-5] | [one sentence]                       |
+| Documentation | [0-5] | [list section numbers present/missing] |
 
 **Average**: [X.X]
 
