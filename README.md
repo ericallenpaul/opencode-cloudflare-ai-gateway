@@ -107,21 +107,23 @@ Bottom line on tic-tac-toe: **~6-10x cost reduction vs Claude Code, consistently
 
 ### A harder benchmark surfaces the trade-off more starkly
 
-`benchmarks/markdown-editor` is a deliberately harder target -- parser correctness, XSS handling, live-preview event wiring, ~300-500 LOC. Two runs completed:
+`benchmarks/markdown-editor` is a deliberately harder target -- parser correctness, XSS handling, live-preview event wiring, ~300-500 LOC. Three runs completed:
 
-| | run 1 (opencode config v1) | run 2 (opencode config v2) |
-|---|---|---|
-| opencode R1-R10 / quality / cost | 8/10 (tests nested in subdir) / 2.6 / $0.25 | **10/10** (file-layout discipline landed) / 2.6 / $0.52 |
-| codex R1-R10 / quality / cost | 10/10 / 4.6 / $1.97 | 10/10 / 4.6 / $2.12 |
-| claude R1-R10 / quality / cost | 10/10 / 4.4 / $1.60 | 3/10 (live-preview wired to wrong DOM event) / 4.4 / $1.43 |
+| | run 1 (opencode config v1) | run 2 (opencode config v2) | run 3 (opencode config v3) |
+|---|---|---|---|
+| opencode R1-R10 / quality / cost | 8/10 (tests nested in subdir) / 2.6 / $0.25 | **10/10** (file-layout discipline landed) / 2.6 / $0.52 | **10/10** / 3.4 / $0.52 |
+| codex R1-R10 / quality / cost | 10/10 / 4.6 / $1.97 | 10/10 / 4.6 / $2.12 | **SKIPPED** -- codex ran out of API tokens mid-benchmark |
+| claude R1-R10 / quality / cost | 10/10 / 4.4 / $1.60 | 3/10 (live-preview wired to wrong DOM event) / 4.4 / $1.43 | 4/10 (`</script>` termination bug killed inline JS) / 3.8 / $3.63 |
 
 What this benchmark surfaced that tic-tac-toe couldn't:
 
-- **Cost-tier still wins on cost** -- 3-5x cheaper than frontier-direct with 10/10 functional R1-R10 in run 2.
-- **Documentation quality is the real cost-tier gap.** Opencode wrote a one-line README both runs despite the SPEC asking for usage / test command / scope / security model sections. Frontier tools wrote 50-130 line READMEs.
-- **Frontier tools have meaningful run-to-run variance too.** Claude's 10/10 → 3/10 swing was a real integration bug -- the live-preview was wired to a keyboard event that doesn't fire on programmatic input. Opencode (the cheap-tier path) shipped working software in the same run where claude (frontier-direct) shipped broken software.
+- **Cost-tier still wins on cost** -- 3-7x cheaper than frontier-direct with 10/10 functional R1-R10 across runs 2 and 3.
+- **Documentation quality is the real cost-tier gap, and it is sticky.** Opencode wrote a one-line README in all three runs despite progressively more concrete prompt rules (v2: abstract "include sections X/Y/Z"; v3: template-driven with named sections + min line count). The mechanically-verifiable v3 rule still did not land. Frontier tools wrote 50-130 line READMEs.
+- **Frontier tools have meaningful run-to-run variance too.** Claude's 10/10 → 3/10 → 4/10 swings were real integration bugs: run 2 wired live-preview to a keyboard event that doesn't fire on programmatic input; run 3 closed an inline `<script>` block too early via a literal `</script>` inside a string. Both bugs were the kind a real browser smoke-test would catch instantly; the agent claimed verification it did not actually perform.
+- **First composite loss for opencode in this benchmark.** Run 3 ranked claude 0.268 vs opencode 0.233 on the cost(50%)/quality(30%)/bugs(20%) composite -- opencode shipped a working app for 6.9x less money but lost on Documentation=1 and on bug-count-beyond-R1-R10 (6 vs 4). The cost-quality gap is now the dominant axis, not the cost-functional gap.
+- **The codex-out-of-tokens skip is itself a lesson.** A benchmark of coding agents can't measure an agent whose subscription has lapsed; the run script gracefully tolerated it (empty output, SKIP in judge) but produced no comparative data for codex on run 3. Followup item: add a codex-CLI preflight check to the start phase so token exhaustion is caught before the run window opens.
 
-Between runs we updated opencode's build-agent prompt to add deliverable-discipline rules. The file-layout rule landed (R9/R10 fix). The abstract README rule did not. Config v3 (template-driven README + Playwright MCP for browser-level self-verification) is queued for run 3.
+Between runs we have iterated only the opencode build-agent prompt; the SPEC/PROMPT/Playwright assertions are byte-identical across all three runs. The file-layout rule (v2) landed cleanly. The abstract README rule (v2) and the template-driven README rule (v3) both failed to land. Run 4 will narrow on: a SCORED README rubric inside SPEC.md (each of 4 required sections is worth 1 quality point), tightened verification language ("open in Playwright MCP, assert no console errors, assert preview is non-empty after typing `# Hello`"), and a codex preflight in `bench-run.ps1`.
 
 **Iteration lineage with commit hashes is documented in [`benchmarks/README.md` → "How we've iterated the opencode config"](benchmarks/README.md).** The benchmark itself (SPEC.md, PROMPT.md, R1-R10 Playwright assertions) has never changed between runs -- only the agent's instructions about how to follow them. A skeptical reader can verify this via `git log -p` on those files. The repo's commitment: tune the tool, not the test.
 
@@ -134,7 +136,7 @@ Three caveats worth knowing before citing these numbers:
 Full caveats list (8 total) and methodology: [`benchmarks/README.md`](benchmarks/README.md). Per-run data:
 
 - tic-tac-toe: [`runs/2026-05-21-0818`](benchmarks/tic-tac-toe/results/runs/2026-05-21-0818/2026-05-21-0818.md), [`runs/2026-05-22-0745`](benchmarks/tic-tac-toe/results/runs/2026-05-22-0745/2026-05-22-0745.md), [`comparisons.md`](benchmarks/tic-tac-toe/results/comparisons.md)
-- markdown-editor: [`runs/2026-05-22-0837`](benchmarks/markdown-editor/results/runs/2026-05-22-0837/2026-05-22-0837.md), [`runs/2026-05-22-0951`](benchmarks/markdown-editor/results/runs/2026-05-22-0951/2026-05-22-0951.md), [`comparisons.md`](benchmarks/markdown-editor/results/comparisons.md)
+- markdown-editor: [`runs/2026-05-22-0837`](benchmarks/markdown-editor/results/runs/2026-05-22-0837/2026-05-22-0837.md), [`runs/2026-05-22-0951`](benchmarks/markdown-editor/results/runs/2026-05-22-0951/2026-05-22-0951.md), [`runs/2026-05-24-0758`](benchmarks/markdown-editor/results/runs/2026-05-24-0758/2026-05-24-0758.md), [`comparisons.md`](benchmarks/markdown-editor/results/comparisons.md)
 
 ## Why one gateway in front of everything
 

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Markdown Editor</title>
+<style>
+  html,body{margin:0;height:100%;font-family:system-ui,sans-serif}
+  .app{display:flex;height:100vh}
+  .pane{flex:1;overflow:auto;padding:1rem;box-sizing:border-box}
+  #src{width:100%;height:100%;border:0;outline:0;resize:none;font:14px/1.5 ui-monospace,monospace;border-right:1px solid #ddd}
+  #preview{border-left:1px solid #ddd}
+  #preview pre{background:#f4f4f4;padding:.5rem;overflow:auto}
+  #preview code{background:#f4f4f4;padding:0 .25rem;border-radius:3px}
+  #preview blockquote{border-left:4px solid #ccc;margin:0;padding:0 .75rem;color:#555}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="pane"><textarea id="src" spellcheck="false"></textarea></div>
+  <div class="pane" id="preview"></div>
+</div>
+<script>
+/* PARSER_START */
+function renderMarkdown(src){
+  const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  const sanitizeUrl = u => {
+    const t = u.trim().toLowerCase();
+    if (t.startsWith('javascript:') || t.startsWith('data:') || t.startsWith('vbscript:')) return '#';
+    return u.replace(/"/g,'%22');
+  };
+  const inline = s => {
+    // s is already html-escaped. Protect inline code first.
+    const codes = [];
+    s = s.replace(/`([^`]+)`/g, (_, c) => { codes.push(c); return ' CODE'+(codes.length-1)+' '; });
+    // ***bold italic***
+    s = s.replace(/\*\*\*([^*]+)\*\*\*/g, '<strong><em>$1</em></strong>');
+    // **bold**
+    s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    // *italic*
+    s = s.replace(/(^|[^*])\*([^*\s][^*]*?)\*(?!\*)/g, '$1<em>$2</em>');
+    // _italic_
+    s = s.replace(/(^|[^_])_([^_\s][^_]*?)_(?!_)/g, '$1<em>$2</em>');
+    // links [text](url) — text and url are already escaped
+    s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, text, url) => '<a href="'+sanitizeUrl(url)+'">'+text+'</a>');
+    // restore inline code (content stays escaped, no inline transforms inside)
+    s = s.replace(/ CODE(\d+) /g, (_, n) => '<code>'+codes[+n]+'</code>');
+    return s;
+  };
+  if (!src) return '';
+  const lines = src.replace(/\r\n?/g,'\n').split('\n');
+  const out = [];
+  let para = [];
+  const flushPara = () => {
+    if (para.length){ out.push('<p>' + inline(esc(para.join('\n'))) + '</p>'); para = []; }
+  };
+  for (let i = 0; i < lines.length; i++){
+    const line = lines[i];
+    if (/^```/.test(line)){
+      flushPara();
+      const buf = [];
+      i++;
+      while (i < lines.length && !/^```/.test(lines[i])){ buf.push(lines[i]); i++; }
+      out.push('<pre><code>' + esc(buf.join('\n') + (buf.length?'\n':'')) + '</code></pre>');
+      continue;
+    }
+    const isUL = s => /^([-*+])\s+(.*)$/.exec(s);
+    const isULNested = s => /^  ([-*+])\s+(.*)$/.exec(s);
+    if (isUL(line)){
+      flushPara();
+      let html = '<ul>';
+      while (i < lines.length){
+        const top = isUL(lines[i]);
+        if (!top) break;
+        html += '<li>' + inline(esc(top[2]));
+        // collect nested
+        if (i+1 < lines.length && isULNested(lines[i+1])){
+          html += '<ul>';
+          while (i+1 < lines.length && isULNested(lines[i+1])){
+            i++;
+            const n = isULNested(lines[i]);
+            html += '<li>' + inline(esc(n[2])) + '</li>';
+          }
+          html += '</ul>';
+        }
+        html += '</li>';
+        i++;
+      }
+      i--; // step back so outer for-loop increment lands correctly
+      out.push(html + '</ul>');
+      continue;
+    }
+    const isOL = s => /^\d+\.\s+(.*)$/.exec(s);
+    if (isOL(line)){
+      flushPara();
+      let html = '<ol>';
+      while (i < lines.length){
+        const m2 = isOL(lines[i]);
+        if (!m2) break;
+        html += '<li>' + inline(esc(m2[1])) + '</li>';
+        i++;
+      }
+      i--;
+      out.push(html + '</ol>');
+      continue;
+    }
+    if (/^>\s?/.test(line)){
+      flushPara();
+      const buf = [line.replace(/^>\s?/,'')];
+      while (i+1 < lines.length && /^>\s?/.test(lines[i+1])){ i++; buf.push(lines[i].replace(/^>\s?/,'')); }
+      out.push('<blockquote>' + inline(esc(buf.join('\n'))) + '</blockquote>');
+      continue;
+    }
+    const h = line.match(/^(#{1,6})\s+(.*)$/);
+    if (h){ flushPara(); out.push('<h'+h[1].length+'>' + inline(esc(h[2])) + '</h'+h[1].length+'>'); continue; }
+    if (line === ''){ flushPara(); continue; }
+    para.push(line);
+  }
+  flushPara();
+  return out.join('');
+}
+/* PARSER_END */
+const srcEl = document.getElementById('src');
+const previewEl = document.getElementById('preview');
+srcEl.value = `# Markdown Editor
+
+Type on the **left**, see _rendered_ HTML on the right.
+
+- bullet one
+- bullet two
+  - nested
+- bullet three
+
+1. first
+2. second
+
+> a quote
+
+\`inline code\` and a [link](https://example.com).
+
+\`\`\`
+fenced code
+<script>alert(1)</script>
+\`\`\`
+`;
+previewEl.innerHTML = renderMarkdown(srcEl.value);
+let t;
+srcEl.addEventListener('input', () => {
+  clearTimeout(t);
+  t = setTimeout(() => { previewEl.innerHTML = renderMarkdown(srcEl.value); }, 200);
+});
+</script>
+</body>
+</html>

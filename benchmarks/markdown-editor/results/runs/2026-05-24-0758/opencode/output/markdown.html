@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Self-contained Markdown Editor</title>
+  <style>
+    html, body { height: 100%; margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    .app { display: flex; height: 100%; }
+    .pane { flex: 1 1 50%; box-sizing: border-box; padding: 12px; overflow: auto; }
+    .left { border-right: 1px solid #ddd; }
+    textarea { width: 100%; height: 100%; resize: none; box-sizing: border-box; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; font-size: 14px; line-height: 1.4; }
+    .preview { font-size: 16px; line-height: 1.5; }
+    pre { background: #f6f8fa; padding: 10px; border-radius: 6px; overflow: auto; }
+    code { background: #f6f8fa; padding: 0 3px; border-radius: 4px; }
+    blockquote { border-left: 4px solid #ddd; margin: 0; padding: 4px 12px; color: #555; background: #fafafa; }
+    ul, ol { padding-left: 24px; }
+    .invalid-link { color: #a00; text-decoration: line-through; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="pane left">
+      <textarea id="editor" aria-label="Markdown input"></textarea>
+    </div>
+    <div class="pane right">
+      <div id="preview" class="preview" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <script>
+  /* MARKDOWN_PARSER_START */
+  (function(global){
+    'use strict';
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function escapeAttr(str) {
+      // Attribute-safe escaping; same as HTML plus extra whitespace trim
+      return escapeHtml(String(str)).replace(/`/g, '&#96;');
+    }
+
+    function sanitizeUrl(url) {
+      if (url == null) return null;
+      let u = String(url).trim();
+      // Disallow control chars and whitespace around colon
+      u = u.replace(/[\u0000-\u001F\u007F\s]+/g, '');
+      const m = /^([a-zA-Z][a-zA-Z0-9+.-]*):/.exec(u);
+      if (m) {
+        const scheme = m[1].toLowerCase();
+        const allowed = new Set(['http','https','mailto','tel']);
+        if (!allowed.has(scheme)) return null;
+      }
+      // Allow relative and hash links
+      if (!m) {
+        if (u.startsWith('/') || u.startsWith('./') || u.startsWith('../') || u.startsWith('#')) return u;
+      }
+      return u;
+    }
+
+    function inline(text) {
+      if (!text) return '';
+      let src = String(text);
+      const ph = [];
+      const tok = (i) => '\\u0001' + i + '\\u0001';
+      const put = (html) => { const i = ph.length; ph.push(html); return tok(i); };
+
+      // Code spans -> placeholder of safe HTML
+      src = src.replace(/`([^`]+)`/g, (_, code) => put('<code>' + escapeHtml(String(code).trim()) + '</code>'));
+
+      // Links: [text](url) with possible parentheses inside URL -> placeholder
+      src = (function replaceLinks(s){
+        let i = 0; let out = '';
+        while (i < s.length) {
+          const lb = s.indexOf('[', i);
+          if (lb === -1) { out += s.slice(i); break; }
+          out += s.slice(i, lb);
+          const rb = s.indexOf(']', lb + 1);
+          if (rb === -1) { out += s.slice(lb); break; }
+          if (s[rb + 1] !== '(') { out += s.slice(lb, rb + 1); i = rb + 1; continue; }
+          // find matching ) accounting parens
+          let j = rb + 2, depth = 1;
+          while (j < s.length && depth > 0) {
+            const ch = s[j++];
+            if (ch === '(') depth++;
+            else if (ch === ')') depth--;
+          }
+          if (depth !== 0) { // no proper closing
+            out += s.slice(lb, rb + 1); i = rb + 1; continue;
+          }
+          const textIn = s.slice(lb + 1, rb);
+          const urlIn = s.slice(rb + 2, j - 1);
+          const safe = sanitizeUrl(urlIn);
+          const content = escapeHtml(textIn);
+          if (!safe) {
+            out += put('<span class="invalid-link">' + content + ' (' + escapeHtml(urlIn) + ')</span>');
+          } else {
+            const href = escapeAttr(safe);
+            out += put('<a href="' + href + '" rel="noopener noreferrer nofollow">' + content + '</a>');
+          }
+          i = j;
+        }
+        return out;
+      })(src);
+
+      // Bold+Italic ***text*** or ___text___ -> placeholder
+      src = src.replace(/(\*\*\*|___)([\s\S]+?)\1/g, function(_, _m, inner){
+        return put('<strong><em>' + escapeHtml(inner) + '</em></strong>');
+      });
+
+      // Bold **text** or __text__ -> placeholder
+      src = src.replace(/(\*\*|__)([\s\S]+?)\1/g, function(_, _m, inner){
+        return put('<strong>' + escapeHtml(inner) + '</strong>');
+      });
+
+      // Italic *text* or _text_ -> placeholder
+      src = src.replace(/(\*|_)([^\s][\s\S]*?)\1/g, function(_, _m, inner){
+        return put('<em>' + escapeHtml(inner) + '</em>');
+      });
+
+      // Escape remaining raw HTML
+      src = src.replace(/&/g,'&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+      // Restore placeholders
+      src = src.replace(/\\u0001(\d+)\\u0001/g, function(_, i){ return ph[Number(i)] || ''; });
+
+      return src;
+    }
+
+    function parse(md) {
+      if (!md) return '';
+      const text = String(md).replace(/\r\n?/g, '\n');
+      const lines = text.split('\n');
+      let i = 0;
+      let out = '';
+
+      function parseBlockquote() {
+        const inner = [];
+        while (i < lines.length) {
+          const line = lines[i];
+          if (/^\s*>\s?/.test(line)) {
+            inner.push(line.replace(/^\s*>\s?/, ''));
+            i++;
+          } else if (line.trim() === '') {
+            // include blank inside quote to preserve paragraph breaks
+            inner.push('');
+            i++;
+          } else {
+            break;
+          }
+        }
+        out += '<blockquote>' + parse(inner.join('\n')) + '</blockquote>';
+      }
+
+      function parseCodeFence() {
+        // consume opening ```
+        i++; // skip opening fence
+        const buf = [];
+        while (i < lines.length) {
+          if (/^```\s*$/.test(lines[i])) { i++; break; }
+          buf.push(lines[i]);
+          i++;
+        }
+        out += '<pre><code>' + escapeHtml(buf.join('\n')) + '</code></pre>';
+      }
+
+      function parseList() {
+        const startLine = lines[i];
+        const m0 = /^(\s{0,5})([*+-]|\d+\.)\s+/.exec(startLine);
+        const listType = /\d+\./.test(m0[2]) ? 'ol' : 'ul';
+        out += listType === 'ul' ? '<ul>' : '<ol>';
+        while (i < lines.length) {
+          const m = /^(\s{0,5})([*+-]|\d+\.)\s+(.*)$/.exec(lines[i] || '');
+          if (!m) break;
+          const indent = m[1].length >= 2 ? 1 : 0;
+          const typeHere = /\d+\./.test(m[2]) ? 'ol' : 'ul';
+          if (indent !== 0 || typeHere !== listType) break; // stop at nested or different-type at same level
+          // consume this top-level item line
+          i++;
+          const itemText = m[3];
+          // collect continuation lines (indented) for this item
+          const cont = [];
+          while (i < lines.length) {
+            const l = lines[i];
+            if (/^(\s{0,5})([*+-]|\d+\.)\s+/.test(l) || /^```\s*$/.test(l) || /^(#{1,6})\s+/.test(l) || /^\s*>\s?/.test(l)) break;
+            if (l.trim() === '') break;
+            if (/^\s{2,}\S/.test(l)) { cont.push(l.trim()); i++; continue; }
+            break;
+          }
+          // If next line(s) are nested items, parse as nested list and append inside this <li>
+          let nestedHtml = '';
+          if (i < lines.length && /^(\s{2,5})([*+-]|\d+\.)\s+/.test(lines[i])) {
+            // temporarily parse nested items of any type, but one level only
+            nestedHtml += (function parseNested(){
+              const first = /^(\s{2,5})([*+-]|\d+\.)\s+/.exec(lines[i]);
+              const nestedType = /\d+\./.test(first[2]) ? 'ol' : 'ul';
+              let html = nestedType==='ul' ? '<ul>' : '<ol>';
+              while (i < lines.length) {
+                const mm = /^(\s{2,5})([*+-]|\d+\.)\s+(.*)$/.exec(lines[i] || '');
+                if (!mm) break;
+                const t = /\d+\./.test(mm[2]) ? 'ol' : 'ul';
+                if (t !== nestedType) break;
+                i++;
+                html += '<li>' + inline(mm[3]) + '</li>';
+              }
+              html += nestedType==='ul' ? '</ul>' : '</ol>';
+              return html;
+            })();
+          }
+          const content = [itemText].concat(cont).join(' ');
+          out += '<li>' + inline(content) + nestedHtml + '</li>';
+        }
+        out += listType === 'ul' ? '</ul>' : '</ol>';
+      }
+
+      function parseParagraph() {
+        // Gather consecutive non-blank, non-block lines into a paragraph
+        const buf = [];
+        while (i < lines.length) {
+          const line = lines[i];
+          if (!line.trim()) { i++; break; }
+          if (/^```\s*$/.test(line) || /^(#{1,6})\s+/.test(line) || /^(\s{0,5})([*+-]|\d+\.)\s+/.test(line) || /^\s*>\s?/.test(line)) {
+            break;
+          }
+          buf.push(line);
+          i++;
+        }
+        if (buf.length) out += '<p>' + inline(buf.join(' ')) + '</p>';
+      }
+
+      while (i < lines.length) {
+        const line = lines[i];
+        if (line.trim() === '') { i++; continue; }
+        // Fenced code
+        if (/^```\s*$/.test(line)) { parseCodeFence(); continue; }
+        // Headings
+        let m;
+        if ((m = /^(#{1,6})\s+(.*)$/.exec(line))) {
+          const level = m[1].length;
+          const content = inline(m[2]);
+          out += '<h' + level + '>' + content + '</h' + level + '>';
+          i++;
+          continue;
+        }
+        // Blockquote
+        if (/^\s*>\s?/.test(line)) { parseBlockquote(); continue; }
+        // Lists
+        if (/^(\s{0,5})([*+-]|\d+\.)\s+/.test(line)) { parseList(); continue; }
+        // Paragraph
+        parseParagraph();
+      }
+
+      return out;
+    }
+
+    global.Markdown = { parse, sanitizeUrl, _escapeHtml: escapeHtml };
+  })(typeof window !== 'undefined' ? window : globalThis);
+  /* MARKDOWN_PARSER_END */
+  </script>
+
+  <script>
+    (function(){
+      const editor = document.getElementById('editor');
+      const preview = document.getElementById('preview');
+
+      function debounce(fn, wait) {
+        let t; return function(){
+          const ctx = this, args = arguments;
+          clearTimeout(t); t = setTimeout(function(){ fn.apply(ctx, args); }, wait);
+        };
+      }
+
+      function render(){
+        try {
+          const html = Markdown.parse(editor.value);
+          preview.innerHTML = html;
+        } catch (e) {
+          preview.textContent = 'Render error: ' + (e && e.message || String(e));
+        }
+      }
+
+      const renderDebounced = debounce(render, 150);
+      editor.addEventListener('input', renderDebounced);
+
+      // Seed content
+      editor.value = `# Markdown Editor\n\nType on the left, preview on the right.\n\n- Supports **bold**, *italic*, and ***both***\n- Lists, [links](https://example.com), code: \`x < y\`\n\n> Blockquote example\n\n\`\`\`\n<escaped code block>\n\`\`\``.replace(/`/g,'`');
+      render();
+    })();
+  </script>
+</body>
+</html>
