@@ -33,7 +33,7 @@ opencode (default agent = orchestrator)
       └─ planner   (subagent, oss tier)      design approach, step plans
 ```
 
-All gateway-bound traffic carries a `cf-aig-metadata` header (`{"app":"opencode-router","user":"eric-local-dev"}`) so it is filterable in CF AI Gateway analytics, distinct from other clients (and other developers) hitting the same gateway.
+All gateway-bound traffic carries a `cf-aig-metadata` header (`{"app":"opencode","user":"eric-local-dev"}`) so it is filterable in CF AI Gateway analytics, distinct from other clients (and other developers) hitting the same gateway.
 
 **Multi-developer handoff:** This config may be shared with colleagues who use the same CF AI Gateway. The `user` field is the per-developer scope tag. Two options for handling this:
 - **v1 (chosen):** hard-code `eric-local-dev`; colleagues edit the value when adopting the config.
@@ -119,7 +119,7 @@ Agent definitions may live inline in `opencode.json` or as separate files under 
 
 ## Validation plan
 
-- **Primary signal:** CF AI Gateway analytics, filtered by `app: opencode-router` AND `user: eric-local-dev` metadata tags
+- **Primary signal:** CF AI Gateway analytics, filtered by `app: opencode` AND `user: eric-local-dev` metadata tags
 - **Window:** ≥ 1 week of real use
 - **Tier breakdown via model differentiation:**
   - `openai/gpt-5` → orchestrator (frontier tier)
