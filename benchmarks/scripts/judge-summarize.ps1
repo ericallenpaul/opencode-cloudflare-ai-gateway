@@ -74,6 +74,22 @@ $mainJsonPath = Join-Path $resultsDir "$RunId.json"
 if (-not (Test-Path $resultsDir)) {
     throw "Results dir not found: $resultsDir"
 }
+
+# Load skipped tools from _run-config.json (v5+); silently OK if absent
+$skippedTools = [ordered]@{}
+$runConfigPath = Join-Path $resultsDir "_run-config.json"
+if (Test-Path $runConfigPath) {
+    try {
+        $rc = Get-Content $runConfigPath -Raw -Encoding utf8 | ConvertFrom-Json
+        if ($rc.skipped) {
+            foreach ($p in $rc.skipped.PSObject.Properties) {
+                $skippedTools[$p.Name] = [string]$p.Value
+            }
+        }
+    } catch {
+        # Pre-v5 run -- no skips to record
+    }
+}
 if (-not (Test-Path $mainMdPath)) {
     throw "Main RunId.md not found: $mainMdPath`n  Run bench-run.ps1 -Phase finish first."
 }
@@ -338,6 +354,16 @@ $lines += "### Methodology note"
 $lines += ""
 $lines += "Cost is API-retail-equivalent per ccusage, not what you actually paid (subscription users pay flat; BYOK gateway users pay the underlying provider). Quality scores are subjective and reflect one agent's read of source + screenshots -- a different judge agent will produce different numbers. Bug count only includes bugs the qualitative judge flagged beyond the R1-R10 functional tests."
 $lines += ""
+if ($skippedTools.Count -gt 0) {
+    $lines += "### Skipped tools"
+    $lines += ""
+    $lines += "The following tools were excluded at run start and are NOT part of the composite ranking above:"
+    $lines += ""
+    foreach ($n in $skippedTools.Keys) {
+        $lines += "- **$n** -- $($skippedTools[$n])"
+    }
+    $lines += ""
+}
 $lines += $END_MARKER
 
 $summaryBlock = $lines -join "`n"
