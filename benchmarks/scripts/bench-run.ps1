@@ -303,18 +303,6 @@ if ($Phase -eq "start") {
     $runConfigPath = Join-Path $runIdDir "_run-config.json"
     $runConfig | ConvertTo-Json -Depth 5 | Set-Content -Encoding utf8 $runConfigPath
     Write-Host "Wrote run config: $runConfigPath" -ForegroundColor DarkGray
-
-    Write-Host "Auth/quota check (manual): the preflight above only confirms each CLI is on PATH." -ForegroundColor DarkGray
-    Write-Host "  It does NOT verify subscription state or API token balance." -ForegroundColor DarkGray
-    Write-Host "  Before continuing, confirm each selected tool can actually produce a token:" -ForegroundColor DarkGray
-    foreach ($t in $runtimeTools) {
-        Write-Host "    - $($t.Name)" -ForegroundColor DarkGray
-    }
-    $authResp = Read-Host "Are all selected tools authenticated and within quota? [y/N]"
-    if ($authResp -notmatch '^[Yy]') {
-        Write-Host "Aborting start phase. Resolve auth/quota issues and re-run." -ForegroundColor Red
-        exit 1
-    }
     Write-Host ""
 
     foreach ($t in $runtimeTools) {
