@@ -375,6 +375,28 @@ function Finish-OneTool {
         [Parameter(Mandatory)][bool]$NoCopy
     )
 
+    # v5: honor _run-config.json -- refuse to finish a skipped tool, and copy the
+    # config into the results dir so downstream phases find it.
+    $runIdDir       = Split-Path -Parent $RunDir
+    $runConfigPath  = Join-Path $runIdDir "_run-config.json"
+    if (Test-Path $runConfigPath) {
+        $runConfig = Get-Content $runConfigPath -Raw -Encoding utf8 | ConvertFrom-Json
+        $skippedNames = @()
+        if ($runConfig.skipped) {
+            $skippedNames = @($runConfig.skipped.PSObject.Properties.Name)
+        }
+        if ($skippedNames -contains $Tool) {
+            $reason = $runConfig.skipped.$Tool
+            throw "Tool '$Tool' was marked SKIPPED in _run-config.json (reason: $reason). Finish refuses to proceed."
+        }
+        # Copy run config into results dir for durable storage
+        $resultsRunIdDir = Join-Path $RepoRoot "benchmarks\$Benchmark\results\runs\$RunId"
+        New-Item -ItemType Directory -Force -Path $resultsRunIdDir | Out-Null
+        $resultsConfigPath = Join-Path $resultsRunIdDir "_run-config.json"
+        Copy-Item -Force $runConfigPath $resultsConfigPath
+    }
+    # If no _run-config.json exists, this is a pre-v5 run -- legacy behavior (all tools assumed selected).
+
     $beforeFile = Join-Path $RunDir "_ccusage-before.json"
     if (-not (Test-Path $beforeFile)) {
         Write-Host "  [skip] baseline snapshot missing for $Tool at $RunDir" -ForegroundColor Yellow
