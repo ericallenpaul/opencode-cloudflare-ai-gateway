@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Self-contained Markdown Editor</title>
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      background: #1e1f22;
+      color: #ddd;
+      font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    }
+    .container {
+      display: flex;
+      height: 100vh;
+      width: 100%;
+    }
+    .pane {
+      flex: 1 1 50%;
+      min-width: 0; /* prevent overflow */
+      display: flex;
+      flex-direction: column;
+    }
+    .header {
+      padding: 8px 12px;
+      background: #2b2d31;
+      border-bottom: 1px solid #3a3d42;
+      font-weight: 600;
+      color: #bbb;
+    }
+    textarea {
+      flex: 1 1 auto;
+      width: 100%;
+      border: none;
+      outline: none;
+      resize: none;
+      padding: 12px;
+      box-sizing: border-box;
+      background: #141517;
+      color: #e6e6e6;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .preview {
+      flex: 1 1 auto;
+      padding: 12px;
+      overflow: auto;
+      background: #0f1012;
+      color: #eee;
+    }
+    .preview h1, .preview h2, .preview h3, .preview h4, .preview h5, .preview h6 { margin: 0.6em 0 0.4em; }
+    .preview p { margin: 0.5em 0; }
+    .preview code { background: #22252a; padding: 2px 4px; border-radius: 3px; }
+    .preview pre { background: #1a1c20; padding: 10px; border-radius: 6px; overflow: auto; }
+    .preview blockquote { margin: 0.6em 0; padding-left: 10px; border-left: 3px solid #3a3d42; color: #bbb; }
+    .preview ul, .preview ol { margin: 0.5em 0 0.5em 1.25em; }
+    .preview a { color: #5fb3ff; text-decoration: none; }
+    .preview a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="pane">
+      <div class="header">Markdown</div>
+      <textarea id="editor" spellcheck="false"># Markdown Editor
+
+Type Markdown on the left; sanitized HTML preview on the right.
+
+## Features
+
+- Headings `#` to `######`
+- **Bold**, *Italic*, ***Bold+Italic***
+- Lists (UL/OL) with one nested level
+- `inline code` and fenced code blocks:
+
+```
+console.log('Hello, world');
+```
+
+- Links: [example](https://example.com)
+- Blockquotes:
+> Quote line 1
+> Quote line 2
+
+Security: raw HTML is escaped. javascript: links are dropped.</textarea>
+    </div>
+    <div class="pane">
+      <div class="header">Preview</div>
+      <div id="preview" class="preview"></div>
+    </div>
+  </div>
+
+  <script>
+    // --- Parser (mirrors markdown.js; no external dependencies) ---
+    function escapeHtml(s) {
+      return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+    function safeUrl(url) {
+      const u = String(url).trim();
+      const low = u.toLowerCase();
+      if (low.startsWith('http://') || low.startsWith('https://')) return u;
+      return null;
+    }
+    function inlineFormat(input) {
+      let s = String(input ?? '');
+      const placeholders = [];
+      const put = (html) => { const t = `\x00${placeholders.length}\x01`; placeholders.push(html); return t; };
+      s = s.replace(/`([^`]+)`/g, (_, code) => put(`<code>${escapeHtml(code)}</code>`));
+      s = s.replace(/\*\*\*([^*]+)\*\*\*/g, (_, inner) => put(`<strong><em>${inlineFormat(inner)}</em></strong>`));
+      s = s.replace(/\*\*([^*]+)\*\*/g, (_, inner) => put(`<strong>${inlineFormat(inner)}</strong>`));
+      s = s.replace(/\*([^*_]+)\*/g, (_, inner) => put(`<em>${inlineFormat(inner)}</em>`));
+      s = s.replace(/_([^*_]+)_/g, (_, inner) => put(`<em>${inlineFormat(inner)}</em>`));
+      s = s.replace(/\[([^\]]+)\]\((.+)\)/g, (_, text, url) => {
+        const safe = safeUrl(url);
+        const inner = inlineFormat(text);
+        if (!safe) return put(`${inner}`);
+        return put(`<a href="${escapeHtml(safe)}" rel="noopener noreferrer" target="_blank">${inner}</a>`);
+      });
+      s = escapeHtml(s);
+      s = s.replace(/\x00(\d+)\x01/g, (_, i) => placeholders[+i]);
+      return s;
+    }
+    function renderMarkdown(md) {
+      const lines = String(md || '').replace(/\r\n?/g, '\n').split('\n');
+      const out = [];
+      let inCode = false; let codeBuf = [];
+      let listStack = []; let openLiDepths = [];
+      let paraOpen = false; let paraBuf = [];
+      let inBq = false; let bqBuf = [];
+      const closePara = () => { if (paraOpen) { out.push(`<p>${inlineFormat(paraBuf.join(' '))}</p>`); paraOpen = false; paraBuf = []; } };
+      const closeListsTo = (depth) => {
+        while (listStack.length > depth) {
+          const last = listStack.length - 1;
+          if (openLiDepths[last]) { out.push('</li>'); openLiDepths[last] = false; }
+          const t = listStack.pop(); out.push(t === 'ul' ? '</ul>' : '</ol>');
+          openLiDepths.pop();
+        }
+      };
+      const ensureList = (type, depth) => {
+        while (listStack.length < depth) { listStack.push('ul'); out.push('<ul>'); openLiDepths.push(false); }
+        if (listStack.length === depth) { listStack.push(type); out.push(type === 'ul' ? '<ul>' : '<ol>'); openLiDepths.push(false); return; }
+        if (listStack[depth] !== type) {
+          closeListsTo(depth);
+          const t = listStack.pop(); out.push(t === 'ul' ? '</ul>' : '</ol>'); openLiDepths.pop();
+          listStack.push(type); out.push(type === 'ul' ? '<ul>' : '<ol>'); openLiDepths.push(false);
+        } else {
+          closeListsTo(depth + 1);
+        }
+      };
+      for (let i = 0; i < lines.length; i++) {
+        let line = lines[i];
+        if (inCode) {
+          if (/^\s*```/.test(line)) { out.push(`<pre><code>${escapeHtml(codeBuf.join('\\n'))}\\n</code></pre>`); inCode = false; codeBuf = []; }
+          else { codeBuf.push(line); }
+          continue;
+        }
+        if (/^\s*```/.test(line)) { if (inBq) { out.push(`<blockquote><p>${inlineFormat(bqBuf.join('\\n'))}</p></blockquote>`); inBq = false; bqBuf = []; } closePara(); closeListsTo(0); inCode = true; continue; }
+        if (/^\s*>\s?/.test(line)) { const content = line.replace(/^\s*>\s?/, ''); if (!inBq) { closePara(); closeListsTo(0); inBq = true; bqBuf = []; } bqBuf.push(content); continue; }
+        else if (inBq && line.trim() === '') { bqBuf.push(''); continue; }
+        else if (inBq) { out.push(`<blockquote><p>${inlineFormat(bqBuf.join('\\n'))}</p></blockquote>`); inBq = false; bqBuf = []; }
+        if (line.trim() === '') { closePara(); continue; }
+        const hm = line.match(/^(#{1,6})\s+(.*)$/); if (hm) { closePara(); closeListsTo(0); const level = hm[1].length; const text = hm[2].trim(); out.push(`<h${level}>${inlineFormat(text)}</h${level}>`); continue; }
+        const ul = line.match(/^(\s{2,})?([*+-])\s+(.*)$/); const ol = line.match(/^(\s{2,})?(\d+)\.\s+(.*)$/);
+        if (ul || ol) { closePara(); const depth = (ul ? ul[1] : ol[1]) ? 1 : 0; const type = ul ? 'ul' : 'ol'; const text = (ul ? ul[3] : ol[3]).trim(); ensureList(type, depth); if (openLiDepths[depth]) { out.push('</li>'); openLiDepths[depth] = false; } out.push(`<li>${inlineFormat(text)}`); openLiDepths[depth] = true; continue; }
+        if (!paraOpen) { paraOpen = true; paraBuf = []; } paraBuf.push(line.trim());
+      }
+      if (inBq) { out.push(`<blockquote><p>${inlineFormat(bqBuf.join('\\n'))}</p></blockquote>`); }
+      if (inCode) { out.push(`<pre><code>${escapeHtml(codeBuf.join('\\n'))}\\n</code></pre>`); }
+      if (paraOpen) { out.push(`<p>${inlineFormat(paraBuf.join(' '))}</p>`); }
+      for (let d = openLiDepths.length - 1; d >= 0; d--) { if (openLiDepths[d]) { out.push('</li>'); openLiDepths[d] = false; } const t = listStack.pop(); out.push(t === 'ul' ? '</ul>' : '</ol>'); }
+      return out.join('');
+    }
+
+    // --- UI ---
+    const editor = document.getElementById('editor');
+    const preview = document.getElementById('preview');
+
+    window.__lastRenderTS = 0;
+
+    function updatePreview() {
+      const html = renderMarkdown(editor.value);
+      preview.innerHTML = html;
+      window.__lastRenderTS = performance.now();
+    }
+
+    // Debounce at ~150ms to meet <250ms requirement comfortably
+    function debounce(fn, wait) {
+      let t = null;
+      return function() {
+        if (t) clearTimeout(t);
+        t = setTimeout(() => fn.apply(this, arguments), wait);
+      };
+    }
+
+    const debouncedUpdate = debounce(updatePreview, 150);
+    editor.addEventListener('input', debouncedUpdate);
+
+    // Initial render
+    updatePreview();
+  </script>
+</body>
+</html>

@@ -107,13 +107,13 @@ Bottom line on tic-tac-toe: **~6-10x cost reduction vs Claude Code, consistently
 
 ### A harder benchmark surfaces the trade-off more starkly
 
-`benchmarks/markdown-editor` is a deliberately harder target -- parser correctness, XSS handling, live-preview event wiring, ~300-500 LOC. Three runs completed:
+`benchmarks/markdown-editor` is a deliberately harder target -- parser correctness, XSS handling, live-preview event wiring, ~300-500 LOC. Four runs completed:
 
-| | run 1 (opencode config v1) | run 2 (opencode config v2) | run 3 (opencode config v3) |
-|---|---|---|---|
-| opencode R1-R10 / quality / cost | 8/10 (tests nested in subdir) / 2.6 / $0.25 | **10/10** (file-layout discipline landed) / 2.6 / $0.52 | **10/10** / 3.4 / $0.52 |
-| codex R1-R10 / quality / cost | 10/10 / 4.6 / $1.97 | 10/10 / 4.6 / $2.12 | **SKIPPED** -- codex ran out of API tokens mid-benchmark |
-| claude R1-R10 / quality / cost | 10/10 / 4.4 / $1.60 | 3/10 (live-preview wired to wrong DOM event) / 4.4 / $1.43 | 4/10 (`</script>` termination bug killed inline JS) / 3.8 / $3.63 |
+| | run 1 (opencode config v1) | run 2 (opencode config v2) | run 3 (opencode config v3) | run 4 (opencode config v5) |
+|---|---|---|---|---|
+| opencode R1-R10 / quality / cost | 8/10 (tests nested in subdir) / 2.6 / $0.25 | **10/10** (file-layout discipline landed) / 2.6 / $0.52 | **10/10** / 3.4 / $0.52 | **10/10** / 2.4 / $0.55 (parser drift + 33-byte README) |
+| codex R1-R10 / quality / cost | 10/10 / 4.6 / $1.97 | 10/10 / 4.6 / $2.12 | **SKIPPED** -- codex ran out of API tokens mid-benchmark | **SKIPPED** (clean v5 workflow: "Out of tokens" recorded as exclusion reason) |
+| claude R1-R10 / quality / cost | 10/10 / 4.4 / $1.60 | 3/10 (live-preview wired to wrong DOM event) / 4.4 / $1.43 | 4/10 (`</script>` termination bug killed inline JS) / 3.8 / $3.63 | **10/10** / 4.6 / $2.09 |
 
 What this benchmark surfaced that tic-tac-toe couldn't:
 
@@ -123,7 +123,11 @@ What this benchmark surfaced that tic-tac-toe couldn't:
 - **First composite loss for opencode in this benchmark.** Run 3 ranked claude 0.268 vs opencode 0.233 on the cost(50%)/quality(30%)/bugs(20%) composite -- opencode shipped a working app for 6.9x less money but lost on Documentation=1 and on bug-count-beyond-R1-R10 (6 vs 4). The cost-quality gap is now the dominant axis, not the cost-functional gap.
 - **The codex-out-of-tokens skip is itself a lesson.** A benchmark of coding agents can't measure an agent whose subscription has lapsed; the run script gracefully tolerated it (empty output, SKIP in judge) but produced no comparative data for codex on run 3. Followup item: add a codex-CLI preflight check to the start phase so token exhaustion is caught before the run window opens.
 
-Between runs we have iterated only the opencode build-agent prompt; the SPEC/PROMPT/Playwright assertions are byte-identical across all three runs. The file-layout rule (v2) landed cleanly. The abstract README rule (v2) and the template-driven README rule (v3) both failed to land. Run 4 will narrow on: a SCORED README rubric inside SPEC.md (each of 4 required sections is worth 1 quality point), tightened verification language ("open in Playwright MCP, assert no console errors, assert preview is non-empty after typing `# Hello`"), and a codex preflight in `bench-run.ps1`.
+Between runs we have iterated only the opencode build-agent prompt and the orchestrator scripts; the SPEC/PROMPT/Playwright assertions are byte-identical across all four runs. The file-layout rule (v2) landed cleanly. **The README rule has failed to land four times in a row** -- abstract (v2), concrete template (v3), scored rubric in JUDGE-PROMPT (v4), and even with the v5 tool-selection workflow surrounding it -- opencode shipped a 33-byte README in run 4 (literally `# Self-contained Markdown Editor` and nothing else). Diagnosed today as structural: README depth was never enforced as a build-time gate, only judged post-hoc. Same model (GPT-5) writes detailed READMEs under codex's harness; the variable is the harness's "am I done?" definition, not the model.
+
+Run 4 also surfaced a new opencode failure mode: **parser drift / single-source-of-truth violation**. The standalone `markdown.js` parser (which the tests import) uses `'\n'` correctly; the inlined parser inside `markdown.html` (which the real app uses) uses `'\\n'` (literal backslash-n). Tests passed against the module. The actual rendered app showed visible `\n` characters in code blocks and blockquotes. R1-R10 missed it because the Playwright suite asserts DOM structure but doesn't inspect rendered text for stray `\n` sequences. Spiritual cousin of claude's run-3 `</script>` bug -- both shipped because R1-R10 doesn't catch every class of runtime artifact issue.
+
+**Config v6** shipped same day as run 4: an executable Node one-liner inside the opencode build agent's verification step that runs after the Playwright smoke-test and exits non-zero if `README.md` has fewer than 5 H2 headings or 40 non-blank lines. Unlike the v2-v4 README rules (which were advisory or judge-side), v6 is a real shell command with a numeric exit code; the model has to invoke it and observe the failure. **This is the last prompt-side iteration**: if a fifth run still ships a 1-line README, the next move is R11 (hard test gate in the Playwright suite -- the first benchmark change ever, and explicitly raising the bar rather than lowering it).
 
 **Iteration lineage with commit hashes is documented in [`benchmarks/README.md` → "How we've iterated the opencode config"](benchmarks/README.md).** The benchmark itself (SPEC.md, PROMPT.md, R1-R10 Playwright assertions) has never changed between runs -- only the agent's instructions about how to follow them. A skeptical reader can verify this via `git log -p` on those files. The repo's commitment: tune the tool, not the test.
 
@@ -136,7 +140,7 @@ Three caveats worth knowing before citing these numbers:
 Full caveats list (8 total) and methodology: [`benchmarks/README.md`](benchmarks/README.md). Per-run data:
 
 - tic-tac-toe: [`runs/2026-05-21-0818`](benchmarks/tic-tac-toe/results/runs/2026-05-21-0818/2026-05-21-0818.md), [`runs/2026-05-22-0745`](benchmarks/tic-tac-toe/results/runs/2026-05-22-0745/2026-05-22-0745.md), [`comparisons.md`](benchmarks/tic-tac-toe/results/comparisons.md)
-- markdown-editor: [`runs/2026-05-22-0837`](benchmarks/markdown-editor/results/runs/2026-05-22-0837/2026-05-22-0837.md), [`runs/2026-05-22-0951`](benchmarks/markdown-editor/results/runs/2026-05-22-0951/2026-05-22-0951.md), [`runs/2026-05-24-0758`](benchmarks/markdown-editor/results/runs/2026-05-24-0758/2026-05-24-0758.md), [`comparisons.md`](benchmarks/markdown-editor/results/comparisons.md)
+- markdown-editor: [`runs/2026-05-22-0837`](benchmarks/markdown-editor/results/runs/2026-05-22-0837/2026-05-22-0837.md), [`runs/2026-05-22-0951`](benchmarks/markdown-editor/results/runs/2026-05-22-0951/2026-05-22-0951.md), [`runs/2026-05-24-0758`](benchmarks/markdown-editor/results/runs/2026-05-24-0758/2026-05-24-0758.md), [`runs/2026-05-24-1522`](benchmarks/markdown-editor/results/runs/2026-05-24-1522/2026-05-24-1522.md), [`comparisons.md`](benchmarks/markdown-editor/results/comparisons.md)
 
 ## Why one gateway in front of everything
 

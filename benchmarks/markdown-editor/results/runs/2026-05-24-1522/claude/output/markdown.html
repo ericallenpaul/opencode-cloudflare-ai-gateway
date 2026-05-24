@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Markdown Editor</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{height:100%;margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#222}
+  .wrap{display:grid;grid-template-columns:1fr 1fr;height:100vh}
+  #src,.preview{padding:1rem;border:0;outline:0;font-size:14px;height:100%;overflow:auto;background:#fff}
+  #src{font-family:ui-monospace,Consolas,"Courier New",monospace;resize:none;border-right:1px solid #ddd;line-height:1.5}
+  .preview{line-height:1.55}
+  .preview h1,.preview h2,.preview h3,.preview h4,.preview h5,.preview h6{margin:.8em 0 .4em;line-height:1.2}
+  .preview p{margin:.5em 0}
+  .preview pre{background:#f4f4f4;padding:.75rem;overflow:auto;border-radius:4px}
+  .preview code{background:#f4f4f4;padding:.1em .3em;border-radius:3px;font-family:ui-monospace,Consolas,monospace;font-size:.95em}
+  .preview pre code{background:transparent;padding:0;border-radius:0}
+  .preview blockquote{border-left:4px solid #ccc;margin:.5em 0;padding:.25rem .75rem;color:#555}
+  .preview ul,.preview ol{margin:.4em 0;padding-left:1.5rem}
+  .preview a{color:#06c;text-decoration:underline}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <textarea id="src" spellcheck="false" placeholder="# Type markdown here&#10;&#10;**bold**, *italic*, `code`&#10;- list item&#10;> blockquote"></textarea>
+  <div class="preview" id="out" aria-live="polite"></div>
+</div>
+<script>
+// PARSER_START
+function escapeHtml(s){
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function sanitizeUrl(u){
+  var s = String(u).trim();
+  // Strip control chars and whitespace inside the URL so attackers can't smuggle a
+  // dangerous scheme past the prefix check (e.g. "java\tscript:..." -> "javascript:...").
+  s = s.replace(/[\x00-\x20]+/g, '');
+  // Allowlist: http(s), mailto, fragment, root-relative, bare relative.
+  if (/^(https?:|mailto:|#|\/)/i.test(s)) return s;
+  if (/^[a-zA-Z0-9._~\-]+(\/|$)/.test(s)) return s;
+  return '#';
+}
+
+// Placeholders for inline code and links. Use private-use ASCII control chars that
+// cannot appear in normal markdown text but are valid string contents in JS.
+var CODE_OPEN  = '\x01C\x01';
+var CODE_CLOSE = '\x02C\x02';
+var LINK_OPEN  = '\x01L\x01';
+var LINK_CLOSE = '\x02L\x02';
+
+function renderInline(text){
+  var codes = [];
+  text = text.replace(/`([^`]+)`/g, function(_, code){
+    codes.push(escapeHtml(code));
+    return CODE_OPEN + (codes.length - 1) + CODE_CLOSE;
+  });
+
+  var links = [];
+  text = text.replace(/\[([^\]\n]+)\]\(([^)\n]+)\)/g, function(_, label, url){
+    links.push({ label: label, url: url });
+    return LINK_OPEN + (links.length - 1) + LINK_CLOSE;
+  });
+
+  // HTML-escape everything that remains (raw user text).
+  text = escapeHtml(text);
+
+  // Emphasis transforms. Order matters: bold+italic, bold, italic.
+  text = text.replace(/\*\*\*([^*\n]+)\*\*\*/g, '<strong><em>$1</em></strong>');
+  text = text.replace(/\*\*([^*\n]+)\*\*/g,    '<strong>$1</strong>');
+  text = text.replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, '$1<em>$2</em>');
+  text = text.replace(/(^|[^_\w])_([^_\n]+)_(?!\w)/g, '$1<em>$2</em>');
+
+  // Restore links with sanitized URLs and escaped label.
+  text = text.replace(/\x01L\x01(\d+)\x02L\x02/g, function(_, i){
+    var L = links[+i];
+    var safeUrl = sanitizeUrl(L.url);
+    return '<a href="' + escapeHtml(safeUrl) + '">' + escapeHtml(L.label) + '</a>';
+  });
+
+  // Restore inline code spans (already escaped).
+  text = text.replace(/\x01C\x01(\d+)\x02C\x02/g, function(_, i){
+    return '<code>' + codes[+i] + '</code>';
+  });
+
+  return text;
+}
+
+function renderListItems(items){
+  var out = '<ul>';
+  for (var i = 0; i < items.length; i++){
+    out += '<li>' + renderInline(items[i].text);
+    if (items[i].children && items[i].children.length){
+      out += '<ul>';
+      for (var j = 0; j < items[i].children.length; j++){
+        out += '<li>' + renderInline(items[i].children[j].text) + '</li>';
+      }
+      out += '</ul>';
+    }
+    out += '</li>';
+  }
+  out += '</ul>';
+  return out;
+}
+
+function renderMarkdown(src){
+  if (src == null) return '';
+  var lines = String(src).replace(/\r\n?/g, '\n').split('\n');
+  var out = [];
+  var i = 0;
+
+  while (i < lines.length){
+    var line = lines[i];
+
+    if (/^\s*$/.test(line)) { i++; continue; }
+
+    // Fenced code block ```
+    var fence = line.match(/^```\s*([A-Za-z0-9_-]*)\s*$/);
+    if (fence){
+      i++;
+      var buf = [];
+      while (i < lines.length && !/^```\s*$/.test(lines[i])){
+        buf.push(lines[i]);
+        i++;
+      }
+      if (i < lines.length) i++;
+      out.push('<pre><code>' + escapeHtml(buf.join('\n')) + '</code></pre>');
+      continue;
+    }
+
+    // ATX heading 1..6
+    var h = line.match(/^(#{1,6}) +(.*?)\s*#*\s*$/);
+    if (h){
+      var level = h[1].length;
+      out.push('<h' + level + '>' + renderInline(h[2]) + '</h' + level + '>');
+      i++;
+      continue;
+    }
+
+    // Blockquote
+    if (/^>\s?/.test(line)){
+      var qbuf = [];
+      while (i < lines.length && /^>\s?/.test(lines[i])){
+        qbuf.push(lines[i].replace(/^>\s?/, ''));
+        i++;
+      }
+      out.push('<blockquote>' + renderMarkdown(qbuf.join('\n')) + '</blockquote>');
+      continue;
+    }
+
+    // Ordered list
+    if (/^\d+\.\s+/.test(line)){
+      var oitems = [];
+      while (i < lines.length && /^\d+\.\s+/.test(lines[i])){
+        oitems.push(lines[i].replace(/^\d+\.\s+/, ''));
+        i++;
+      }
+      var oh = '<ol>';
+      for (var k = 0; k < oitems.length; k++) oh += '<li>' + renderInline(oitems[k]) + '</li>';
+      oh += '</ol>';
+      out.push(oh);
+      continue;
+    }
+
+    // Unordered list with one level of nesting
+    if (/^[-*+]\s+/.test(line)){
+      var items = [];
+      while (i < lines.length){
+        var top = lines[i].match(/^[-*+]\s+(.*)$/);
+        if (top){
+          items.push({ text: top[1], children: [] });
+          i++;
+          while (i < lines.length){
+            var nest = lines[i].match(/^[ ]{2,3}[-*+]\s+(.*)$/);
+            if (!nest) break;
+            items[items.length - 1].children.push({ text: nest[1] });
+            i++;
+          }
+          continue;
+        }
+        break;
+      }
+      out.push(renderListItems(items));
+      continue;
+    }
+
+    // Plain paragraph (single line)
+    out.push('<p>' + renderInline(line) + '</p>');
+    i++;
+  }
+
+  return out.join('');
+}
+// PARSER_END
+
+(function(){
+  if (typeof document === 'undefined') return;
+  var src = document.getElementById('src');
+  var out = document.getElementById('out');
+  var t = null;
+  function update(){ out.innerHTML = renderMarkdown(src.value); }
+  src.addEventListener('input', function(){
+    if (t) clearTimeout(t);
+    t = setTimeout(update, 150);
+  });
+  update();
+})();
+</script>
+</body>
+</html>

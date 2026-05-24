@@ -1,0 +1,53 @@
+﻿{
+    "tools":  [
+                  {
+                      "Tool":  "claude",
+                      "Skipped":  false,
+                      "StartTime":  "2026-05-24T15:23:36-04:00",
+                      "EndTime":  "2026-05-24T15:31:04-04:00",
+                      "EndTimeSource":  "newest agent file mtime (markdown.html)",
+                      "WallSec":  448,
+                      "WallHuman":  "07m 28s",
+                      "Cost":  2.0916664,
+                      "InputTokens":  265,
+                      "EffectiveInputTokens":  2650642,
+                      "OutputTokens":  34672,
+                      "ReasoningOutputTokens":  0,
+                      "CacheReadTokens":  2483247,
+                      "CacheWriteTokens":  167130,
+                      "Sessions":  2,
+                      "Models":  "claude-haiku-4-5-20251001, claude-opus-4-7",
+                      "ResultsDir":  "C:\\Users\\eric.paul\\source\\repos\\opencode-cloudflare-ai-gateway\\benchmarks\\markdown-editor\\results\\runs\\2026-05-24-1522\\claude",
+                      "OutputDir":  "C:\\Users\\eric.paul\\source\\repos\\opencode-cloudflare-ai-gateway\\benchmarks\\markdown-editor\\results\\runs\\2026-05-24-1522\\claude\\output",
+                      "NotesPath":  "C:\\Users\\eric.paul\\source\\repos\\opencode-cloudflare-ai-gateway\\benchmarks\\markdown-editor\\results\\runs\\2026-05-24-1522\\claude\\notes.md",
+                      "HtmlFile":  "C:\\Users\\eric.paul\\source\\repos\\opencode-cloudflare-ai-gateway\\benchmarks\\markdown-editor\\results\\runs\\2026-05-24-1522\\claude\\output\\markdown.html",
+                      "TestFile":  "C:\\Users\\eric.paul\\source\\repos\\opencode-cloudflare-ai-gateway\\benchmarks\\markdown-editor\\results\\runs\\2026-05-24-1522\\claude\\output\\markdown.test.js"
+                  },
+                  {
+                      "Tool":  "opencode",
+                      "Skipped":  false,
+                      "StartTime":  "2026-05-24T15:23:39-04:00",
+                      "EndTime":  "2026-05-24T15:30:26-04:00",
+                      "EndTimeSource":  "newest agent file mtime (README.md)",
+                      "WallSec":  407,
+                      "WallHuman":  "07m 47s",
+                      "Cost":  0.55004200000000014,
+                      "InputTokens":  148232,
+                      "EffectiveInputTokens":  920968,
+                      "OutputTokens":  15168,
+                      "ReasoningOutputTokens":  0,
+                      "CacheReadTokens":  772736,
+                      "CacheWriteTokens":  0,
+                      "Sessions":  1,
+                      "Models":  "gpt-5",
+                      "ResultsDir":  "C:\\Users\\eric.paul\\source\\repos\\opencode-cloudflare-ai-gateway\\benchmarks\\markdown-editor\\results\\runs\\2026-05-24-1522\\opencode",
+                      "OutputDir":  "C:\\Users\\eric.paul\\source\\repos\\opencode-cloudflare-ai-gateway\\benchmarks\\markdown-editor\\results\\runs\\2026-05-24-1522\\opencode\\output",
+                      "NotesPath":  "C:\\Users\\eric.paul\\source\\repos\\opencode-cloudflare-ai-gateway\\benchmarks\\markdown-editor\\results\\runs\\2026-05-24-1522\\opencode\\notes.md",
+                      "HtmlFile":  "C:\\Users\\eric.paul\\source\\repos\\opencode-cloudflare-ai-gateway\\benchmarks\\markdown-editor\\results\\runs\\2026-05-24-1522\\opencode\\output\\markdown.html",
+                      "TestFile":  "C:\\Users\\eric.paul\\source\\repos\\opencode-cloudflare-ai-gateway\\benchmarks\\markdown-editor\\results\\runs\\2026-05-24-1522\\opencode\\output\\markdown.test.js"
+                  }
+              ],
+    "benchmark":  "markdown-editor",
+    "generatedAt":  "2026-05-24T15:32:23-04:00",
+    "runId":  "2026-05-24-1522"
+}
