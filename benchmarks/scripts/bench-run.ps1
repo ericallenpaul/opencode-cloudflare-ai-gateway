@@ -174,7 +174,7 @@ function Select-Tools {
         Write-Host "Select which tools to include in this benchmark run." -ForegroundColor Cyan
         Write-Host "(For any tool you exclude, you'll be asked to record a one-line reason.)" -ForegroundColor DarkGray
         foreach ($n in $orderedNames) {
-            $ans = Read-Host "  Include $n? [Y/n]"
+            $ans = Read-Host "  Include ${n}? [Y/n]"
             $isSelected[$n] = ($ans -notmatch '^[nN]')
         }
     }
