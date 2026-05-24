@@ -125,6 +125,28 @@ function Get-NowIso {
     Get-Date -Format "yyyy-MM-ddTHH:mm:sszzz"
 }
 
+function Test-ToolReachable {
+    param(
+        [Parameter(Mandatory)][string]$ToolName,
+        [Parameter(Mandatory)][string]$VersionCommand
+    )
+    try {
+        $cmd = Get-Command $ToolName -ErrorAction Stop
+    } catch {
+        return @{ Ok = $false; Detail = "$ToolName not found on PATH" }
+    }
+    try {
+        $out = & cmd /c "$VersionCommand 2>&1" | Out-String
+        $exit = $LASTEXITCODE
+        if ($exit -ne 0) {
+            return @{ Ok = $false; Detail = "$ToolName --version exited $exit -- $($out.Trim())" }
+        }
+        return @{ Ok = $true; Detail = ($out.Trim() -split "`n")[0] }
+    } catch {
+        return @{ Ok = $false; Detail = "$ToolName invocation error: $_" }
+    }
+}
+
 # ccusage JSON shape varies by tool/version -- look up by candidate keys
 function Get-Field {
     param(
@@ -172,6 +194,30 @@ if ($Phase -eq "start") {
     Write-Host "  RunId:     $RunId"
     Write-Host "  BaseDir:   $BaseDir"
     Write-Host "  Tools:     $($validToolNames -join ', ')"
+    Write-Host ""
+
+    Write-Host "Preflight: verifying each tool CLI is reachable..." -ForegroundColor DarkGray
+    $preflightFailures = @()
+    foreach ($t in $Tools) {
+        $check = Test-ToolReachable -ToolName $t.Name -VersionCommand "$($t.Name) --version"
+        if ($check.Ok) {
+            Write-Host "  $($t.Name): OK ($($check.Detail))" -ForegroundColor DarkGray
+        } else {
+            Write-Host "  $($t.Name): FAIL -- $($check.Detail)" -ForegroundColor Yellow
+            $preflightFailures += $t.Name
+        }
+    }
+    if ($preflightFailures.Count -gt 0) {
+        Write-Host ""
+        Write-Host "WARNING: preflight failed for: $($preflightFailures -join ', ')" -ForegroundColor Yellow
+        Write-Host "  Common causes: (1) CLI not installed; (2) CLI not on PATH; (3) for codex specifically, expired subscription or exhausted API tokens." -ForegroundColor DarkGray
+        Write-Host "  If you continue, those tools will produce empty output dirs and the judge will mark all criteria SKIP." -ForegroundColor DarkGray
+        $resp = Read-Host "Continue with the rest? [y/N]"
+        if ($resp -notmatch '^[Yy]') {
+            Write-Host "Aborting start phase." -ForegroundColor Red
+            exit 1
+        }
+    }
     Write-Host ""
 
     foreach ($t in $Tools) {
