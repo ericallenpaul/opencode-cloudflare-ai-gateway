@@ -218,6 +218,23 @@ if ($Phase -eq "start") {
             exit 1
         }
     }
+
+    # Auth/quota confirm: --version only catches "CLI missing"; it does NOT catch
+    # an expired subscription or exhausted API tokens (those fail later, mid-run,
+    # producing an empty output dir that the judge marks SKIP). Force the human
+    # to confirm before we open the bench window.
+    Write-Host ""
+    Write-Host "Auth/quota check (manual): the preflight above only confirms each CLI is on PATH." -ForegroundColor DarkGray
+    Write-Host "  It does NOT verify subscription state or API token balance." -ForegroundColor DarkGray
+    Write-Host "  Before continuing, confirm each tool can actually produce a token:" -ForegroundColor DarkGray
+    Write-Host "    - claude:   subscription active and not over usage cap?" -ForegroundColor DarkGray
+    Write-Host "    - codex:    API tokens available (the run-3 silent failure mode)?" -ForegroundColor DarkGray
+    Write-Host "    - opencode: gateway BYOK keys reachable (env vars + CF gateway up)?" -ForegroundColor DarkGray
+    $authResp = Read-Host "Are all configured tools authenticated and within quota? [y/N]"
+    if ($authResp -notmatch '^[Yy]') {
+        Write-Host "Aborting start phase. Resolve auth/quota issues and re-run." -ForegroundColor Red
+        exit 1
+    }
     Write-Host ""
 
     foreach ($t in $Tools) {
