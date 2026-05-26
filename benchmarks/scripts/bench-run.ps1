@@ -152,6 +152,38 @@ function Test-ToolReachable {
     }
 }
 
+function Test-LiveConfigSync {
+    param(
+        [Parameter(Mandatory)][string]$RepoRoot
+    )
+    # Compare the live opencode config's build-agent prompt against the repo
+    # template. Returns @{ Match=$bool; LivePath=<str>; LiveLen=<int>; ExampleLen=<int>; Reason=<str> }.
+    $livePath = Join-Path $env:USERPROFILE ".config\opencode\opencode.json"
+    $examplePath = Join-Path $RepoRoot "opencode.example.json"
+    if (-not (Test-Path $livePath)) {
+        return @{ Match = $true; LivePath = $livePath; Reason = "no live config (skip check)" }
+    }
+    if (-not (Test-Path $examplePath)) {
+        return @{ Match = $true; LivePath = $livePath; Reason = "no example to compare against (skip check)" }
+    }
+    try {
+        $live = Get-Content $livePath -Raw -Encoding utf8 | ConvertFrom-Json
+        $ex   = Get-Content $examplePath -Raw -Encoding utf8 | ConvertFrom-Json
+        $livePrompt = [string]$live.agent.build.prompt
+        $exPrompt   = [string]$ex.agent.build.prompt
+        $match = ($livePrompt -eq $exPrompt)
+        return @{
+            Match      = $match
+            LivePath   = $livePath
+            LiveLen    = $livePrompt.Length
+            ExampleLen = $exPrompt.Length
+            Reason     = if ($match) { "live agent.build.prompt matches example" } else { "live agent.build.prompt differs from example ($($livePrompt.Length) vs $($exPrompt.Length) chars)" }
+        }
+    } catch {
+        return @{ Match = $true; LivePath = $livePath; Reason = "config parse error -- skipping check: $_" }
+    }
+}
+
 function Select-Tools {
     param(
         [Parameter(Mandatory)][object[]]$ConfiguredTools,
@@ -290,6 +322,32 @@ if ($Phase -eq "start") {
             exit 1
         }
     }
+
+    # v7: warn loudly if the live opencode build-agent prompt has drifted from
+    # the repo template. Prevents the class of bug that invalidated runs 1-4
+    # (template edited, live config never re-copied -- benchmark measured the
+    # wrong configuration). See docs/LEARNINGS.md "Validate live config..."
+    $configSync = Test-LiveConfigSync -RepoRoot $repoRoot
+    if (-not $configSync.Match) {
+        Write-Host ""
+        Write-Host "WARNING: live opencode build-agent prompt DIFFERS from the repo template." -ForegroundColor Yellow
+        Write-Host "  Live    : $($configSync.LivePath) -- $($configSync.LiveLen) chars" -ForegroundColor DarkGray
+        Write-Host "  Example : opencode.example.json  -- $($configSync.ExampleLen) chars" -ForegroundColor DarkGray
+        Write-Host "  This means opencode will run with prompt instructions that DO NOT match" -ForegroundColor Yellow
+        Write-Host "  what is currently in the repo. If you intended to iterate the build prompt" -ForegroundColor Yellow
+        Write-Host "  and measure the result, you probably want to re-copy opencode.example.json" -ForegroundColor Yellow
+        Write-Host "  into the live location before continuing. If you have intentional local" -ForegroundColor Yellow
+        Write-Host "  customizations and want to proceed anyway, answer Y." -ForegroundColor Yellow
+        $resp = Read-Host "Continue with live config as-is? [y/N]"
+        if ($resp -notmatch '^[Yy]') {
+            Write-Host "Aborting start phase. Re-copy opencode.example.json to ~/.config/opencode/opencode.json" -ForegroundColor Red
+            Write-Host "(preserving any local customizations you want to keep), then re-run." -ForegroundColor Red
+            exit 1
+        }
+    } else {
+        Write-Host "Live config sync: OK ($($configSync.Reason))" -ForegroundColor DarkGray
+    }
+    Write-Host ""
 
     $runIdDir = Join-Path $BaseDir $RunId
     New-Item -ItemType Directory -Force -Path $runIdDir | Out-Null
