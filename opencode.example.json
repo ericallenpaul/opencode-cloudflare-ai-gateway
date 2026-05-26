@@ -88,6 +88,19 @@
         "@cf/meta/llama-3.3-70b-instruct-fp8-fast": { "name": "@cf/meta/llama-3.3-70b-instruct-fp8-fast" },
         "@cf/deepseek-ai/deepseek-r1-distill-qwen-32b": { "name": "@cf/deepseek-ai/deepseek-r1-distill-qwen-32b" }
       }
+    },
+    "lmstudio": {
+      "name": "LM Studio (local)",
+      "npm": "@ai-sdk/openai-compatible",
+      "options": {
+        "baseURL": "http://127.0.0.1:1234/v1"
+      },
+      "models": {
+        "qwen3-coder-30b-a3b-instruct": {
+          "name": "Qwen3 Coder 30B (LM Studio)",
+          "tools": true
+        }
+      }
     }
   },
   "agent": {
