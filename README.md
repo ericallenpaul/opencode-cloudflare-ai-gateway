@@ -29,6 +29,8 @@ Full reasoning behind the architecture lives in [`docs/PROBLEM.md`](docs/PROBLEM
 | **OSS** | `@cf/qwen/qwen2.5-coder-32b-instruct` | Cloudflare Workers AI via Gateway | low-cents per M tokens |
 | **Frontier** | `gpt-5` | OpenAI via Gateway | Standard frontier pricing |
 
+> **Note (2026-05-26):** the **Local tier** is real but harder to make reliable than the table suggests. Through extensive testing we found Ollama's local tool-calling is unreliable across most models; LM Studio + qwen3-coder + n_ctx 16384 is the known-working setup (see [`docs/LEARNINGS.md`](docs/LEARNINGS.md) and [`docs/SETUP.md`](docs/SETUP.md)). Even working, dispatched local-tier subtasks run 20-40s on consumer hardware. For most daily-use scenarios, pointing the `local` tier at a gateway-hosted cheap model like `openai-via-gateway/gpt-4o-mini` (~8x cheaper than gpt-5, fast inference, reliable) preserves the tiered cost thesis without the local-inference latency tax.
+
 Plus the gateway-routed catalog: Claude Sonnet/Opus/Haiku 4-5 & 4-6, GPT-5 family, GPT-4.1-mini, GPT-4o-mini, Gemini 2.5 Pro/Flash, Llama 3.3 70B, DeepSeek-R1-distill 32B.
 
 ## Quick start
