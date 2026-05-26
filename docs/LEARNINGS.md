@@ -245,6 +245,51 @@ Both claude and codex produced implementations that set `disabled` on occupied c
 
 Scripts under `benchmarks/scripts/` need two parent jumps to reach the repo root -- the script lives two levels down, not one. An off-by-one in an early version produced doubled path segments (`benchmarks/benchmarks/...`) that silently created wrong directories instead of failing loudly. Always resolve relative paths explicitly and verify the target before any `New-Item` or `Copy-Item` calls.
 
+## Local LLM tool-calling with opencode is real, hard, and runtime-sensitive
+
+(Added 2026-05-26.) Trying to make the `local` tier dispatch actually fire to a local Ollama/LM Studio model burned ~4 hours. Multiple distinct failure modes, all with the same surface symptom: the build agent dispatched correctly, but the local subagent returned zero tool calls or hallucinated output. Documented here so the next person doesn't have to rediscover this.
+
+### Failure modes we hit, in order
+
+1. **Granite4 7B (Ollama)** -- silent. Zero output, zero tool calls. Couldn't even diagnose without studying the dev log -- the model produced nothing usable but the trace just showed "0 toolcalls."
+2. **Qwen2.5-coder 7B q4_K_M (Ollama)** -- attempted tool calls but emitted malformed tags. The Qwen team's own statement on [ollama#6007](https://github.com/ollama/ollama/issues/6007) calls this out as expected behavior for small + heavily quantized models: "the smaller models, especially after quantization, don't always follow instructions as accurately. I found that the tags were often missing in the generated text."
+3. **gpt-oss 20B (Ollama)** -- emitted OpenAI's Response API tokens (`<|channel|>analysis`, `assistant<|channel|>functions.X`) instead of standard OpenAI JSON tool calls. opencode's parser misread these as unknown tool names. Ollama's template handling does not normalize gpt-oss's native format.
+4. **Qwen3-coder 30B (Ollama)** -- emitted XML-tag tool calls (`<function=read>...</function>`) instead of JSON. opencode partially understood the first call but got distracted on subsequent turns by the giant list of MCP tools (40+ tools flooding the subagent's context). Switched to migrating Cloudflare Pages to Workers instead of counting lines.
+5. **gpt-oss 20B (LM Studio)** -- still wrong protocol despite LM Studio's better templates. gpt-oss is hardwired to emit Response API tokens; that's not a runtime-fixable issue, it's the model's training.
+6. **Qwen3-coder 30B (LM Studio) at default n_ctx 4096** -- failed similarly to Ollama: context overflow truncated the tool definitions, model lost track of what tools were available.
+7. **Qwen3-coder 30B (LM Studio) at n_ctx 16384, with `tools: true`** -- WORKED. Tool call fired, file read succeeded, correct line count returned.
+
+### The actual working recipe
+
+Confirmed working:
+
+| Component | Setting |
+|---|---|
+| Runtime | **LM Studio** (NOT Ollama -- opencode maintainer explicitly recommends LMStudio: "ollama has been unreliable and we receive a large number of issues from people trying to use it") |
+| Model | **qwen3-coder** (NOT qwen2.5; NOT granite; NOT gpt-oss; designed specifically for agentic tools) |
+| `n_ctx` | **16384 or higher** (the LM Studio default of 4096 is too small for opencode's prompts + tool defs + MCP tool list + user message often 8k+ tokens -- truncation kills tool-calling) |
+| opencode config | Model-definition needs `"tools": true` |
+| GPU offload | All layers if VRAM allows; CPU fallback is too slow to be usable |
+
+Reference: https://github.com/p-lemonish/ollama-x-opencode -- the recipe that solved this for many users on opencode#1034.
+
+### Performance honesty
+
+Even with the working setup, qwen3-coder 30B Q4 at n_ctx 16384 on consumer GPUs takes **20-40+ seconds per dispatched subtask**. For tier-routing to dispatch reads and grep to local while the orchestrator stays on a frontier model, this means: every routed lookup costs you 30+ seconds of latency for a sub-call that gpt-5 would have done in 2-3 seconds. For a real coding session that dispatches dozens of subtasks, the wall-clock cost adds up faster than the dollar savings. **Practical reality: local-tier dispatching is only worth it if (a) you have a 24GB+ VRAM GPU running flat-out, AND (b) you value cost optimization over wall-clock time.**
+
+### The pivot we considered
+
+If your hardware doesn't support practical local inference, the architectural thesis ("dispatch cheap work to cheap models") can still be tested by routing the `local` tier to a gateway-hosted cheap model -- `openai-via-gateway/gpt-4o-mini` (~$0.15/M input vs gpt-5's $1.25/M, ~8x cheaper) or `workers-ai-via-gateway/@cf/qwen/qwen2.5-coder-32b-instruct` (cents per million). Both use standard OpenAI JSON tool-call format that opencode handles natively. You lose the "free local inference" angle but gain reliable execution and fast inference. **For most daily-use scenarios this is the better trade-off.** The `local` agent definition stays the same conceptually; only the model assignment changes.
+
+### Generalizable lesson
+
+Three orthogonal failure axes when running local LLMs as opencode subagents:
+1. **Model output format** must match what opencode (via the @ai-sdk/openai-compatible provider) can parse: standard OpenAI JSON tool-call format. XML-tag formats (qwen3-native), Response-API tokens (gpt-oss-native), or malformed JSON (quantized models) all silently fail.
+2. **Context window** must be large enough for opencode's prompt overhead (system prompt + tool defs + MCP tool list + user message often 8k+ tokens). Default `n_ctx=4096` on most Ollama/LMStudio loads is insufficient.
+3. **Runtime templates** matter: Ollama's are coarse and break for many models; LM Studio's per-model handling is more reliable. Use LMStudio for local subagent work until Ollama improves.
+
+When ALL three are aligned, local tool-calling works. Miss any one and you'll spend hours diagnosing it.
+
 ## PowerShell auto-unwraps single-element arrays from function returns
 
 A `Get-Field` helper returning `@("claude-opus-4-7")` (a one-element array) gets unwrapped by PowerShell to a bare string at the call site. Code that checked for `IEnumerable` shape to detect multi-value fields would miss the single-model case. Check both shapes -- scalar and array -- when consuming function output that might return either depending on data.
