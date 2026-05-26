@@ -97,7 +97,10 @@
         "lsp": true,
         "read": false,
         "grep": false,
-        "glob": false
+        "glob": false,
+        "bash": false,
+        "webfetch": false,
+        "websearch": false
       }
     },
     "local": {
@@ -138,11 +141,14 @@
       "prompt": "For code symbol lookups (classes, functions, types, methods): prefer the lsp tool when available. For lsp.workspaceSymbol, the filePath argument must be an EXISTING FILE (not a directory) with the language extension matching your search — e.g. any '.cs' file when searching for C# symbols, '.ts' for TypeScript, '.py' for Python. The file's only purpose is to select which LSP server runs the query; the query itself searches the entire workspace. If you don't know a concrete file path, run glob first to find one, then call lsp.workspaceSymbol. Use lsp.goToDefinition / lsp.findReferences / lsp.hover for navigation once you have a starting file:line:character. Fall back to grep only when the lsp tool isn't in your toolset, or for non-symbol text searches (strings, comments, configs).",
       "tools": {
         "lsp": true,
+        "bash": true,
         "task": false,
-        "bash": false,
         "webfetch": false,
         "websearch": false,
-        "todowrite": false
+        "todowrite": false,
+        "read": false,
+        "grep": false,
+        "glob": false
       }
     }
   }
