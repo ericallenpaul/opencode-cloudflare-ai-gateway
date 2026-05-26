@@ -234,13 +234,13 @@ Run a quick query in any directory, then go to the CF dashboard â†’ AI Gateway â
 
 ## 8. (Optional) Customize the default tier
 
-The `model` field at the top of `opencode.json` is the boot default when no `--agent` flag is passed. The example config defaults to `ollama/granite4:7b-a1b-h` (free local) so you don't accidentally burn frontier tokens on a casual session. Change to whatever default suits you:
+The `model` field at the top of `opencode.json` is the boot default when no `--agent` flag is passed. The example config now defaults to `openai-via-gateway/gpt-5` -- in practice frontier-tier is the dominant launch case once you're past initial exploration, and it's friction to type `--model openai-via-gateway/gpt-5` every time. If you'd rather default to the free local tier and explicitly opt into frontier per session, change it to:
 
 ```json
-"model": "openai-via-gateway/gpt-5"
+"model": "ollama/granite4:7b-a1b-h"
 ```
 
-The agent-specific `model` fields override this on `--agent` switches.
+The agent-specific `model` fields (under `agent.local`, `agent.oss`, `agent.frontier`) override the top-level default whenever you use `--agent <name>`.
 
 ## Common setup failures
 

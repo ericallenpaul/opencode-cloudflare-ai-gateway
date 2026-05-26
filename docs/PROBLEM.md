@@ -34,7 +34,7 @@ This repo is one concrete answer to the four points above:
 | Lever | How this repo addresses it |
 |---|---|
 | Tier work by hardness | Three named tiers (`local`, `oss`, `frontier`) the user picks per session |
-| Default to cheapest | Default boot model is local Ollama; oss is a one-flag switch; frontier is opt-in |
+| Pick a default tier deliberately | Top-level `model` is the boot default; any tier is one-flag override. The shipped example defaults to frontier (`openai-via-gateway/gpt-5`) because in practice that's the dominant launch case once you're past exploration -- but `local` and `oss` are one `--agent` away when "working" is good enough |
 | Make cost visible | Every paid request goes through one Cloudflare AI Gateway → one analytics view |
 | Attribute spend per user | Every paid request carries a `cf-aig-metadata` tag with `app` and `user` fields |
 

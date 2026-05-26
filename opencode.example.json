@@ -1,6 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "ollama/granite4:7b-a1b-h",
+  "model": "openai-via-gateway/gpt-5",
   "lsp": {},
   "plugin": [
     "~/.config/opencode/node_modules/superpowers"
