@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Markdown Editor</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f3efe5;
+      --panel: rgba(255, 252, 246, 0.94);
+      --panel-strong: #fffdf8;
+      --text: #1f1f1b;
+      --muted: #6a665c;
+      --line: rgba(61, 52, 37, 0.14);
+      --accent: #c7682a;
+      --accent-soft: rgba(199, 104, 42, 0.14);
+      --shadow: 0 24px 80px rgba(73, 50, 22, 0.12);
+      --code-bg: #272822;
+      --code-text: #f8f8f2;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Georgia, "Times New Roman", serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(199, 104, 42, 0.18), transparent 32%),
+        radial-gradient(circle at bottom right, rgba(58, 93, 78, 0.14), transparent 28%),
+        linear-gradient(135deg, #efe6d5 0%, #f7f4ec 40%, #e9dfcb 100%);
+    }
+
+    .shell {
+      width: min(1400px, calc(100vw - 32px));
+      margin: 16px auto;
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: rgba(255, 250, 242, 0.72);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+      overflow: hidden;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 18px 22px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.28));
+    }
+
+    .title {
+      margin: 0;
+      font-size: clamp(1.2rem, 2vw, 1.7rem);
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .status {
+      font-family: "Courier New", monospace;
+      font-size: 0.82rem;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .panes {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      min-height: calc(100vh - 132px);
+    }
+
+    .pane {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .pane + .pane {
+      border-left: 1px solid var(--line);
+    }
+
+    .pane-label {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--line);
+      font-size: 0.78rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      background: rgba(255, 255, 255, 0.42);
+    }
+
+    textarea {
+      width: 100%;
+      flex: 1;
+      border: 0;
+      padding: 22px;
+      resize: none;
+      outline: none;
+      background: var(--panel-strong);
+      color: var(--text);
+      font: 16px/1.6 Consolas, "Courier New", monospace;
+      tab-size: 2;
+    }
+
+    .preview {
+      flex: 1;
+      overflow: auto;
+      padding: 24px 28px 48px;
+      background: var(--panel);
+      line-height: 1.7;
+    }
+
+    .preview > :first-child {
+      margin-top: 0;
+    }
+
+    .preview h1,
+    .preview h2,
+    .preview h3,
+    .preview h4,
+    .preview h5,
+    .preview h6 {
+      margin: 1.2em 0 0.55em;
+      line-height: 1.2;
+    }
+
+    .preview h1 {
+      font-size: 2rem;
+    }
+
+    .preview h2 {
+      font-size: 1.7rem;
+    }
+
+    .preview h3 {
+      font-size: 1.45rem;
+    }
+
+    .preview p,
+    .preview ul,
+    .preview ol,
+    .preview blockquote,
+    .preview pre {
+      margin: 0 0 1rem;
+    }
+
+    .preview ul,
+    .preview ol {
+      padding-left: 1.4rem;
+    }
+
+    .preview li + li {
+      margin-top: 0.3rem;
+    }
+
+    .preview blockquote {
+      padding: 0.8rem 1rem;
+      border-left: 4px solid var(--accent);
+      background: var(--accent-soft);
+      border-radius: 0 14px 14px 0;
+    }
+
+    .preview code {
+      padding: 0.14rem 0.36rem;
+      border-radius: 0.35rem;
+      background: rgba(39, 40, 34, 0.08);
+      font: 0.95em Consolas, "Courier New", monospace;
+    }
+
+    .preview pre {
+      padding: 1rem 1.1rem;
+      overflow: auto;
+      border-radius: 16px;
+      background: var(--code-bg);
+      color: var(--code-text);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+    }
+
+    .preview pre code {
+      padding: 0;
+      background: transparent;
+      color: inherit;
+    }
+
+    .preview a {
+      color: #8a3f13;
+    }
+
+    .preview .unsafe-link {
+      color: #8b2d2d;
+      font-weight: 700;
+      text-decoration: line-through;
+    }
+
+    @media (max-width: 900px) {
+      .panes {
+        grid-template-columns: 1fr;
+      }
+
+      .pane + .pane {
+        border-left: 0;
+        border-top: 1px solid var(--line);
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <h1 class="title">Markdown Editor</h1>
+      <div class="status" id="status">Preview idle</div>
+    </header>
+    <section class="panes">
+      <section class="pane">
+        <div class="pane-label">Markdown Input</div>
+        <textarea id="input" spellcheck="false" aria-label="Markdown input"></textarea>
+      </section>
+      <section class="pane">
+        <div class="pane-label">HTML Preview</div>
+        <div class="preview" id="preview" aria-live="polite"></div>
+      </section>
+    </section>
+  </main>
+  <script>
+    const CODE_TOKEN_PREFIX = '\u0000CODE';
+    const CODE_TOKEN_SUFFIX = '\u0000';
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function createCodeToken(index) {
+      return `${CODE_TOKEN_PREFIX}${index}${CODE_TOKEN_SUFFIX}`;
+    }
+
+    function sanitizeUrl(url) {
+      const trimmed = url.trim();
+      if (!trimmed) {
+        return null;
+      }
+
+      const normalized = trimmed.replace(/[\u0000-\u001F\u007F\s]+/g, '').toLowerCase();
+      if (normalized.startsWith('javascript:')) {
+        return null;
+      }
+
+      if (/^(https?:|mailto:)/i.test(trimmed) || /^(\/|\.\/|\.\.\/|#|\?)/.test(trimmed)) {
+        return trimmed;
+      }
+
+      return null;
+    }
+
+    function applyEmphasis(html) {
+      return html
+        .replace(/\*\*\*([^*\n]+)\*\*\*/g, '<strong><em>$1</em></strong>')
+        .replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>')
+        .replace(/(^|[^\w])\*([^*\n]+)\*(?!\*)/g, '$1<em>$2</em>')
+        .replace(/(^|[^\w])_([^_\n]+)_(?!_)/g, '$1<em>$2</em>');
+    }
+
+    function tokenizeCodeSpans(text) {
+      const tokens = [];
+      const replaced = text.replace(/`([^`\n]+)`/g, (_, content) => {
+        const token = createCodeToken(tokens.length);
+        tokens.push(`<code>${escapeHtml(content)}</code>`);
+        return token;
+      });
+      return { replaced, tokens };
+    }
+
+    function restoreCodeTokens(text, tokens) {
+      return text.replace(/\u0000CODE(\d+)\u0000/g, (_, index) => tokens[Number(index)] ?? '');
+    }
+
+    function renderInline(text) {
+      const { replaced, tokens } = tokenizeCodeSpans(text);
+      let cursor = 0;
+      let html = '';
+
+      while (cursor < replaced.length) {
+        const labelStart = replaced.indexOf('[', cursor);
+        if (labelStart === -1) {
+          html += escapeHtml(replaced.slice(cursor));
+          break;
+        }
+
+        html += escapeHtml(replaced.slice(cursor, labelStart));
+
+        const labelEnd = replaced.indexOf('](', labelStart);
+        if (labelEnd === -1) {
+          html += escapeHtml(replaced.slice(labelStart));
+          break;
+        }
+
+        let hrefIndex = labelEnd + 2;
+        let depth = 1;
+        let hrefEnd = -1;
+
+        while (hrefIndex < replaced.length) {
+          const char = replaced[hrefIndex];
+          if (char === '(') {
+            depth += 1;
+          } else if (char === ')') {
+            depth -= 1;
+            if (depth === 0) {
+              hrefEnd = hrefIndex;
+              break;
+            }
+          }
+          hrefIndex += 1;
+        }
+
+        if (hrefEnd === -1) {
+          html += escapeHtml(replaced.slice(labelStart));
+          break;
+        }
+
+        const rawLabel = replaced.slice(labelStart + 1, labelEnd);
+        const rawHref = replaced.slice(labelEnd + 2, hrefEnd);
+        const safeHref = sanitizeUrl(rawHref);
+        if (safeHref) {
+          html += `<a href="${escapeHtml(safeHref)}" target="_blank" rel="noopener noreferrer">${renderInline(rawLabel)}</a>`;
+        } else {
+          html += `<span class="unsafe-link">${escapeHtml(rawLabel)}</span>`;
+        }
+
+        cursor = hrefEnd + 1;
+      }
+
+      html = applyEmphasis(html);
+      return restoreCodeTokens(html, tokens);
+    }
+
+    function isBlank(line) {
+      return line.trim() === '';
+    }
+
+    function isFence(line) {
+      return /^```/.test(line);
+    }
+
+    function isHeading(line) {
+      return /^(#{1,6})\s+.+$/.test(line);
+    }
+
+    function isBlockquote(line) {
+      return /^>\s?/.test(line);
+    }
+
+    function parseListMarker(line) {
+      const match = line.match(/^(\s{0,3})([-+*]|\d+\.)\s+(.+)$/);
+      if (!match) {
+        return null;
+      }
+
+      return {
+        indent: match[1].length,
+        type: /\d+\./.test(match[2]) ? 'ol' : 'ul',
+        content: match[3]
+      };
+    }
+
+    function renderParagraph(lines) {
+      return `<p>${lines.map((line) => renderInline(line)).join('<br>')}</p>`;
+    }
+
+    function collectParagraph(lines, startIndex) {
+      const content = [];
+      let index = startIndex;
+
+      while (index < lines.length) {
+        const line = lines[index];
+        if (isBlank(line) || isFence(line) || isHeading(line) || isBlockquote(line) || parseListMarker(line)) {
+          break;
+        }
+        content.push(line);
+        index += 1;
+      }
+
+      return { html: renderParagraph(content), nextIndex: index };
+    }
+
+    function collectFence(lines, startIndex) {
+      const opener = lines[startIndex].match(/^```(\S+)?\s*$/);
+      const language = opener && opener[1] ? ` class="language-${escapeHtml(opener[1])}"` : '';
+      const content = [];
+      let index = startIndex + 1;
+
+      while (index < lines.length && !/^```\s*$/.test(lines[index])) {
+        content.push(lines[index]);
+        index += 1;
+      }
+
+      if (index < lines.length) {
+        index += 1;
+      }
+
+      return {
+        html: `<pre><code${language}>${escapeHtml(content.join('\n'))}</code></pre>`,
+        nextIndex: index
+      };
+    }
+
+    function collectBlockquote(lines, startIndex) {
+      const quoteLines = [];
+      let index = startIndex;
+
+      while (index < lines.length && (isBlockquote(lines[index]) || isBlank(lines[index]))) {
+        quoteLines.push(isBlockquote(lines[index]) ? lines[index].replace(/^>\s?/, '') : '');
+        index += 1;
+      }
+
+      const paragraphs = [];
+      let current = [];
+      for (const line of quoteLines) {
+        if (line === '') {
+          if (current.length) {
+            paragraphs.push(renderParagraph(current));
+            current = [];
+          }
+        } else {
+          current.push(line);
+        }
+      }
+
+      if (current.length) {
+        paragraphs.push(renderParagraph(current));
+      }
+
+      return {
+        html: `<blockquote>${paragraphs.join('')}</blockquote>`,
+        nextIndex: index
+      };
+    }
+
+    function collectList(lines, startIndex, expectedIndent, forcedType) {
+      const firstMarker = parseListMarker(lines[startIndex]);
+      const baseIndent = expectedIndent == null ? firstMarker.indent : expectedIndent;
+      const listType = forcedType || firstMarker.type;
+      const items = [];
+      let index = startIndex;
+
+      while (index < lines.length) {
+        const marker = parseListMarker(lines[index]);
+        if (!marker) {
+          break;
+        }
+
+        if (marker.indent < baseIndent || marker.indent > baseIndent + 3) {
+          break;
+        }
+
+        if (marker.indent > baseIndent) {
+          if (!items.length) {
+            break;
+          }
+
+          const nested = collectList(lines, index, marker.indent, marker.type);
+          items[items.length - 1] += nested.html;
+          index = nested.nextIndex;
+          continue;
+        }
+
+        if (marker.type !== listType) {
+          break;
+        }
+
+        items.push(`<li>${renderInline(marker.content)}`);
+        index += 1;
+
+        while (index < lines.length) {
+          const nextLine = lines[index];
+          if (isBlank(nextLine)) {
+            index += 1;
+            break;
+          }
+
+          const nextMarker = parseListMarker(nextLine);
+          if (nextMarker) {
+            if (nextMarker.indent > baseIndent) {
+              const nested = collectList(lines, index, nextMarker.indent, nextMarker.type);
+              items[items.length - 1] += nested.html;
+              index = nested.nextIndex;
+              continue;
+            }
+
+            if (nextMarker.indent === baseIndent && nextMarker.type === listType) {
+              break;
+            }
+
+            break;
+          }
+
+          if (/^\s{2,}.+/.test(nextLine)) {
+            items[items.length - 1] += `<br>${renderInline(nextLine.trim())}`;
+            index += 1;
+            continue;
+          }
+
+          break;
+        }
+
+        items[items.length - 1] += '</li>';
+      }
+
+      return {
+        html: `<${listType}>${items.join('')}</${listType}>`,
+        nextIndex: index
+      };
+    }
+
+    function renderMarkdown(markdown) {
+      const normalized = String(markdown || '').replace(/\r\n?/g, '\n');
+      if (!normalized.trim()) {
+        return '';
+      }
+
+      const lines = normalized.split('\n');
+      const parts = [];
+      let index = 0;
+
+      while (index < lines.length) {
+        const line = lines[index];
+
+        if (isBlank(line)) {
+          index += 1;
+          continue;
+        }
+
+        if (isFence(line)) {
+          const fence = collectFence(lines, index);
+          parts.push(fence.html);
+          index = fence.nextIndex;
+          continue;
+        }
+
+        const heading = line.match(/^(#{1,6})\s+(.+)$/);
+        if (heading) {
+          parts.push(`<h${heading[1].length}>${renderInline(heading[2].trim())}</h${heading[1].length}>`);
+          index += 1;
+          continue;
+        }
+
+        if (isBlockquote(line)) {
+          const blockquote = collectBlockquote(lines, index);
+          parts.push(blockquote.html);
+          index = blockquote.nextIndex;
+          continue;
+        }
+
+        const marker = parseListMarker(line);
+        if (marker) {
+          const list = collectList(lines, index, marker.indent, marker.type);
+          parts.push(list.html);
+          index = list.nextIndex;
+          continue;
+        }
+
+        const paragraph = collectParagraph(lines, index);
+        parts.push(paragraph.html);
+        index = paragraph.nextIndex;
+      }
+
+      return parts.join('\n');
+    }
+
+    const defaultMarkdown = `# Write markdown here
+
+Type on the left and preview on the right within **200ms**.
+
+## Supported markdown
+
+- *Italic* and **bold**
+- ***Bold italic***
+- \`inline code\`
+- [Safe link](https://example.com)
+- Nested lists
+  - One level deep
+
+1. Ordered
+2. Also ordered
+
+> Blockquotes render line by line
+> and stay escaped.
+
+\`\`\`js
+const x = '<script>never runs<\/script>';
+console.log(x);
+\`\`\`
+`;
+
+    const textarea = document.getElementById('input');
+    const preview = document.getElementById('preview');
+    const status = document.getElementById('status');
+    let renderTimer = 0;
+    let lastInputAt = 0;
+    const renderDelay = 180;
+
+    window.__previewMetrics = {
+      renderDelay,
+      lastInputAt: 0,
+      lastRenderAt: 0,
+      lastLatencyMs: 0
+    };
+
+    function renderNow() {
+      preview.innerHTML = renderMarkdown(textarea.value);
+      const finishedAt = performance.now();
+      const latency = finishedAt - lastInputAt;
+
+      window.__previewMetrics.lastRenderAt = finishedAt;
+      window.__previewMetrics.lastLatencyMs = latency;
+      preview.dataset.renderedAt = String(finishedAt);
+      status.textContent = `Preview updated in ${Math.round(latency)}ms`;
+    }
+
+    function scheduleRender() {
+      lastInputAt = performance.now();
+      window.__previewMetrics.lastInputAt = lastInputAt;
+      clearTimeout(renderTimer);
+      status.textContent = 'Preview pending...';
+      renderTimer = window.setTimeout(renderNow, renderDelay);
+    }
+
+    textarea.addEventListener('input', scheduleRender);
+    textarea.value = defaultMarkdown;
+    lastInputAt = performance.now();
+    window.__previewMetrics.lastInputAt = lastInputAt;
+    renderNow();
+  </script>
+</body>
+</html>

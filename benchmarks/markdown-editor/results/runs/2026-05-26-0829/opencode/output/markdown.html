@@ -1,0 +1,182 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Markdown Editor</title>
+  <style>
+    html, body { height: 100%; margin: 0; font-family: system-ui, Arial, sans-serif; }
+    .split { display: flex; height: 100vh; }
+    textarea { width: 50%; resize: none; padding: 12px; border: none; border-right: 1px solid #ddd; font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    #preview { width: 50%; padding: 16px; overflow: auto; }
+    pre { background: #f6f8fa; padding: 12px; overflow: auto; }
+    code { background: #f6f8fa; padding: 0 3px; }
+    blockquote { border-left: 4px solid #ddd; padding-left: 10px; color: #555; margin: 0.5em 0; }
+    ul, ol { padding-left: 24px; }
+  </style>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; script-src 'unsafe-inline'">
+  <!-- CSP above further reduces risk when opened via file:// in some browsers -->
+</head>
+<body>
+  <div class="split">
+    <textarea id="editor" placeholder="# Hello
+
+Type Markdown here..."></textarea>
+    <div id="preview" aria-live="polite"></div>
+  </div>
+  <script>
+  // ===== START_PARSER =====
+  function escapeHTML(s){
+    return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
+  }
+  function sanitizeHref(href){
+    const h = String(href || '').trim();
+    const lower = h.toLowerCase();
+    if (lower.startsWith('javascript:') || lower.startsWith('data:')) return '#';
+    if (/^(https?:)?\/\//i.test(h) || h.startsWith('#') || h.startsWith('/')) {
+      return h.replace(/"/g, '%22');
+    }
+    return h.replace(/"/g, '%22');
+  }
+  function renderInline(text){
+    // Input here is already HTML-escaped. Only introduce safe whitelisted tags.
+    let s = text;
+    // Code spans first to avoid formatting inside code
+    s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
+    // Bold+italic ***text***
+    s = s.replace(/\*\*\*([^*]+)\*\*\*/g, '<strong><em>$1</em></strong>');
+    // Bold **text**
+    s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    // Italic *text* or _text_
+    s = s.replace(/\*([^*]+)\*|_([^_]+)_/g, (m, a, b) => `<em>${a || b}</em>`);
+    // Links [text](url)
+    s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (m, t, href) => {
+      const safe = sanitizeHref(href.trim());
+      const attrs = safe === '#' ? '' : ' rel="noopener noreferrer" target="_blank"';
+      return `<a href="${safe}"${attrs}>${t}</a>`;
+    });
+    return s;
+  }
+  function parseMarkdown(md){
+    const src = (md || '').replace(/\r\n?/g, '\n');
+    const lines = src.split('\n');
+    const out = [];
+    let i = 0;
+    let inCode = false;
+    let codeBuf = [];
+    let inBlockquote = false;
+    let listStack = []; // stack of {type:'ul'|'ol', indent:number}
+
+    function closeParagraph(){
+      // no-op; paragraphs emitted inline per line handling
+    }
+    function closeBlockquote(){
+      if (inBlockquote){ out.push('</blockquote>'); inBlockquote = false; }
+    }
+    function closeLists(toIndent){
+      while (listStack.length && (toIndent === undefined || listStack[listStack.length-1].indent >= toIndent)){
+        const top = listStack.pop();
+        out.push(top.type === 'ul' ? '</ul>' : '</ol>');
+      }
+    }
+
+    while (i < lines.length){
+      const raw = lines[i];
+      const line = raw;
+
+      // Code fences
+      const fence = line.match(/^```(.*)$/);
+      if (fence){
+        closeBlockquote();
+        if (!inCode){ inCode = true; codeBuf = []; }
+        else { out.push('<pre><code>' + escapeHTML(codeBuf.join('\n')) + '</code></pre>'); inCode = false; codeBuf = []; }
+        i++; continue;
+      }
+      if (inCode){ codeBuf.push(line); i++; continue; }
+
+      // Blank line -> close block structures appropriately
+      if (/^\s*$/.test(line)){
+        closeBlockquote();
+        closeLists(-1);
+        i++; continue;
+      }
+
+      // Blockquote
+      const bq = line.match(/^>\s?(.*)$/);
+      if (bq){
+        closeLists(-1);
+        if (!inBlockquote){ out.push('<blockquote>'); inBlockquote = true; }
+        out.push('<p>' + renderInline(escapeHTML(bq[1])) + '</p>');
+        i++; continue;
+      } else {
+        closeBlockquote();
+      }
+
+      // Headings
+      const h = line.match(/^(#{1,6})\s+(.*)$/);
+      if (h){
+        closeLists(-1);
+        const level = h[1].length;
+        out.push(`<h${level}>` + renderInline(escapeHTML(h[2])) + `</h${level}>`);
+        i++; continue;
+      }
+
+      // Lists (ul/ol) with one level nesting (indent by 2 or more spaces)
+      let m;
+      if (m = line.match(/^([ ]{0,4})([-+*])\s+(.*)$/)){
+        const indent = m[1].length >= 2 ? 1 : 0; // 0 = top, 1 = one-level nest
+        const itemText = m[3];
+        const targetType = 'ul';
+        // Adjust stack
+        if (!listStack.length || listStack[listStack.length-1].type !== targetType || listStack[listStack.length-1].indent !== indent){
+          // close deeper or switch
+          if (listStack.length && listStack[listStack.length-1].indent > indent) closeLists(indent);
+          // open new
+          out.push('<' + targetType + '>');
+          listStack.push({ type: targetType, indent });
+        }
+        out.push('<li>' + renderInline(escapeHTML(itemText)) + '</li>');
+        i++; continue;
+      }
+      if (m = line.match(/^([ ]{0,4})(\d+)\.\s+(.*)$/)){
+        const indent = m[1].length >= 2 ? 1 : 0;
+        const itemText = m[3];
+        const targetType = 'ol';
+        if (!listStack.length || listStack[listStack.length-1].type !== targetType || listStack[listStack.length-1].indent !== indent){
+          if (listStack.length && listStack[listStack.length-1].indent > indent) closeLists(indent);
+          out.push('<' + targetType + '>');
+          listStack.push({ type: targetType, indent });
+        }
+        out.push('<li>' + renderInline(escapeHTML(itemText)) + '</li>');
+        i++; continue;
+      }
+
+      // Paragraph fallback
+      closeLists(-1);
+      out.push('<p>' + renderInline(escapeHTML(line)) + '</p>');
+      i++;
+    }
+    // Close any open blocks
+    if (inCode){ out.push('<pre><code>' + escapeHTML(codeBuf.join('\n')) + '</code></pre>'); }
+    closeBlockquote();
+    closeLists(-1);
+    return out.join('\n');
+  }
+  // ===== END_PARSER =====
+  (function(){
+    const ta = document.getElementById('editor');
+    const preview = document.getElementById('preview');
+    let t;
+    function render(){
+      preview.innerHTML = parseMarkdown(ta.value);
+    }
+    ta.addEventListener('input', function(){
+      clearTimeout(t);
+      t = setTimeout(render, 150);
+    });
+    ta.value = '# Hello\n\nType Markdown here...';
+    render();
+  })();
+  </script>
+  <noscript>This editor requires JavaScript to render the preview.</noscript>
+</body>
+</html>

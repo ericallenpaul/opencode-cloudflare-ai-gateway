@@ -1,0 +1,62 @@
+﻿{
+    "tool":  "opencode",
+    "htmlPath":  "C:\\Users\\eric.paul\\source\\repos\\opencode-cloudflare-ai-gateway\\benchmarks\\markdown-editor\\results\\runs\\2026-05-26-0829\\opencode\\output\\markdown.html",
+    "results":  {
+                    "R3":  {
+                               "status":  "PASS",
+                               "reason":  "All h1-h6 found in preview"
+                           },
+                    "R8":  {
+                               "status":  "PASS",
+                               "reason":  "\u003cblockquote\u003e found with all three lines"
+                           },
+                    "R5":  {
+                               "status":  "PASS",
+                               "reason":  "ul present, nested ul present, ol with 3 li"
+                           },
+                    "R2":  {
+                               "status":  "PASS",
+                               "reason":  "Preview updated 228ms after keystroke"
+                           },
+                    "R7":  {
+                               "status":  "PASS",
+                               "reason":  "\u003ca href=\"https://example.com\"\u003eExample\u003c/a\u003e rendered correctly"
+                           },
+                    "R4":  {
+                               "status":  "PASS",
+                               "reason":  "strong=2, em=3, nested bold+italic=1"
+                           },
+                    "R9":  {
+                               "status":  "PASS",
+                               "reason":  "Test file found: markdown.test.js"
+                           },
+                    "R6":  {
+                               "status":  "PASS",
+                               "reason":  "Inline code and fenced pre\u003ecode both rendered"
+                           },
+                    "R_PERF":  {
+                                   "status":  "PASS",
+                                   "reason":  "Large input (17000 chars) processed in 2782ms"
+                               },
+                    "R10":  {
+                                "status":  "PASS",
+                                "reason":  "node --test exited 0 (all tests passed)"
+                            },
+                    "R1":  {
+                               "status":  "PASS",
+                               "reason":  "Editor and preview panes visible, no console errors on load"
+                           }
+                },
+    "consoleErrors":  {
+
+                      },
+    "jsErrors":  {
+
+                 },
+    "screenshots":  [
+                        "empty.png",
+                        "headings.png",
+                        "xss-attempt.png",
+                        "mobile.png"
+                    ]
+}

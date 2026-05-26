@@ -1,0 +1,42 @@
+- main [ref=e2]:
+  - generic [ref=e3]:
+    - heading "Markdown Editor" [level=1] [ref=e4]
+    - generic [ref=e5]: Preview updated in 1ms
+  - generic [ref=e6]:
+    - generic [ref=e7]:
+      - generic [ref=e8]: Markdown Input
+      - textbox "Markdown input" [ref=e9]: "# Write markdown here Type on the left and preview on the right within **200ms**. ## Supported markdown - *Italic* and **bold** - ***Bold italic*** - `inline code` - [Safe link](https://example.com) - Nested lists - One level deep 1. Ordered 2. Also ordered > Blockquotes render line by line > and stay escaped. ```js const x = '<script>never runs</script>'; console.log(x); ```"
+    - generic [ref=e10]:
+      - generic [ref=e11]: HTML Preview
+      - generic [ref=e12]:
+        - heading "Write markdown here" [level=1] [ref=e13]
+        - paragraph [ref=e14]:
+          - text: Type on the left and preview on the right within
+          - strong [ref=e15]: 200ms
+          - text: .
+        - heading "Supported markdown" [level=2] [ref=e16]
+        - list [ref=e17]:
+          - listitem [ref=e18]:
+            - emphasis [ref=e19]: Italic
+            - text: and
+            - strong [ref=e20]: bold
+          - listitem [ref=e21]:
+            - strong [ref=e22]:
+              - emphasis [ref=e23]: Bold italic
+          - listitem [ref=e24]:
+            - code [ref=e25]: inline code
+          - listitem [ref=e26]:
+            - link "Safe link" [ref=e27] [cursor=pointer]:
+              - /url: https://example.com
+          - listitem [ref=e28]:
+            - text: Nested lists
+            - list [ref=e29]:
+              - listitem [ref=e30]: One level deep
+        - list [ref=e31]:
+          - listitem [ref=e32]: Ordered
+          - listitem [ref=e33]: Also ordered
+        - blockquote [ref=e34]:
+          - paragraph [ref=e35]:
+            - text: Blockquotes render line by line
+            - text: and stay escaped.
+        - code [ref=e37]: const x = '<script>never runs</script>'; console.log(x);

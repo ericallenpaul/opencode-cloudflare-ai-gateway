@@ -1,0 +1,13 @@
+﻿{
+    "runId":  "2026-05-26-0829",
+    "benchmark":  "markdown-editor",
+    "selected":  [
+                     "claude",
+                     "codex",
+                     "opencode"
+                 ],
+    "skipped":  {
+
+                },
+    "selectedAt":  "2026-05-26T08:29:48-04:00"
+}

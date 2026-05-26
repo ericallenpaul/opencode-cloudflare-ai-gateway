@@ -1,0 +1,6 @@
+- generic [ref=e2]:
+  - textbox "# Hello Type Markdown here..." [ref=e3]:
+    - /placeholder: "# Hello\n\nType Markdown here..."
+  - generic [ref=e4]:
+    - heading "Hello" [level=1] [ref=e5]
+    - paragraph [ref=e6]: Type Markdown here...
