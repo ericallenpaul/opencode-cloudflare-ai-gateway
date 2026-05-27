@@ -145,17 +145,19 @@ Two specific additions worth knowing beyond the integrations we ship by default:
 
 The plugin ecosystem is still young. Most extension value today flows through MCPs and skills; the rest is per-team customization via hooks. As the ecosystem matures we may promote this section to a dedicated doc.
 
-## Future shape — the orchestrator (Phase 2)
+## Shipped orchestrator
 
-The current tier setup is **manually selected** — you pick `--agent frontier` when you want frontier reasoning. The next phase ([design spec here](specs/2026-05-19-routing-brain-d-design.md)) introduces a primary `orchestrator` agent that dispatches work across tiers automatically using OpenCode's native Task tool and subagent mechanism:
+The shipped example config now uses the primary `build` agent as a frontier-tier orchestrator. It can dispatch concrete subtasks through OpenCode's native Task tool to project-local subagents under `.opencode/agents/`:
 
-- `searcher` subagent (local) — grep/glob/find
-- `reader` subagent (local) — summarize files
-- `coder` subagent (oss) — implement code changes
-- `planner` subagent (oss) — design approach
-- `orchestrator` (frontier) — reasoning, dispatch, user dialogue
+- `searcher` subagent — cheap hosted search/LSP/grep worker
+- `reader` subagent — cheap hosted file-reading and extraction worker
+- `coder` subagent — cheap hosted implementation worker
+- `planner` subagent — cheap hosted decomposition and planning worker
+- `build` primary agent — frontier reasoning, dispatch, synthesis, and final review
 
-This stays an OpenCode-config change — no external service. If the orchestrator's natural-language dispatch turns out to be too undisciplined, the further-future "Option C" is an external routing brain (CF Worker or local proxy) that enforces tier selection in code.
+This stays an OpenCode-native config change — no external service. The practical adjustment from the original design is reliability-first routing: the shipped subagents default to cheap hosted models rather than the experimental truly-local tier. The manual `local` primary agent still exists for read-only local work and for future local-tier experimentation.
+
+If the orchestrator's natural-language dispatch still proves too undisciplined, the further-future "Option C" remains an external routing brain (CF Worker or local proxy) that enforces tier selection in code.
 
 ## Future shape — superpowers (Phase 3a)
 

@@ -14,7 +14,7 @@ We're not going to stop paying for tokens. Local models keep getting better, but
 
 This repo is one attempt at that lever:
 
-- **Three explicit cost tiers** the user can switch between manually (and a planned orchestrator that picks per-task — see [the design spec](docs/specs/2026-05-19-routing-brain-d-design.md))
+- **Three explicit cost tiers** the user can switch between manually, plus a shipped frontier-tier orchestrator that can dispatch concrete subtasks to cheaper workers
 - **One gateway** in front of every paid provider, so every dollar shows up in one analytics view
 - **Automatic per-user and per-project metadata tagging** (app = directory basename, user = OS user) so a shared team gateway can attribute spend by person and by project
 - **Verification scripts** (PowerShell + Bash) so you can confirm what's actually addressable from your gateway before relying on it in an agent loop
@@ -26,12 +26,14 @@ Full reasoning behind the architecture lives in [`docs/PROBLEM.md`](docs/PROBLEM
 | Tier | Default model | Provider | Cost shape (May 2026, indicative) |
 |---|---|---|---|
 | **Local** | `ollama/granite4:7b-a1b-h` | Ollama on your machine | Free (hardware cost only) |
-| **OSS** | `@cf/qwen/qwen2.5-coder-32b-instruct` | Cloudflare Workers AI via Gateway | low-cents per M tokens |
+| **OSS** | `@cf/zai-org/glm-4.7-flash` | Cloudflare Workers AI via Gateway | low-cents per M tokens |
 | **Frontier** | `gpt-5` | OpenAI via Gateway | Standard frontier pricing |
 
 > **Note (2026-05-26):** the **Local tier** is real but harder to make reliable than the table suggests. Through extensive testing we found Ollama's local tool-calling is unreliable across most models; LM Studio + qwen3-coder + n_ctx 16384 is the known-working setup (see [`docs/LEARNINGS.md`](docs/LEARNINGS.md) and [`docs/SETUP.md`](docs/SETUP.md)). Even working, dispatched local-tier subtasks run 20-40s on consumer hardware. For most daily-use scenarios, pointing the `local` tier at a gateway-hosted cheap model like `openai-via-gateway/gpt-4o-mini` (~8x cheaper than gpt-5, fast inference, reliable) preserves the tiered cost thesis without the local-inference latency tax.
 
-Plus the gateway-routed catalog: Claude Sonnet/Opus/Haiku 4-5 & 4-6, GPT-5 family, GPT-4.1-mini, GPT-4o-mini, Gemini 2.5 Pro/Flash, Llama 3.3 70B, DeepSeek-R1-distill 32B.
+Plus the gateway-routed catalog: Claude Sonnet/Opus/Haiku 4-5 & 4-6, GPT-5 family, GPT-4.1-mini, GPT-4o-mini, Gemini 2.5 Pro/Flash, GLM 4.7 Flash, GPT-OSS 20B/120B, Qwen 3 30B A3B, Llama 3.3 70B, and DeepSeek-R1-distill 32B.
+
+> **Hosted OSS default (2026-05-27):** the repo now defaults its cheap hosted worker tier to `@cf/zai-org/glm-4.7-flash`. We tested several current Cloudflare-hosted OSS candidates through the actual OpenCode + AI Gateway + Workers AI stack. `glm-4.7-flash` completed read/search and harmless write tasks successfully. `@cf/openai/gpt-oss-20b`, `@cf/qwen/qwen3-30b-a3b-fp8`, and even the previously-shipped `@cf/qwen/qwen2.5-coder-32b-instruct` all failed in this stack with request-shape `Bad input` errors. The model catalog is broader than the subset OpenCode can reliably drive today; the default has to follow runtime reliability, not just catalog availability.
 
 ## Quick start
 
@@ -47,7 +49,7 @@ The fastest way to know whether you have everything in place is to run the diagn
 ./scripts/check-setup.sh
 ```
 
-It walks every prerequisite (opencode CLI, env vars, opencode.json, superpowers plugin wired up, MCP servers configured, ollama + granite4 model) and prints a PASS/FAIL per item with the exact fix command for anything missing. Pass `-InstallConfig` / `--install-config` and it will copy `opencode.example.json` into place (with a backup of any existing config). Pure diagnostic otherwise -- no env-var writes, no npm installs.
+It walks every prerequisite (opencode CLI, env vars, opencode.json, superpowers plugin wired up, MCP servers configured, ollama + granite4 model) and prints a PASS/FAIL per item with the exact fix command for anything missing. Pass `-InstallConfig` / `--install-config` and it will copy `opencode.example.json` into place (with a backup of any existing config). The repo's project-local subagents live under `.opencode/agents/`; keep that folder alongside the project when using the orchestrator setup. For automatic app attribution in PowerShell, run `.\scripts\install-opencode-app-tag.ps1` once. Pure diagnostic otherwise -- no env-var writes, no npm installs.
 
 If you'd rather walk through manually, the full sequence is:
 
@@ -58,7 +60,7 @@ If you'd rather walk through manually, the full sequence is:
    [Environment]::SetEnvironmentVariable("CF_GATEWAY_NAME", "<your-gateway-slug>", "User")
    [Environment]::SetEnvironmentVariable("CF_AIG_TOKEN", "<your-gateway-auth-token>", "User")
    ```
-3. **Copy the example config** to `~/.config/opencode/opencode.json` and adjust agent defaults to taste:
+3. **Copy the example config** to `~/.config/opencode/opencode.json` and keep this repo's `.opencode/agents/` folder with the project if you want the shipped orchestrator/subagents:
    ```powershell
    Copy-Item .\opencode.example.json $env:USERPROFILE\.config\opencode\opencode.json
    ```
@@ -181,12 +183,14 @@ Beyond the rubric, three pragmatic factors made it the right call **for me speci
 - Automatic `app` + `user` metadata tagging on every gateway request (app from directory basename, user from OS user) -- surfaces as filters in CF AI Gateway analytics
 - Baseline MCP integration: `context7` (current library docs), `cloudflare-docs`, and `snyk` (security scanning) ship enabled in the example config
 - LSP integration: OpenCode's 24+ built-in language servers enabled with `"lsp": {}` for diagnostics-driven feedback; **agent-callable `lsp` tool** wired up (requires `OPENCODE_EXPERIMENTAL_LSP_TOOL=true` env var -- the tool is experimental in opencode 1.15.5); per-agent prompt nudging biases the model toward LSP over grep for symbol lookups; custom PowerShell setup documented
+- Primary `build` agent now acts as the default frontier-tier orchestrator, with project-local `searcher`, `reader`, `coder`, and `planner` subagents invoked via OpenCode's Task tool
+- Manual `local`, `oss`, and `frontier` primary agents remain available as direct overrides when you do not want delegation
 - Reproducible benchmark infrastructure (`benchmarks/scripts/bench-run.ps1`) with ccusage delta capture, session-window contamination filtering, and cross-tool comparison files
 - Two-layer judge: deterministic Playwright R1-R10 suite (`benchmarks/scripts/judge-run.ps1`) + qualitative AI prompt template (`benchmarks/scripts/judge/JUDGE-PROMPT.md`)
 
 **Planned (not yet built):**
-- Subagent-based orchestrator that dispatches work across tiers automatically (see design spec)
 - [obra/superpowers](https://github.com/obra/superpowers) plugin integration -- process skills (TDD, brainstorming, code review) on the orchestrator
+- Further tuning of the shipped orchestrator/subagent routing rules using benchmark and real-session data
 - Groq and xAI provider integrations (deferred -- pending API key provisioning)
 
 ## License

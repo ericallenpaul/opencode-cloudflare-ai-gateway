@@ -2,7 +2,7 @@
 
 End-to-end setup, ~30 minutes if Cloudflare and Ollama are already in place. Most of that is "wait for `ollama pull`" and dashboard clicks. Tested on Windows 11 with PowerShell 7; the steps translate cleanly to macOS/Linux — the only Windows-specific bits are env var commands.
 
-> **Shortcut**: at any point during this walkthrough -- and especially when you think you're done -- run `scripts/check-setup.ps1` (or `.sh`) to confirm every prerequisite is in place. It walks 9 required + 3 optional checks and prints exact fix commands for anything missing. Pass `-InstallConfig` (or `--install-config`) to also copy `opencode.example.json` into your opencode config dir with a backup of any existing file. See [`scripts/README.md`](../scripts/README.md) for details.
+> **Shortcut**: at any point during this walkthrough -- and especially when you think you're done -- run `scripts/check-setup.ps1` (or `.sh`) to confirm every prerequisite is in place. It walks 9 required + 3 optional checks and prints exact fix commands for anything missing. Pass `-InstallConfig` (or `--install-config`) to also copy `opencode.example.json` into your opencode config dir with a backup of any existing file. The shipped orchestrator workers live under this repo's `.opencode/agents/`, so keep that folder with the project when using the orchestrator setup. See [`scripts/README.md`](../scripts/README.md) for details.
 
 ## Prerequisites
 
@@ -165,6 +165,8 @@ cp ./opencode.example.json ~/.config/opencode/opencode.json
 
 If you already have an opencode.json, **back it up first**: the example config wholesale replaces the `provider` and `agent` sections.
 
+The repo also ships project-local subagents in `.opencode/agents/`. Those files are part of the working setup, not optional examples. If you transplant this configuration into another repository, copy that folder too or the primary `build` agent's Task-based orchestration will have nothing to call.
+
 ## 5. Verify everything is reachable
 
 **Windows (PowerShell):**
@@ -204,7 +206,7 @@ opencode run --agent frontier "say hi"
 
 If `local` works but `oss` or `frontier` doesn't, the most common cause is a BYOK key not being stored on the gateway side. Check the gateway dashboard's Providers tab — the provider you're trying to use should show as connected.
 
-## 7. (Optional but recommended) Automatic per-user and per-project attribution
+## 7. (Recommended) Automatic per-user and per-project attribution
 
 The example config attaches a `cf-aig-metadata` header to every gateway-routed request, tagging it with `app` (the directory you launched opencode from) and `user` (you). Both come from env vars: `OPENCODE_APP_TAG` and `OPENCODE_USER_TAG`. If neither is set, the header still works but values come through as empty strings — your gateway analytics won't be useful for slicing.
 
@@ -222,13 +224,20 @@ Two small bits of one-time setup make this automatic for every future opencode i
 export OPENCODE_USER_TAG="$USER"
 ```
 
-**Register a directory-change hook that walks up to the project root and sets the app tag.** This is a native shell mechanism — no wrapping of the `opencode` command, no prompt redefinition. The hook fires on every `cd`, walks up to find the nearest `.git` ancestor, and uses that directory's name as the app tag. So whether you're in `~/code/auth-api` or `~/code/auth-api/src/components`, the tag stays `auth-api`.
+**Register a directory-change hook that walks up to the project root and sets the app tag.** This is a native shell mechanism — no wrapping of the `opencode` command, no prompt redefinition. The hook runs once when the shell loads to initialize `OPENCODE_APP_TAG`, then again on every `cd`. It walks up to find the nearest `.git` ancestor and uses that directory's name as the app tag. So whether you're in `~/code/auth-api` or `~/code/auth-api/src/components`, the tag stays `auth-api`.
 
 Once opencode launches, the env var is captured into the opencode process and stays fixed for that session — even if you `cd` elsewhere in your terminal afterwards.
 
 ```powershell
-# Windows — add to your PowerShell $PROFILE (run `notepad $PROFILE` to open;
-# create the file if missing).
+# Windows — recommended: install the hook from this repo.
+.\scripts\install-opencode-app-tag.ps1
+```
+
+That script adds a small managed block to `$PROFILE.CurrentUserAllHosts`, sets `OPENCODE_APP_TAG` for the current shell, and makes future PowerShell sessions keep it updated on each `cd`.
+
+If you prefer to install it manually, the script writes this block:
+
+```powershell
 function Get-OpencodeAppTag {
     $p = $PWD.Path
     while ($p -and $p -ne (Split-Path $p -Parent)) {
@@ -240,7 +249,6 @@ function Get-OpencodeAppTag {
 $ExecutionContext.SessionState.InvokeCommand.LocationChangedAction = {
     $env:OPENCODE_APP_TAG = Get-OpencodeAppTag
 }
-# Set it once for the initial shell (before any cd)
 $env:OPENCODE_APP_TAG = Get-OpencodeAppTag
 ```
 

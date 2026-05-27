@@ -2,7 +2,25 @@
 
 Helper scripts for running benchmarks consistently across coding-agent tools.
 
-## benchmark.ps1 -- the one command you usually want
+## benchmark-auto.ps1 -- primary automated runner
+
+```powershell
+cd "<repo>\benchmarks\scripts"
+.\benchmark-auto.ps1                                         # default target: tic-tac-toe
+.\benchmark-auto.ps1 -Benchmark markdown-editor              # one other target
+.\benchmark-auto.ps1 -Benchmark tic-tac-toe -Tools opencode  # one tool only
+```
+
+Runs a benchmark target without manual checkpoints. It reads `benchmarks/<target>/policy.json`, launches each enabled CLI non-interactively, captures raw stdout/stderr, snapshots `ccusage` before and after, copies deliverables into `benchmarks/<target>/results/runs/<RunId>/<tool>/output/`, writes `_run-result.json`, and runs the deterministic Playwright judge.
+
+Policy modes:
+
+- `tool`: validates requested model and expected outputs. `tic-tac-toe` uses this mode as the quick harness smoke test.
+- `architecture`: also validates required model routing. `markdown-editor` uses this mode so OpenCode must show both `gpt-5` and the cheaper worker model for a valid tier-routing run.
+
+Each tool is marked `valid: true` or `valid: false` in `_run-results.json`. Invalid runs keep their raw logs and outputs so failures can be audited instead of silently disappearing.
+
+## benchmark.ps1 -- secondary guided/manual runner
 
 ```powershell
 cd "<repo>\benchmarks\scripts"
@@ -11,7 +29,7 @@ cd "<repo>\benchmarks\scripts"
 .\benchmark.ps1 -Benchmark tic-tac-toe,markdown-editor       # several, in sequence
 ```
 
-Single-entry orchestrator that wraps the three scripts below into one guided workflow. `-Benchmark` accepts a comma-separated list: each target runs end-to-end (start, tools, finish, judge-run, qualitative pass, summarize) before the next one begins, with a banner between them so it's clear which one you're on. Three phases, two manual checkpoints:
+Guided orchestrator that wraps the three scripts below into one workflow. `-Benchmark` accepts a comma-separated list: each target runs end-to-end (start, tools, finish, judge-run, qualitative pass, summarize) before the next one begins, with a banner between them so it's clear which one you're on. Three phases, two manual checkpoints:
 
 1. **Phase 1 -- start** (script): captures ccusage baselines for all configured tools, generates a RunId, prints per-tool launch instructions.
 2. **Checkpoint A -- run the tools** (human): you launch each tool in its scratch dir, paste the prompt from PROMPT.md, let it work, exit. The orchestrator waits at a `Press ENTER to continue` prompt.

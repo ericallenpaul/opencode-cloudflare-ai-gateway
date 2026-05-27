@@ -1,0 +1,55 @@
+{
+  "name": "tic-tac-toe",
+  "mode": "tool",
+  "timeoutSeconds": 900,
+  "runJudge": true,
+  "runQualitativeJudge": false,
+  "expectedOutputs": {
+    "html": [
+      "tictactoe.html"
+    ],
+    "tests": [
+      "tictactoe.test.js",
+      "*.test.js"
+    ],
+    "docs": [
+      "README.md"
+    ]
+  },
+  "tools": {
+    "claude": {
+      "enabled": true,
+      "requestedModel": "claude-sonnet-4-5",
+      "expectedModels": [
+        "claude-sonnet-4-5"
+      ],
+      "requiredModels": [
+        "claude-sonnet-4-5"
+      ],
+      "allowAdditionalModels": false
+    },
+    "codex": {
+      "enabled": true,
+      "requestedModel": "gpt-5",
+      "expectedModels": [
+        "gpt-5"
+      ],
+      "requiredModels": [
+        "gpt-5"
+      ],
+      "allowAdditionalModels": false
+    },
+    "opencode": {
+      "enabled": true,
+      "requestedModel": "openai-via-gateway/gpt-5",
+      "expectedModels": [
+        "gpt-5"
+      ],
+      "requiredModels": [
+        "gpt-5"
+      ],
+      "allowAdditionalModels": true,
+      "requireRouting": false
+    }
+  }
+}

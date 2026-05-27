@@ -219,6 +219,21 @@ We use the per-provider endpoints throughout because the proper SDKs (`@ai-sdk/a
 
 OpenAI's `codex-mini` model is listed in Cloudflare's gateway-supported models page but returns `model_not_found` when probed from a standard OpenAI account. Appears to be tier-gated or in restricted access. Don't add it to your config unless you've verified your account has access.
 
+## Workers AI model catalog breadth is larger than the OpenCode-compatible subset
+
+(Added 2026-05-27.) A model being listed in Cloudflare's AI / Workers AI catalog does **not** mean it is automatically viable inside the current OpenCode + `@ai-sdk/openai-compatible` + AI Gateway worker stack.
+
+Empirical results from a targeted reliability pass:
+
+- **`@cf/zai-org/glm-4.7-flash`** -- worked for read, glob, and harmless write/read-back tasks through `opencode run`
+- **`@cf/openai/gpt-oss-20b`** -- failed with Workers AI `Bad input` request-shape errors
+- **`@cf/qwen/qwen3-30b-a3b-fp8`** -- failed with Workers AI `Bad input` request-shape errors
+- **`@cf/qwen/qwen2.5-coder-32b-instruct`** -- also failed with the same request-shape errors in the current stack, despite being the previously-shipped OSS default
+
+The failure signature was the same class of error: Workers AI rejected the request body with `oneOf at '/' not met` / content-shape mismatches. This points to an adapter compatibility issue in the current stack rather than a pure model-quality issue.
+
+**Practical rule**: choose OSS defaults based on **runtime compatibility inside OpenCode**, not just on benchmark reputation or catalog presence. As of 2026-05-27, `glm-4.7-flash` is the safest hosted-OSS worker default in this repo.
+
 ## Reasoning models burn output tokens you can't see in the response
 
 When testing gpt-5 with `max_completion_tokens: 30` and a short prompt, the response came back with **empty content** but `reasoning_tokens: 64`. The model used its entire output budget on internal reasoning before producing user-facing text. For real testing, set `max_completion_tokens` to at least 256.

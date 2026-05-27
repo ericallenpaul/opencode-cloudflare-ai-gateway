@@ -32,7 +32,7 @@ Subagents stay skill-free. The frontier orchestrator runs skill workflows, deriv
 
 ## Which skill works best with which tier
 
-OpenCode runs the skill on whichever model the agent is currently using — there's no auto-routing yet (that arrives in Phase 2 with the orchestrator). For now, this is a guide for **which model to switch to** before invoking a given skill manually.
+OpenCode runs the skill on whichever model the current primary agent is using. With the shipped orchestrator/subagent baseline, skills still belong on the primary frontier agent rather than the cheap workers. The table below is therefore a guide for **which primary tier to use** when invoking a given skill manually.
 
 | Skill | Recommended tier | Why |
 |---|---|---|
@@ -98,7 +98,7 @@ In the orchestrator's loop:
 4. **Update the orchestrator's system prompt** with a section explaining: "you have superpowers skills available; invoke them when they apply; skills run on you, not on subagents — derive concrete tasks from skill processes and dispatch only the concrete tasks."
 5. **Leave subagent configs alone.** No `skill` permission, no skill-related prompt text. Subagents stay simple.
 
-The example `opencode.json` in this repo will get an updated `orchestrator` agent block once Phase 2 (orchestrator + subagents) ships and Phase 3a (superpowers layer) ships on top of it.
+The shipped example config now includes the orchestrator/subagent baseline. Phase 3a is the remaining step: layering superpowers deliberately onto that primary orchestrator without bloating or destabilizing the cheap worker agents.
 
 ## Optional vs. required
 

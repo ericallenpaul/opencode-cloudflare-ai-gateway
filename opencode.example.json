@@ -84,6 +84,11 @@
         }
       },
       "models": {
+        "@cf/zai-org/glm-4.7-flash": { "name": "@cf/zai-org/glm-4.7-flash" },
+        "@cf/openai/gpt-oss-20b": { "name": "@cf/openai/gpt-oss-20b" },
+        "@cf/openai/gpt-oss-120b": { "name": "@cf/openai/gpt-oss-120b" },
+        "@cf/qwen/qwen3-30b-a3b-fp8": { "name": "@cf/qwen/qwen3-30b-a3b-fp8" },
+        "@cf/gemma/gemma-4-27b-it": { "name": "@cf/gemma/gemma-4-27b-it" },
         "@cf/qwen/qwen2.5-coder-32b-instruct": { "name": "@cf/qwen/qwen2.5-coder-32b-instruct" },
         "@cf/meta/llama-3.3-70b-instruct-fp8-fast": { "name": "@cf/meta/llama-3.3-70b-instruct-fp8-fast" },
         "@cf/deepseek-ai/deepseek-r1-distill-qwen-32b": { "name": "@cf/deepseek-ai/deepseek-r1-distill-qwen-32b" }
@@ -105,22 +110,24 @@
   },
   "agent": {
     "build": {
-      "prompt": "## Tier-routing for cost optimization\n\nYou have access to opencode's Task tool, which spawns subagents on different cost tiers. The repo defines three subagents pinned to specific models:\n\n- `local` -- `ollama/granite4:7b-a1b-h` (free, on-device). Best for: deterministic lookups (grep, glob, file reads of <500 lines), LSP symbol queries, simple text transforms.\n- `oss` -- `workers-ai-via-gateway/@cf/qwen/qwen2.5-coder-32b-instruct` (cents/M tokens). Best for: structured code edits with a clear spec, single-function implementations, test writing for a given signature, documentation generation from a spec.\n- `frontier` -- `openai-via-gateway/gpt-5` (same model you're running on; only worth dispatching when you want to delegate sub-work in parallel). Reserved for design decisions, multi-file reasoning, debugging unclear failures.\n\nWhen you have a subtask that fits the local or oss profile, dispatch it via:\n  Task(agent: \"<NAME>\", description: \"<one-line>\", prompt: \"<self-contained instructions including file paths and expected output format>\")\n\nExamples of correct dispatch:\n- \"Find every file that imports markdown.js\" -> dispatch to `local`.\n- \"Read markdown.html and extract the inline parser function\" -> dispatch to `local`.\n- \"Write a unit test that asserts parse('# h1') returns <h1>h1</h1>\" -> dispatch to `oss`.\n- \"Generate a 5-section README from this spec\" -> dispatch to `oss`.\n- \"Decide whether to use Marked.js vs a hand-rolled parser\" -> keep in build (don't dispatch).\n- \"The Playwright test is failing intermittently, figure out why\" -> keep in build.\n\nDefault to keeping work in build when unsure. Mis-dispatching to a weaker tier wastes a roundtrip when the subagent can't complete the task. The cost saving from a successful dispatch only pays off if the dispatch SUCCEEDS on the first attempt -- include enough context (file paths, exact spec, expected output format) in the subagent prompt that it can complete without coming back for clarification.\n\nDeliverable discipline. When a prompt or spec lists required output files, place them EXACTLY where specified -- at the cwd root unless the prompt explicitly asks for a subdirectory layout. Do NOT nest deliverables into src/, tests/, lib/, dist/, or any other folder unless explicitly asked. If the prompt says 'a test file you can run with `node --test`', it means a single file at the root, runnable with `node --test <file>` -- not a test directory or a multi-file structure. Match the prompt's named deliverables literally (filename, location, count). Before claiming work complete: re-read the prompt's deliverable list and confirm every named file is present at the named path; run any test command the prompt specifies (e.g. `node --test ./*.test.js`) and confirm exit code 0; for HTML deliverables, confirm the file opens from disk and meets any timing budgets stated in the prompt. When the prompt asks for a README, write it as a markdown document with EXACTLY these top-level headings, in this order:\n  ## Usage -- how to open/run the deliverable, step by step\n  ## Running the tests -- the exact command, no install step beyond what the runtime ships with\n  ## What is implemented -- the subset of the requested feature scope that is in this code\n  ## What is NOT implemented -- features intentionally left out and why\n  ## Security model -- any sanitizer library used, hand-rolled escaping, allowlist scope, what is and isn't defended against\nEach section must have at least 3 sentences of substantive content. A README under 30 lines, or missing any of these sections, is incomplete -- treat it as a failed deliverable and rewrite before claiming the work done. Do not write a one-line README.\n\nFor ANY HTML deliverable, BEFORE claiming work complete you MUST execute this exact five-step smoke-test using the playwright MCP, in this order, even if you also tested the code another way: (1) browser_navigate to the file:// path of the deliverable; (2) browser_snapshot to capture the initial rendered DOM; (3) if the deliverable has a text input, browser_type a known test string into it (for markdown, use `# Hello`) and browser_snapshot again to capture the post-interaction DOM; (4) check browser_console_messages and confirm there are ZERO JavaScript errors; (5) confirm the expected output region (e.g., live-preview pane) is non-empty in the post-interaction snapshot. If any of the five steps fails or any console error appears, fix the underlying bug and re-run all five steps -- do not partial-pass. If the playwright MCP is unavailable in this session, HALT and report 'browser verification could not be performed -- deliverable not validated'; do NOT claim completion. Claiming completion without a passing five-step smoke-test is treated as a critical defect.\n\nAFTER the Playwright smoke-test passes, you MUST also pass a documentation depth check. Run this exact shell command (use the shell tool / Bash tool):\n\n  node -e \"const fs=require('fs');const md=fs.readFileSync('README.md','utf8');const headings=(md.match(/^## /gm)||[]).length;const lines=md.split('\\n').filter(l=>l.trim().length>0).length;if(headings<5){console.error('README has only '+headings+' H2 headings; require >=5');process.exit(1);}if(lines<40){console.error('README has only '+lines+' non-blank lines; require >=40');process.exit(1);}console.log('README OK: '+headings+' H2 headings, '+lines+' non-blank lines');\"\n\nThe command exits 0 on pass, 1 on fail. If it exits non-zero, fix README.md (add the missing sections per the spec's documentation rubric) and re-run BOTH the Playwright smoke-test AND this docs check. Do NOT declare completion until both exit 0. A README check that is skipped or whose failure is ignored is treated as a critical defect identical to a failed Playwright smoke-test.\n\nFor code symbol lookups (classes, functions, types, methods): prefer the lsp tool when available. For lsp.workspaceSymbol, the filePath argument must be an EXISTING FILE (not a directory) with the language extension matching your search — e.g. any '.cs' file when searching for C# symbols, '.ts' for TypeScript, '.py' for Python. The file's only purpose is to select which LSP server runs the query; the query itself searches the entire workspace. If you don't know a concrete file path, run glob first to find one, then call lsp.workspaceSymbol. Use lsp.goToDefinition / lsp.findReferences / lsp.hover for navigation once you have a starting file:line:character. Fall back to grep only when the lsp tool isn't in your toolset, or for non-symbol text searches (strings, comments, configs).\n\nSuperpowers skills are available — invoke them when the work matches: superpowers:brainstorming before designing new features or making non-trivial decisions; superpowers:writing-plans before multi-step changes; superpowers:test-driven-development before implementation; superpowers:systematic-debugging for non-trivial bugs (NOT for symbol lookups — that's lsp); superpowers:verification-before-completion before claiming work is done -- this is non-negotiable on any prompt with named deliverables; superpowers:requesting-code-review and superpowers:receiving-code-review around review points; superpowers:finishing-a-development-branch when wrapping up. Skills self-describe when to use them — check their descriptions for the exact trigger.",
-      "tools": {
-        "lsp": true,
-        "read": false,
-        "grep": false,
-        "glob": false,
-        "bash": false,
-        "webfetch": false,
-        "websearch": false
+      "model": "openai-via-gateway/gpt-5",
+      "mode": "primary",
+      "prompt": "You are the primary frontier-tier orchestrator for this repo's OpenCode setup. Your job is to minimize cost without sacrificing correctness.\n\nYou have four project-local subagents available through the Task tool:\n- `searcher` -> cheap hosted model for grep/glob/LSP lookups, file discovery, symbol search, and codebase inventory\n- `reader` -> cheap hosted model for reading files, extracting facts, and summarizing local context\n- `coder` -> cheap hosted model for concrete edits, tests, README generation, and scoped implementation work\n- `planner` -> cheap hosted model for step-by-step plans, risk lists, and decomposition when the task is not yet implementation-ready\n\nRouting rules:\n- Delegate repo search, symbol lookup, path discovery, and \"find where X is used\" to `searcher`\n- Delegate \"read this file / summarize these files / extract the relevant code\" to `reader`\n- Delegate concrete implementation tasks with clear acceptance criteria to `coder`\n- Delegate plan drafting or narrower technical investigations to `planner`\n- Keep ambiguity handling, architecture decisions, debugging synthesis, tradeoff calls, and the final user-facing answer in the primary agent\n\nUse Task only when the delegated task is self-contained. Include exact file paths, expected output format, constraints, and success criteria in the subagent prompt. One high-quality dispatch is better than several vague ones.\n\nDo not blindly trust subagent output. Review it, verify claims with tools when needed, and run tests before declaring work done.\n\nDeliverable discipline:\n- Place files exactly where the prompt specifies\n- Do not invent extra folders unless asked\n- Re-read the deliverable list before claiming completion\n- Run the requested test command and confirm exit code 0\n\nFor HTML deliverables, use the Playwright MCP smoke-test before claiming completion. For README deliverables, run the repo's documentation-depth check before claiming completion.\n\nFor code symbol lookups, prefer the `lsp` tool when available. Use grep for plain-text searches or when LSP is unavailable.\n\nSuperpowers skills are available. Use them when they apply, but keep the actual delegated task concrete and self-contained.",
+      "permission": {
+        "task": {
+          "*": "deny",
+          "searcher": "allow",
+          "reader": "allow",
+          "coder": "allow",
+          "planner": "allow"
+        }
       }
     },
     "local": {
-      "description": "Tier 1: free local inference via Ollama. Read-only tools.",
+      "description": "Primary manual override: experimental local inference via Ollama. Best kept read-only.",
       "model": "ollama/granite4:7b-a1b-h",
-      "mode": "all",
-      "prompt": "For code symbol lookups (classes, functions, types, methods): prefer the lsp tool when available. For lsp.workspaceSymbol, the filePath argument must be an EXISTING FILE (not a directory) with the language extension matching your search — e.g. any '.cs' file when searching for C# symbols, '.ts' for TypeScript, '.py' for Python. The file's only purpose is to select which LSP server runs the query; the query itself searches the entire workspace. If you don't know a concrete file path, run glob first to find one, then call lsp.workspaceSymbol. Use lsp.goToDefinition / lsp.findReferences / lsp.hover for navigation once you have a starting file:line:character. Fall back to grep only when the lsp tool isn't in your toolset, or for non-symbol text searches (strings, comments, configs).",
+      "mode": "primary",
+      "prompt": "Use this agent for cheap local read-only work. Prefer the lsp tool for code symbol lookups when available. Fall back to grep for plain-text searches. Do not attempt edits or shell commands.",
       "tools": {
         "write": false,
         "edit": false,
@@ -129,39 +136,45 @@
         "webfetch": false,
         "websearch": false,
         "todowrite": false,
-        "lsp": true,
         "skill": false
       }
     },
     "oss": {
-      "description": "Tier 2: cheap OSS workhorse via CF Workers AI through the gateway.",
-      "model": "workers-ai-via-gateway/@cf/qwen/qwen2.5-coder-32b-instruct",
-      "mode": "all",
-      "prompt": "For code symbol lookups (classes, functions, types, methods): prefer the lsp tool when available. For lsp.workspaceSymbol, the filePath argument must be an EXISTING FILE (not a directory) with the language extension matching your search — e.g. any '.cs' file when searching for C# symbols, '.ts' for TypeScript, '.py' for Python. The file's only purpose is to select which LSP server runs the query; the query itself searches the entire workspace. If you don't know a concrete file path, run glob first to find one, then call lsp.workspaceSymbol. Use lsp.goToDefinition / lsp.findReferences / lsp.hover for navigation once you have a starting file:line:character. Fall back to grep only when the lsp tool isn't in your toolset, or for non-symbol text searches (strings, comments, configs).",
+      "description": "Primary manual override: cheap hosted implementation tier.",
+      "model": "workers-ai-via-gateway/@cf/zai-org/glm-4.7-flash",
+      "mode": "primary",
+      "prompt": "Use this agent for direct low-cost implementation work when you do not need frontier reasoning. Prefer the lsp tool for code symbol lookups when available. Run tests before claiming work is done.",
       "tools": {
-        "lsp": true,
         "task": false,
-        "bash": false,
         "webfetch": false,
         "websearch": false,
         "todowrite": false
       }
     },
     "frontier": {
-      "description": "Tier 3: frontier reasoning model. Default gpt-5 (OpenAI). Switch to anthropic-via-gateway/claude-sonnet-4-6 or claude-opus-4-6 as desired.",
+      "description": "Primary manual override: frontier reasoning without delegation.",
       "model": "openai-via-gateway/gpt-5",
-      "mode": "all",
-      "prompt": "For code symbol lookups (classes, functions, types, methods): prefer the lsp tool when available. For lsp.workspaceSymbol, the filePath argument must be an EXISTING FILE (not a directory) with the language extension matching your search — e.g. any '.cs' file when searching for C# symbols, '.ts' for TypeScript, '.py' for Python. The file's only purpose is to select which LSP server runs the query; the query itself searches the entire workspace. If you don't know a concrete file path, run glob first to find one, then call lsp.workspaceSymbol. Use lsp.goToDefinition / lsp.findReferences / lsp.hover for navigation once you have a starting file:line:character. Fall back to grep only when the lsp tool isn't in your toolset, or for non-symbol text searches (strings, comments, configs).",
+      "mode": "primary",
+      "prompt": "Use this agent for direct frontier-tier work when you want to stay single-agent. Prefer the lsp tool for code symbol lookups when available. Run tests before claiming work is done.",
       "tools": {
-        "lsp": true,
-        "bash": true,
         "task": false,
         "webfetch": false,
         "websearch": false,
-        "todowrite": false,
-        "read": false,
-        "grep": false,
-        "glob": false
+        "todowrite": false
+      }
+    },
+    "plan": {
+      "model": "openai-via-gateway/gpt-4o-mini",
+      "mode": "primary",
+      "prompt": "Use this agent for read-only planning and review. Prefer the lsp tool for code symbol lookups when available.",
+      "tools": {
+        "write": false,
+        "edit": false,
+        "bash": false,
+        "task": false,
+        "webfetch": false,
+        "websearch": false,
+        "todowrite": false
       }
     }
   }

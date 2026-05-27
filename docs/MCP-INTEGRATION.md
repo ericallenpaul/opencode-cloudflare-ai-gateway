@@ -147,7 +147,7 @@ We route Anthropic, OpenAI, Google, and Workers AI traffic through Cloudflare AI
 
 ## Interaction with the tiered-agent architecture
 
-When Phase 2 (orchestrator + subagents) ships, MCP tool access needs a similar shape to superpowers skills — orchestrator gets everything, subagents get a curated subset.
+Now that the orchestrator/subagent baseline ships, MCP tool access needs the same shape as superpowers skills — the primary orchestrator gets the broad tool surface, and subagents keep a curated subset.
 
 **Default plan:**
 

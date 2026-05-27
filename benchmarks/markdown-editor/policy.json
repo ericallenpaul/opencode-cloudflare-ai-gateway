@@ -1,0 +1,57 @@
+{
+  "name": "markdown-editor",
+  "mode": "architecture",
+  "timeoutSeconds": 1200,
+  "runJudge": true,
+  "runQualitativeJudge": false,
+  "expectedOutputs": {
+    "html": [
+      "markdown.html"
+    ],
+    "tests": [
+      "markdown.test.js",
+      "*.test.js"
+    ],
+    "docs": [
+      "README.md"
+    ]
+  },
+  "tools": {
+    "claude": {
+      "enabled": true,
+      "requestedModel": "claude-sonnet-4-5",
+      "expectedModels": [
+        "claude-sonnet-4-5"
+      ],
+      "requiredModels": [
+        "claude-sonnet-4-5"
+      ],
+      "allowAdditionalModels": false
+    },
+    "codex": {
+      "enabled": true,
+      "requestedModel": "gpt-5",
+      "expectedModels": [
+        "gpt-5"
+      ],
+      "requiredModels": [
+        "gpt-5"
+      ],
+      "allowAdditionalModels": false
+    },
+    "opencode": {
+      "enabled": true,
+      "requestedModel": "openai-via-gateway/gpt-5",
+      "expectedModels": [
+        "gpt-5",
+        "@cf/zai-org/glm-4.7-flash"
+      ],
+      "requiredModels": [
+        "gpt-5",
+        "@cf/zai-org/glm-4.7-flash"
+      ],
+      "allowAdditionalModels": true,
+      "requireRouting": true
+    }
+  }
+}

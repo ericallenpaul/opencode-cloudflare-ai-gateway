@@ -1,6 +1,6 @@
 # scripts/
 
-Two diagnostic tools, each with parallel PowerShell + Bash implementations.
+Two diagnostic tools, plus one PowerShell helper for automatic app tagging.
 
 ## check-setup -- "am I ready to use this repo?"
 
@@ -36,6 +36,30 @@ Exit code 0 only if all REQUIRED checks pass. Optional failures emit warnings bu
 ```
 
 Run this FIRST before `verify-models` -- `check-setup` confirms the environment is in place; `verify-models` confirms the configured models are actually reachable through the gateway.
+
+## install-opencode-app-tag -- "make app attribution automatic in PowerShell"
+
+`install-opencode-app-tag.ps1` writes a small managed block into your PowerShell profile that keeps `OPENCODE_APP_TAG` aligned to the nearest git-root basename.
+
+What it does:
+- sets `OPENCODE_APP_TAG` once for the current shell
+- registers `LocationChangedAction` so each future `cd` refreshes it
+- leaves the profile unchanged on repeated runs
+
+What it does **not** do:
+- it does not modify your OpenCode config
+- it does not affect already-running terminal windows other than the current process
+- it does not re-run on every OpenCode request; OpenCode captures the env var when it starts
+
+```powershell
+.\install-opencode-app-tag.ps1
+```
+
+After running it once, open a new PowerShell window and confirm:
+
+```powershell
+$env:OPENCODE_APP_TAG
+```
 
 ## verify-models -- "are the models I configured reachable?"
 

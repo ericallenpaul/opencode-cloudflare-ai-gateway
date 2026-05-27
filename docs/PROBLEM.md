@@ -38,7 +38,7 @@ This repo is one concrete answer to the four points above:
 | Make cost visible | Every paid request goes through one Cloudflare AI Gateway → one analytics view |
 | Attribute spend per user | Every paid request carries a `cf-aig-metadata` tag with `app` and `user` fields |
 
-The current setup makes tier selection manual (you pick `--agent frontier` when you know you need it). A planned next phase ([the orchestrator design](specs/2026-05-19-routing-brain-d-design.md)) automates that choice: a primary frontier-tier agent that dispatches trivial work to cheaper subagents via OpenCode's Task tool.
+The current setup still supports manual tier selection (`--agent frontier`, `--agent oss`, `--agent local`) when you want explicit control. On top of that, the shipped `build` agent now acts as a frontier-tier orchestrator that can dispatch trivial work to cheaper subagents via OpenCode's Task tool. The original orchestrator design lives in [the design spec](specs/2026-05-19-routing-brain-d-design.md); the current implementation is the practical first pass.
 
 ## What this is not
 

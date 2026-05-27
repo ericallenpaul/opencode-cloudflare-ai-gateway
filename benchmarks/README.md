@@ -76,19 +76,38 @@ Each benchmark target lives in its own subdirectory (e.g. `tic-tac-toe/`) with:
 - `PROMPT.md` — the canonical prompt fed to each tool, verbatim
 - `SPEC.md` — what the finished app must do (acceptance criteria + test expectations)
 - `METHODOLOGY.md` — exact run steps, fairness notes, what to capture
+- `policy.json` — automated run contract: tools, requested models, expected outputs, and invalidation rules
 - `results/runs/<RunId>/<tool>/` — outputs from each tool in each run
 - `results/comparisons.md` — hand-maintained ranking log across runs
 
-**The simple path: one orchestrator command, two manual pauses.**
+**Primary path: fully automated, non-interactive.**
 
 ```powershell
 cd "<repo>\benchmarks\scripts"
-.\benchmark.ps1                                              # tic-tac-toe (default)
-.\benchmark.ps1 -Benchmark markdown-editor                   # any other target
-.\benchmark.ps1 -Benchmark tic-tac-toe,markdown-editor       # several in sequence
+.\benchmark-auto.ps1                                         # tic-tac-toe (default)
+.\benchmark-auto.ps1 -Benchmark markdown-editor              # any other target
+.\benchmark-auto.ps1 -Benchmark tic-tac-toe -Tools opencode  # one tool only
 ```
 
-`benchmark.ps1` wraps the three lower-level scripts (`bench-run.ps1`, `judge-run.ps1`, `judge-summarize.ps1`) into a single guided workflow:
+`benchmark-auto.ps1` launches each CLI non-interactively, captures raw stdout/stderr, snapshots `ccusage` before and after, copies deliverables into `results/runs/<RunId>/<tool>/output/`, writes `_run-result.json`, and runs the deterministic Playwright judge. A tool run is marked invalid if it violates `policy.json`: wrong model, missing expected outputs, auth/model rejection, or required OpenCode routing that did not happen.
+
+There are two benchmark modes:
+
+- `tool`: validates that the tool can complete the target with the requested model. `tic-tac-toe` uses this as a cheap harness smoke test.
+- `architecture`: validates the tiered-routing thesis. `markdown-editor` requires OpenCode to show both `gpt-5` and the cheaper worker model in the run.
+
+Qualitative judging remains available through `judge-run.ps1` and `judge-summarize.ps1`, but it is no longer part of the default automated path.
+
+**Secondary path: guided manual workflow.**
+
+```powershell
+cd "<repo>\benchmarks\scripts"
+.\benchmark.ps1                                              # guided manual mode
+.\benchmark.ps1 -Benchmark markdown-editor
+.\benchmark.ps1 -Benchmark tic-tac-toe,markdown-editor
+```
+
+`benchmark.ps1` still wraps the three lower-level scripts (`bench-run.ps1`, `judge-run.ps1`, `judge-summarize.ps1`) into a guided workflow:
 
 1. **Phase 1 -- start** (script): captures ccusage baselines for every configured tool, generates a RunId, prints per-tool launch instructions.
 2. **Checkpoint A** (human): you launch each tool in its scratch dir, paste the prompt from `PROMPT.md`, let it work, exit. The orchestrator waits at `Press ENTER to continue`.
@@ -153,8 +172,8 @@ A reader who's skeptical that we're tuning to make opencode look better can veri
 
 ## Current benchmark targets
 
-- [tic-tac-toe](tic-tac-toe/) -- standalone HTML tic-tac-toe, ~200-400 lines, exercises plan/execute/verify with bounded scope. **Status: first run complete (RunId `2026-05-21-0818`, all tools 10/10).**
-- [markdown-editor](markdown-editor/) -- standalone HTML markdown editor with live preview, ~300-500 lines, exercises parser design and XSS defensiveness. **Status: 6 runs complete. Runs 1-4 marked `[CONFIG MISMATCH]`. Run 5 (`2026-05-26-0829`) is the v6 baseline ($0.83, single-model). Run 6 (`2026-05-26-1132`) tested v8 prompt-side routing -- routing did NOT fire on real workload despite explicit instructions ($0.65, gpt-5 only). Config v9 (hard tool-availability gate) is queued for run 7: the definitive thesis test.**
+- [tic-tac-toe](tic-tac-toe/) -- standalone HTML tic-tac-toe, ~200-400 lines, exercises plan/execute/verify with bounded scope. **Status: automated smoke path is working. Policy mode is `tool`, so OpenCode does not need to route to a worker model for this tiny target.**
+- [markdown-editor](markdown-editor/) -- standalone HTML markdown editor with live preview, ~300-500 lines, exercises parser design and XSS defensiveness. **Status: 6 runs complete. Runs 1-4 marked `[CONFIG MISMATCH]`. Policy mode is `architecture`, so OpenCode must show both frontier and cheaper worker models for a valid tier-routing result.**
 
 ## Adding a new benchmark target
 
@@ -165,6 +184,7 @@ benchmarks/<target>/
 ├── PROMPT.md            # required -- canonical prompt fed to every tool, verbatim
 ├── SPEC.md              # required -- R1-R10 acceptance criteria + quality dimensions
 ├── METHODOLOGY.md       # optional -- run-procedure notes; falls back to a default if absent
+├── policy.json          # required for benchmark-auto.ps1
 └── results/             # script-managed (auto-created on first run)
     ├── README.md        # optional, describes the layout to readers
     ├── comparisons.md   # optional, hand-maintained ranking log
@@ -177,7 +197,7 @@ The spec file name MUST match the target directory name exactly (kebab-case incl
 
 **Why the Playwright spec lives outside the target dir**: it needs to `import` from `@playwright/test`, which only resolves under `benchmarks/scripts/judge/` where `npm install` ran. Keeping the spec in `tests/` avoids needing per-target node_modules.
 
-**Easiest path** when adding a target: copy `benchmarks/tic-tac-toe/` to `benchmarks/<your-target>/`, copy `benchmarks/scripts/judge/tests/tic-tac-toe.spec.js` to `tests/<your-target>.spec.js`, then rewrite both for your target's app. Once those files exist, `benchmark.ps1 -Benchmark <your-target>` works end-to-end.
+**Easiest path** when adding a target: copy `benchmarks/tic-tac-toe/` to `benchmarks/<your-target>/`, copy `benchmarks/scripts/judge/tests/tic-tac-toe.spec.js` to `tests/<your-target>.spec.js`, then rewrite both for your target's app. Update `policy.json` to choose `tool` mode for smoke-style targets or `architecture` mode when OpenCode routing is part of the claim. Once those files exist, `benchmark-auto.ps1 -Benchmark <your-target>` works end-to-end.
 
 ## See also
 

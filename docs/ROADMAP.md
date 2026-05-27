@@ -10,20 +10,20 @@
 - [x] Verification scripts (PowerShell and Bash) that probe every configured model and write sanitized reports
 - [x] LSP integration enabled (`"lsp": {}` in config; opencode bundles 24+ built-in LSPs, custom PowerShell setup documented in [LSP-INTEGRATION.md](LSP-INTEGRATION.md))
 - [x] Full setup documentation, problem statement, architecture diagram, learnings catalog
+- [x] OpenCode-native orchestrator/subagent baseline: `build` acts as the frontier orchestrator and delegates to project-local `searcher`, `reader`, `coder`, and `planner` subagents via the Task tool
 - [x] Reproducible benchmark infrastructure (`benchmarks/scripts/bench-run.ps1`) -- two-phase ccusage delta capture, session-window contamination filtering, per-tool notes.md stubs, cross-tool `<RunId>.md` comparison file
 - [x] Two-layer judge: deterministic Playwright R1-R10 suite (`benchmarks/scripts/judge-run.ps1`) + qualitative AI prompt template (`benchmarks/scripts/judge/JUDGE-PROMPT.md`) for soft scoring
 
 ## Planned (in design, not yet built)
 
-### Orchestrator + subagent pattern (Phase 2)
+### Orchestrator tuning and validation
 
-The current tier setup is **manually selected** — you pick `--agent frontier` when you know you need it. The next phase introduces a primary `orchestrator` agent that dispatches work across tiers automatically using OpenCode's native Task tool and `mode: subagent` agents.
+The baseline orchestrator/subagent shape now ships in the repo. The remaining work is to tune routing quality and validate whether the current worker mix is the right one for day-to-day use.
 
-- `searcher` subagent (local) — grep/glob/find symbols
-- `reader` subagent (local) — summarize files, extract info
-- `coder` subagent (oss) — implement code changes from a clear spec
-- `planner` subagent (oss) — design step-by-step plans
-- `orchestrator` (frontier, default agent) — reasoning, dispatch decisions, user dialogue
+- tighten the primary-agent routing prompt using real session data
+- decide whether `searcher` and `reader` should stay on `gpt-4o-mini`, move back to true-local inference, or split by task type
+- measure whether `planner` adds value or whether frontier-direct planning is cheaper overall
+- validate subagent context handoff and retry behavior under real use
 
 Detailed design: [`specs/2026-05-19-routing-brain-d-design.md`](specs/2026-05-19-routing-brain-d-design.md).
 
