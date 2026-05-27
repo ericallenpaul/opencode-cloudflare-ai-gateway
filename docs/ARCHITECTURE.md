@@ -147,6 +147,8 @@ The plugin ecosystem is still young. Most extension value today flows through MC
 
 ## Shipped orchestrator
 
+The shipped setup is a centralized, hierarchical orchestration pattern. The `build` primary agent is the orchestrator: it owns decomposition, task assignment, dependency sequencing, final verification, fallback decisions, and the user-facing answer. The project-local subagents are specialized workers with narrow scopes; they do not decide whether the overall user request is complete.
+
 The shipped example config now uses the primary `build` agent as a frontier-tier orchestrator. It can dispatch concrete subtasks through OpenCode's native Task tool to project-local subagents under `.opencode/agents/`:
 
 - `searcher` subagent — cheap hosted search/LSP/grep worker
@@ -154,6 +156,10 @@ The shipped example config now uses the primary `build` agent as a frontier-tier
 - `coder` subagent — cheap hosted implementation worker
 - `planner` subagent — cheap hosted decomposition and planning worker
 - `build` primary agent — frontier reasoning, dispatch, synthesis, and final review
+
+Every subagent handoff should include the objective, relevant file paths and constraints, scope boundaries, expected output format, and success criteria. This keeps context transfer explicit and prevents vague worker results from becoming hidden assumptions.
+
+The fault-tolerance rule is deliberately simple: retry a worker once only when the failure is likely missing context, then escalate to the primary agent or a more capable path. The benchmark harness records when routing does not happen or when a worker model is absent, so cost-saving claims have to be backed by actual model evidence.
 
 This stays an OpenCode-native config change — no external service. The practical adjustment from the original design is reliability-first routing: the shipped subagents default to cheap hosted models rather than the experimental truly-local tier. The manual `local` primary agent still exists for read-only local work and for future local-tier experimentation.
 

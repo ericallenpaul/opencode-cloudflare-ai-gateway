@@ -18,6 +18,8 @@ Policy modes:
 - `tool`: validates requested model and expected outputs. `tic-tac-toe` uses this mode as the quick harness smoke test.
 - `architecture`: also validates required model routing. `markdown-editor` uses this mode so OpenCode must show both `gpt-5` and the cheaper worker model for a valid tier-routing run.
 
+Architecture-mode runs are evidence tests, not just output tests. If OpenCode produces a correct app without using the cheaper worker model, the run is invalid for the tier-routing claim even though the generated app may be useful.
+
 Each tool is marked `valid: true` or `valid: false` in `_run-results.json`. Invalid runs keep their raw logs and outputs so failures can be audited instead of silently disappearing.
 
 ## benchmark.ps1 -- secondary guided/manual runner

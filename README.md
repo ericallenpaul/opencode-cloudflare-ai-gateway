@@ -2,7 +2,7 @@
 
 > **A note up front:** I'm new to [OpenCode](https://opencode.ai). This isn't a deep tour of the tool — it's one engineer's working setup, written down. But the shape of this setup — tiered models, single gateway, per-user attribution — feels right for the next few years of AI-assisted development, and the steps below are what it took to actually get there. If you're further along on OpenCode than I am, I'd genuinely welcome a PR or issue that sharpens any of this.
 
-A tiered-agent setup for OpenCode that routes every frontier and OSS model through a single [Cloudflare AI Gateway](https://developers.cloudflare.com/ai-gateway/), keeps a free local-Ollama tier in place for cheap work, and gives you one place to see usage, cost, and per-user attribution across providers.
+A centralized, hierarchical agent setup for OpenCode: a frontier `build` orchestrator can delegate bounded work to cheaper specialized subagents, while every paid model request routes through a single [Cloudflare AI Gateway](https://developers.cloudflare.com/ai-gateway/) for usage, cost, and per-user attribution.
 
 This is the configuration, the setup walkthrough, and the lessons learned from getting it to actually work end-to-end. It is not a router service. It is the foundation a router service would sit on.
 
@@ -15,6 +15,7 @@ We're not going to stop paying for tokens. Local models keep getting better, but
 This repo is one attempt at that lever:
 
 - **Three explicit cost tiers** the user can switch between manually, plus a shipped frontier-tier orchestrator that can dispatch concrete subtasks to cheaper workers
+- **Explicit orchestration discipline**: the `build` agent owns decomposition, context handoff, fallback decisions, final verification, and the final answer; subagents are scoped workers
 - **One gateway** in front of every paid provider, so every dollar shows up in one analytics view
 - **Automatic per-user and per-project metadata tagging** (app = directory basename, user = OS user) so a shared team gateway can attribute spend by person and by project
 - **Verification scripts** (PowerShell + Bash) so you can confirm what's actually addressable from your gateway before relying on it in an agent loop
@@ -184,6 +185,7 @@ Beyond the rubric, three pragmatic factors made it the right call **for me speci
 - Baseline MCP integration: `context7` (current library docs), `cloudflare-docs`, and `snyk` (security scanning) ship enabled in the example config
 - LSP integration: OpenCode's 24+ built-in language servers enabled with `"lsp": {}` for diagnostics-driven feedback; **agent-callable `lsp` tool** wired up (requires `OPENCODE_EXPERIMENTAL_LSP_TOOL=true` env var -- the tool is experimental in opencode 1.15.5); per-agent prompt nudging biases the model toward LSP over grep for symbol lookups; custom PowerShell setup documented
 - Primary `build` agent now acts as the default frontier-tier orchestrator, with project-local `searcher`, `reader`, `coder`, and `planner` subagents invoked via OpenCode's Task tool
+- Subagent handoff contract: objective, context, scope, expected output, and success criteria. Worker failures are retried once only when missing context is likely, then escalated instead of looped.
 - Manual `local`, `oss`, and `frontier` primary agents remain available as direct overrides when you do not want delegation
 - Reproducible benchmark infrastructure (`benchmarks/scripts/bench-run.ps1`) with ccusage delta capture, session-window contamination filtering, and cross-tool comparison files
 - Two-layer judge: deterministic Playwright R1-R10 suite (`benchmarks/scripts/judge-run.ps1`) + qualitative AI prompt template (`benchmarks/scripts/judge/JUDGE-PROMPT.md`)

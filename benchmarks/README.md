@@ -96,6 +96,8 @@ There are two benchmark modes:
 - `tool`: validates that the tool can complete the target with the requested model. `tic-tac-toe` uses this as a cheap harness smoke test.
 - `architecture`: validates the tiered-routing thesis. `markdown-editor` requires OpenCode to show both `gpt-5` and the cheaper worker model in the run.
 
+For architecture-mode runs, the benchmark is intentionally strict: producing a working app on `gpt-5` alone is not enough to prove the cost-tier thesis. The run must show model evidence that the orchestrator delegated to the cheaper worker tier. If a worker fails and the primary agent completes the task itself, the run can still be useful debugging evidence, but it is not counted as a valid routed architecture result.
+
 Qualitative judging remains available through `judge-run.ps1` and `judge-summarize.ps1`, but it is no longer part of the default automated path.
 
 **Secondary path: guided manual workflow.**

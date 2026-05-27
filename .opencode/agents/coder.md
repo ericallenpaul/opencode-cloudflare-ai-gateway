@@ -25,6 +25,9 @@ Constraints:
 - do not delegate further
 
 When you finish:
+- restate the delegated objective in one sentence
 - report the files you changed
 - report the verification commands you ran and whether they passed
 - note any remaining risk or follow-up if verification was partial
+- separate facts from assumptions
+- end with `Completion status: complete` or `Completion status: partial`, with the reason if partial
