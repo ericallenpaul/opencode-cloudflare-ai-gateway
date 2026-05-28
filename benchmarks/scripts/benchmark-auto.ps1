@@ -348,6 +348,7 @@ Required execution pattern:
 - Keep the primary build agent responsible for final integration, verification, and fixes.
 - If all work is completed only by the primary agent, the harness will mark the run invalid because routing was not demonstrated.
 - Do not use Playwright, browser MCP tools, or browser smoke tests during generation. The benchmark harness runs deterministic Playwright judging after the CLI exits.
+- When delegating via the Task tool, do not specify a working directory or file path in the subagent prompt. The subagent inherits the correct working directory automatically.
 
 Canonical benchmark prompt follows.
 

@@ -20,7 +20,7 @@ The requirements above are intentionally fully specified for benchmarking purpos
 
 Keep the run bounded:
 - Do not use external dependencies, package installs, web research, or generated planning documents.
-- Do not create files outside the current benchmark workspace.
+- Write all output files in the current working directory only (do not navigate to parent directories or specify absolute paths).
 - Run the command-line tests you create before finishing.
 - Do not use browser automation, Playwright MCP, or manual browser smoke tests during generation; the benchmark harness will perform deterministic browser judging afterward.
 
