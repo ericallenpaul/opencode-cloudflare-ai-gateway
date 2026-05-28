@@ -13,7 +13,7 @@ This repo is not a "just use a cheaper model" template. The first attempt tried 
 
 The project goal is cost-per-correct-result, not lowest sticker price per token. The benchmark harness is part of the architecture because it proves when a cheaper route actually worked and when it only looked cheap.
 
-> **Author context:** this repo is written from the perspective of someone actively learning OpenCode, not from an OpenCode maintainer or long-time expert. The value here is the documented experiments, failures, benchmark evidence, and working configuration, not a claim that this is the only or official way to run OpenCode.
+> **A note up front:** I'm new to [OpenCode](https://opencode.ai). This isn't a deep tour of the tool — it's one engineer's working setup, written down. But the shape of this setup — tiered models, single gateway, per-user attribution — feels right for the next few years of AI-assisted development, and the steps below are what it took to actually get there. If you're further along on OpenCode than I am, I'd genuinely welcome a PR or issue that sharpens any of this.
 
 > **About pricing in this doc:** all dollar figures are "as of May 2026" and provided for rough magnitude comparison only. Provider pricing moves constantly. Always confirm current pricing against each provider's published rate card before making cost decisions.
 
