@@ -46,7 +46,13 @@
 - **Cost (May 2026, indicative):** sub-dollar per million tokens for most listed models — roughly an order of magnitude or more below frontier on like-for-like work
 - **Latency:** ~1s typical
 - **Capability ceiling:** competitive with prior-generation frontier (Qwen 2.5 Coder 32B, Llama 3.3 70B, DeepSeek-R1-distill)
-- **Sweet spot:** code generation against a clear spec, refactors, well-scoped edits, structured reasoning when frontier-grade output isn't needed
+- **Sweet spot:** search, file reading, summarization, narrow planning, and mechanical context extraction. Recent benchmark evidence showed GLM 4.7 Flash is not reliable enough as the default implementation coder on harder app-building tasks.
+
+### Tier 2.5 — Cheap hosted implementation worker
+- **Default model:** `openai-via-gateway/gpt-5-mini`
+- **Cost (May 2026, indicative):** materially below frontier orchestration while preserving much better coding reliability than the hosted OSS coder attempt
+- **Sweet spot:** concrete implementation tasks with clear acceptance criteria, tests, README generation, and scoped fixes
+- **Evidence:** the markdown-editor architecture run `2026-05-27-103313` completed in about 4.5 minutes at $0.1416 using `gpt-5` + `gpt-5-mini`; the all-tool run `2026-05-27-105622` kept OpenCode valid and core-functional at $0.3888, versus Codex at $1.0080 and Claude at $1.2273.
 
 ### Tier 3 — Frontier (Anthropic / OpenAI / Google via Gateway)
 - **Cost (May 2026, indicative):** multi-dollar per million tokens; reasoning-model output is more expensive than non-reasoning even on the same provider
@@ -153,7 +159,7 @@ The shipped example config now uses the primary `build` agent as a frontier-tier
 
 - `searcher` subagent — cheap hosted search/LSP/grep worker
 - `reader` subagent — cheap hosted file-reading and extraction worker
-- `coder` subagent — cheap hosted implementation worker
+- `coder` subagent — cheap hosted implementation worker (`gpt-5-mini`)
 - `planner` subagent — cheap hosted decomposition and planning worker
 - `build` primary agent — frontier reasoning, dispatch, synthesis, and final review
 
@@ -161,7 +167,7 @@ Every subagent handoff should include the objective, relevant file paths and con
 
 The fault-tolerance rule is deliberately simple: retry a worker once only when the failure is likely missing context, then escalate to the primary agent or a more capable path. The benchmark harness records when routing does not happen or when a worker model is absent, so cost-saving claims have to be backed by actual model evidence.
 
-This stays an OpenCode-native config change — no external service. The practical adjustment from the original design is reliability-first routing: the shipped subagents default to cheap hosted models rather than the experimental truly-local tier. The manual `local` primary agent still exists for read-only local work and for future local-tier experimentation.
+This stays an OpenCode-native config change — no external service. The practical adjustment from the original design is reliability-first routing: the shipped subagents use cheap hosted models rather than the experimental truly-local tier, and the implementation worker is stronger than the read/search workers. The manual `local` primary agent still exists for read-only local work and for future local-tier experimentation.
 
 If the orchestrator's natural-language dispatch still proves too undisciplined, the further-future "Option C" remains an external routing brain (CF Worker or local proxy) that enforces tier selection in code.
 

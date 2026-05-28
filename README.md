@@ -27,14 +27,14 @@ Full reasoning behind the architecture lives in [`docs/PROBLEM.md`](docs/PROBLEM
 | Tier | Default model | Provider | Cost shape (May 2026, indicative) |
 |---|---|---|---|
 | **Local** | `ollama/granite4:7b-a1b-h` | Ollama on your machine | Free (hardware cost only) |
-| **OSS** | `@cf/zai-org/glm-4.7-flash` | Cloudflare Workers AI via Gateway | low-cents per M tokens |
+| **Cheap worker** | `gpt-5-mini` for `coder`; `@cf/zai-org/glm-4.7-flash` for search/read/planning | OpenAI + Workers AI via Gateway | lower than frontier; reliability-dependent |
 | **Frontier** | `gpt-5` | OpenAI via Gateway | Standard frontier pricing |
 
 > **Note (2026-05-26):** the **Local tier** is real but harder to make reliable than the table suggests. Through extensive testing we found Ollama's local tool-calling is unreliable across most models; LM Studio + qwen3-coder + n_ctx 16384 is the known-working setup (see [`docs/LEARNINGS.md`](docs/LEARNINGS.md) and [`docs/SETUP.md`](docs/SETUP.md)). Even working, dispatched local-tier subtasks run 20-40s on consumer hardware. For most daily-use scenarios, pointing the `local` tier at a gateway-hosted cheap model like `openai-via-gateway/gpt-4o-mini` (~8x cheaper than gpt-5, fast inference, reliable) preserves the tiered cost thesis without the local-inference latency tax.
 
 Plus the gateway-routed catalog: Claude Sonnet/Opus/Haiku 4-5 & 4-6, GPT-5 family, GPT-4.1-mini, GPT-4o-mini, Gemini 2.5 Pro/Flash, GLM 4.7 Flash, GPT-OSS 20B/120B, Qwen 3 30B A3B, Llama 3.3 70B, and DeepSeek-R1-distill 32B.
 
-> **Hosted OSS default (2026-05-27):** the repo now defaults its cheap hosted worker tier to `@cf/zai-org/glm-4.7-flash`. We tested several current Cloudflare-hosted OSS candidates through the actual OpenCode + AI Gateway + Workers AI stack. `glm-4.7-flash` completed read/search and harmless write tasks successfully. `@cf/openai/gpt-oss-20b`, `@cf/qwen/qwen3-30b-a3b-fp8`, and even the previously-shipped `@cf/qwen/qwen2.5-coder-32b-instruct` all failed in this stack with request-shape `Bad input` errors. The model catalog is broader than the subset OpenCode can reliably drive today; the default has to follow runtime reliability, not just catalog availability.
+> **Balanced worker default (2026-05-28):** GLM remains useful for cheap search/read/planning work, but the markdown-editor architecture benchmark showed it is not reliable enough as the implementation `coder` on harder tasks. The shipped `coder` subagent now uses `openai-via-gateway/gpt-5-mini`; `searcher`, `reader`, and `planner` stay on `@cf/zai-org/glm-4.7-flash`. In the latest all-tool markdown-editor run, OpenCode (`gpt-5` + `gpt-5-mini`) passed the core deterministic judge at $0.3888, while Codex (`gpt-5.5` + `gpt-5.4-mini`) also passed at $1.0080 and Claude (`opus` + `haiku`) failed runtime rendering at $1.2273. The model catalog is broader than the subset OpenCode can reliably drive today; the default follows runtime evidence, not just catalog availability.
 
 ## Quick start
 
@@ -85,7 +85,19 @@ Full walkthrough with screenshots and gotchas: [`docs/SETUP.md`](docs/SETUP.md).
 
 ## Validation: does the tiered setup actually save money?
 
-Short answer: **yes on cost, with a measurable quality gap on harder work that we're actively iterating to close.** Two benchmark targets, four completed runs to date, every run published with the data and the agent config version in effect.
+Short answer: **yes, when cheap workers are assigned to work they can actually do.** The current balanced result is stronger than the earlier GLM-as-coder attempt: use `gpt-5` for orchestration and final accountability, `gpt-5-mini` for implementation, and keep GLM on search/read/planning. Two benchmark targets are in the repo; the markdown-editor benchmark is now the best evidence because it exercises parser correctness, XSS handling, live-preview event wiring, tests, docs, and model routing in one run.
+
+Latest markdown-editor evidence (`2026-05-27-105622`, native best-orchestrator setup per tool):
+
+| Tool | Models observed | Cost | Deterministic judge |
+|---|---|---:|---|
+| **OpenCode** | `gpt-5`, `gpt-5-mini` | **$0.3888** | Core R1-R10 pass; perf partial |
+| Codex | `gpt-5.5`, `gpt-5.4-mini` | $1.0080 | Core R1-R10 pass; perf partial |
+| Claude Code | `claude-opus-4-7`, `claude-haiku-4-5` | $1.2273 | Failed browser runtime rendering despite passing its own `node --test` |
+
+That run makes the current recommendation concrete: OpenCode achieved comparable functional quality to Codex at about 39% of Codex cost on this target. The earlier GLM coder architecture run routed correctly and was cheaper, but failed quality and security checks; it is not the recommended implementation tier.
+
+### Historical benchmark notes
 
 `benchmarks/tic-tac-toe` has been run twice, identical prompt and identical R1-R10 acceptance criteria each time. Both runs across all three tools:
 

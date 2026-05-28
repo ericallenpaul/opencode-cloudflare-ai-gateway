@@ -4,6 +4,16 @@ Reproducible benchmarks that measure **cost, time, and quality** of building the
 
 ## Headline result so far
 
+Latest architecture result: `markdown-editor` run `2026-05-27-105622` compared each tool in its intended best-orchestrator setup.
+
+| Tool | Models observed | Cost | Functional result |
+|---|---|---:|---|
+| **OpenCode** | `gpt-5`, `gpt-5-mini` | **$0.3888** | Core R1-R10 pass; perf partial |
+| Codex | `gpt-5.5`, `gpt-5.4-mini` | $1.0080 | Core R1-R10 pass; perf partial |
+| Claude Code | `claude-opus-4-7`, `claude-haiku-4-5` | $1.2273 | Failed browser runtime rendering due JS regex error |
+
+This supersedes the earlier GLM-as-coder experiment. GLM 4.7 Flash routed successfully and is still useful for read/search/planning, but it failed the markdown-editor implementation target on parser features, XSS safety, and tests. The current OpenCode recommendation is `gpt-5` orchestrator plus `gpt-5-mini` coder.
+
 Two completed runs of `tic-tac-toe`, identical prompt and acceptance criteria each time. Models: opencode ran GPT-5 via this repo's gateway stack; codex ran GPT-5 (CLI mis-reports as "gpt-5.5" in session records); claude ran claude-opus-4-7.
 
 | Tool | Run 1 (05-21) cost / wall / R1-R10 | Run 2 (05-22) cost / wall / R1-R10 | Quality avg (run 1 / run 2) |
@@ -87,6 +97,7 @@ cd "<repo>\benchmarks\scripts"
 .\benchmark-auto.ps1                                         # tic-tac-toe (default)
 .\benchmark-auto.ps1 -Benchmark markdown-editor              # any other target
 .\benchmark-auto.ps1 -Benchmark tic-tac-toe -Tools opencode  # one tool only
+.\benchmark-auto.ps1 -Benchmark markdown-editor -Tools claude,codex,opencode
 ```
 
 `benchmark-auto.ps1` launches each CLI non-interactively, captures raw stdout/stderr, snapshots `ccusage` before and after, copies deliverables into `results/runs/<RunId>/<tool>/output/`, writes `_run-result.json`, and runs the deterministic Playwright judge. A tool run is marked invalid if it violates `policy.json`: wrong model, missing expected outputs, auth/model rejection, or required OpenCode routing that did not happen.
@@ -97,6 +108,8 @@ There are two benchmark modes:
 - `architecture`: validates the tiered-routing thesis. `markdown-editor` requires OpenCode to show both `gpt-5` and the cheaper worker model in the run.
 
 For architecture-mode runs, the benchmark is intentionally strict: producing a working app on `gpt-5` alone is not enough to prove the cost-tier thesis. The run must show model evidence that the orchestrator delegated to the cheaper worker tier. If a worker fails and the primary agent completes the task itself, the run can still be useful debugging evidence, but it is not counted as a valid routed architecture result.
+
+The automated runner accepts either PowerShell array syntax (`-Tools claude,codex,opencode`) or repeated/string-list forms. It also injects an OpenCode-only architecture contract for architecture-mode targets: OpenCode must delegate implementation/test/docs work to a subagent and must not use Playwright/browser MCP during generation, because the harness runs deterministic Playwright judging after the CLI exits.
 
 Qualitative judging remains available through `judge-run.ps1` and `judge-summarize.ps1`, but it is no longer part of the default automated path.
 
@@ -176,6 +189,7 @@ A reader who's skeptical that we're tuning to make opencode look better can veri
 
 - [tic-tac-toe](tic-tac-toe/) -- standalone HTML tic-tac-toe, ~200-400 lines, exercises plan/execute/verify with bounded scope. **Status: automated smoke path is working. Policy mode is `tool`, so OpenCode does not need to route to a worker model for this tiny target.**
 - [markdown-editor](markdown-editor/) -- standalone HTML markdown editor with live preview, ~300-500 lines, exercises parser design and XSS defensiveness. **Status: 6 runs complete. Runs 1-4 marked `[CONFIG MISMATCH]`. Policy mode is `architecture`, so OpenCode must show both frontier and cheaper worker models for a valid tier-routing result.**
+- Current OpenCode architecture baseline: `gpt-5` orchestrator + `gpt-5-mini` coder. GLM remains assigned to cheaper search/read/planning workers, not implementation.
 
 ## Adding a new benchmark target
 

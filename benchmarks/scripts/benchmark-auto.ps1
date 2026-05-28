@@ -324,6 +324,37 @@ exit `$LASTEXITCODE
     Set-Content -Path $ScriptPath -Value $body -Encoding utf8
 }
 
+function Get-BenchmarkPrompt {
+    param(
+        [Parameter(Mandatory)][string]$Tool,
+        [Parameter(Mandatory)]$Policy,
+        [Parameter(Mandatory)][string]$PromptText
+    )
+
+    $mode = [string](Get-Field $Policy @("mode") "")
+    if ($Tool -ne "opencode" -or $mode -ne "architecture") {
+        return $PromptText
+    }
+
+    return @"
+AUTOMATED BENCHMARK CONTRACT
+
+This target policy mode is architecture. A valid OpenCode run must demonstrate the configured tiered architecture, not just solve the app in the primary GPT-5 session.
+
+Required execution pattern:
+- Read the benchmark requirements first.
+- Delegate at least one concrete implementation, test, or documentation task to an OpenCode subagent through the Task tool.
+- Prefer the cheaper configured worker model for bounded mechanical work when the subagent config allows it.
+- Keep the primary build agent responsible for final integration, verification, and fixes.
+- If all work is completed only by the primary agent, the harness will mark the run invalid because routing was not demonstrated.
+- Do not use Playwright, browser MCP tools, or browser smoke tests during generation. The benchmark harness runs deterministic Playwright judging after the CLI exits.
+
+Canonical benchmark prompt follows.
+
+$PromptText
+"@
+}
+
 function Test-PolicyCompliance {
     param(
         [Parameter(Mandatory)]$ToolPolicy,
@@ -347,11 +378,24 @@ function Test-PolicyCompliance {
         return $reasons
     }
 
+    function Test-ModelNameMatch {
+        param(
+            [Parameter(Mandatory)][string]$Actual,
+            [Parameter(Mandatory)][string]$Expected
+        )
+        if ($Actual -eq $Expected) { return $true }
+        if ($Actual.StartsWith($Expected + "-", [System.StringComparison]::OrdinalIgnoreCase)) { return $true }
+        if ($Expected -eq "opus" -and $Actual -match '(^|-)opus($|-)') { return $true }
+        if ($Expected -eq "sonnet" -and $Actual -match '(^|-)sonnet($|-)') { return $true }
+        if ($Expected -eq "haiku" -and $Actual -match '(^|-)haiku($|-)') { return $true }
+        return $false
+    }
+
     $required = @($ToolPolicy.requiredModels)
     foreach ($m in $required) {
         $matched = $false
         foreach ($actual in $ActualModels) {
-            if (([string]$actual -eq [string]$m) -or ([string]$actual).StartsWith(([string]$m + "-"), [System.StringComparison]::OrdinalIgnoreCase)) {
+            if (Test-ModelNameMatch -Actual ([string]$actual) -Expected ([string]$m)) {
                 $matched = $true
                 break
             }
@@ -364,7 +408,7 @@ function Test-PolicyCompliance {
         foreach ($m in $ActualModels) {
             $matched = $false
             foreach ($expected in $expectedModels) {
-                if (([string]$m -eq $expected) -or ([string]$m).StartsWith($expected + "-", [System.StringComparison]::OrdinalIgnoreCase)) {
+                if (Test-ModelNameMatch -Actual ([string]$m) -Expected $expected) {
                     $matched = $true
                     break
                 }
@@ -411,6 +455,7 @@ function Write-MarkdownSummary {
 
 $toolNames = @($policy.tools.PSObject.Properties.Name | Where-Object { $policy.tools.$_.enabled })
 if ($Tools -and $Tools.Count -gt 0) {
+    $Tools = @($Tools | ForEach-Object { ([string]$_).Split(',') } | ForEach-Object { $_.Trim() } | Where-Object { $_ })
     $unknownTools = @($Tools | Where-Object { $toolNames -notcontains $_ })
     if ($unknownTools.Count -gt 0) { throw "Unknown tool(s) for ${Benchmark}: $($unknownTools -join ', ')" }
     $toolNames = @($toolNames | Where-Object { $Tools -contains $_ })
@@ -453,7 +498,8 @@ foreach ($tool in $toolNames) {
     $requestedModel = [string]$toolPolicy.requestedModel
     $timeoutSeconds = [int]$policy.timeoutSeconds
 
-    Set-Content -Path $promptCopyPath -Value $promptText -Encoding utf8
+    $toolPromptText = Get-BenchmarkPrompt -Tool $tool -Policy $policy -PromptText $promptText
+    Set-Content -Path $promptCopyPath -Value $toolPromptText -Encoding utf8
 
     Write-Host "Running $tool..." -ForegroundColor Cyan
     Invoke-CcusageSnapshot -Tool $tool -JsonPath $beforeJsonPath -TextPath $beforeTxtPath
@@ -502,6 +548,11 @@ foreach ($tool in $toolNames) {
     $invalidationReasons = @()
     if ($process.exitCode -ne 0 -and -not $outputs.valid) {
         $invalidationReasons += "non-zero exit with missing required outputs"
+    }
+    if ($process.timedOut) {
+        $invalidationReasons += "CLI timed out after $timeoutSeconds seconds"
+    } elseif ($process.exitCode -ne 0) {
+        $invalidationReasons += "CLI exited non-zero: $($process.exitCode)"
     }
     if (-not $outputs.valid) {
         foreach ($missing in $outputs.missing) { $invalidationReasons += "missing output category: $missing" }

@@ -19,36 +19,36 @@
   "tools": {
     "claude": {
       "enabled": true,
-      "requestedModel": "claude-sonnet-4-5",
+      "requestedModel": "opus",
       "expectedModels": [
-        "claude-sonnet-4-5"
+        "opus"
       ],
       "requiredModels": [
-        "claude-sonnet-4-5"
+        "opus"
       ],
-      "allowAdditionalModels": false
+      "allowAdditionalModels": true
     },
     "codex": {
       "enabled": true,
-      "requestedModel": "gpt-5",
+      "requestedModel": "gpt-5.5",
       "expectedModels": [
-        "gpt-5"
+        "gpt-5.5"
       ],
       "requiredModels": [
-        "gpt-5"
+        "gpt-5.5"
       ],
-      "allowAdditionalModels": false
+      "allowAdditionalModels": true
     },
     "opencode": {
       "enabled": true,
       "requestedModel": "openai-via-gateway/gpt-5",
       "expectedModels": [
         "gpt-5",
-        "@cf/zai-org/glm-4.7-flash"
+        "gpt-5-mini"
       ],
       "requiredModels": [
         "gpt-5",
-        "@cf/zai-org/glm-4.7-flash"
+        "gpt-5-mini"
       ],
       "allowAdditionalModels": true,
       "requireRouting": true

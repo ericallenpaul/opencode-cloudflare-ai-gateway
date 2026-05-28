@@ -148,6 +148,7 @@ foreach ($toolDir in $toolDirs) {
     $outputDir  = Join-Path $toolDir.FullName "output"
     $screensDir = Join-Path $toolDir.FullName "_screenshots"
     $judgeJson  = Join-Path $toolDir.FullName "_judge-functional.json"
+    $nodeTestLog = Join-Path $toolDir.FullName "_node-test.log"
 
     Write-Host "Judging: $toolName" -ForegroundColor Cyan
     Write-Host "  OutputDir:  $outputDir"
@@ -182,11 +183,12 @@ foreach ($toolDir in $toolDirs) {
 
     Write-Host "  HtmlFile:   $($htmlFile.FullName)"
 
-    # Find test file
-    $testFile = Get-ChildItem -Path $outputDir -Filter "*.test.js" -ErrorAction SilentlyContinue |
+    # Find test file. Benchmark policies allow recursive output matching, so
+    # the judge must accept tests in folders like output/tests/*.test.js too.
+    $testFile = Get-ChildItem -Path $outputDir -Recurse -File -Filter "*.test.js" -ErrorAction SilentlyContinue |
         Select-Object -First 1
     if (-not $testFile) {
-        $testFile = Get-ChildItem -Path $outputDir -Filter "*.test.mjs" -ErrorAction SilentlyContinue |
+        $testFile = Get-ChildItem -Path $outputDir -Recurse -File -Filter "*.test.mjs" -ErrorAction SilentlyContinue |
             Select-Object -First 1
     }
     if ($testFile) {
@@ -243,23 +245,27 @@ foreach ($toolDir in $toolDirs) {
         Write-Host "  Playwright completed OK" -ForegroundColor Green
     }
 
-    # ---- R9 / R10: run node --test ------------------------------------------
+    # ---- Unit tests: run node --test ----------------------------------------
+    # Target-specific scoring:
+    #   tic-tac-toe: R9 = test file exists, R10 = node --test passes
+    #   markdown-editor: R9 is Playwright XSS safety, R10 = node --test passes
 
     $r9Status  = 'FAIL'
-    $r9Reason  = 'No test file found in output/'
+    $r9Reason  = 'No test file found under output/'
     $r10Status = 'FAIL'
-    $r10Reason = 'No test file found in output/'
+    $r10Reason = 'No test file found under output/'
 
     if ($testFile) {
         $r9Status = 'PASS'
-        $r9Reason = "Test file found: $($testFile.Name)"
-        Write-Host "  Running node --test $($testFile.Name)..." -ForegroundColor DarkGray
+        $relativeTestPath = [System.IO.Path]::GetRelativePath($outputDir, $testFile.FullName)
+        $r9Reason = "Test file found: $relativeTestPath"
+        Write-Host "  Running node --test $relativeTestPath..." -ForegroundColor DarkGray
 
         $nodeOutput = $null
         $nodeExitCode = 0
         try {
             Push-Location $outputDir
-            $nodeOutput = & node --test $testFile.Name 2>&1 | Out-String
+            $nodeOutput = & node --test $relativeTestPath 2>&1 | Out-String
             $nodeExitCode = $LASTEXITCODE
         } catch {
             $nodeExitCode = 99
@@ -275,9 +281,16 @@ foreach ($toolDir in $toolDirs) {
             $r10Status = 'FAIL'
             $r10Reason = "node --test exited $nodeExitCode"
         }
+        $nodeOutput | Set-Content -Path $nodeTestLog -Encoding utf8
         Write-Host "  R9=$r9Status  R10=$r10Status (exit $nodeExitCode)" -ForegroundColor DarkGray
     } else {
         Write-Host "  R9=FAIL  R10=FAIL (no test file)" -ForegroundColor DarkGray
+        "No test file found under output/." | Set-Content -Path $nodeTestLog -Encoding utf8
+    }
+
+    if ($Benchmark -ne "tic-tac-toe") {
+        $r9Status = 'N/A'
+        $r9Reason = 'R9 is owned by the benchmark Playwright spec'
     }
 
     # Patch R9/R10 into the judge JSON
@@ -294,7 +307,9 @@ foreach ($toolDir in $toolDirs) {
                 $resultsHash[$_.Name] = @{ status = $_.Value.status; reason = $_.Value.reason }
             }
         }
-        $resultsHash['R9']  = @{ status = $r9Status;  reason = $r9Reason  }
+        if ($Benchmark -eq "tic-tac-toe") {
+            $resultsHash['R9'] = @{ status = $r9Status; reason = $r9Reason }
+        }
         $resultsHash['R10'] = @{ status = $r10Status; reason = $r10Reason }
 
         $merged = [ordered]@{
@@ -319,6 +334,7 @@ foreach ($toolDir in $toolDirs) {
         PlaywrightOk  = ($pwExitCode -eq 0)
         R9Status      = $r9Status
         R10Status     = $r10Status
+        NodeTestLog   = if (Test-Path $nodeTestLog) { $nodeTestLog } else { $null }
         JudgeJsonPath = $judgeJson
         JudgeMdPath   = (Join-Path $toolDir.FullName "judge.md")
     }

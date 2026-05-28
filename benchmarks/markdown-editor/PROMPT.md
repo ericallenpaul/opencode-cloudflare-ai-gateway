@@ -16,12 +16,13 @@ Requirements:
 - The HTML file must open and run from disk (file:// URL) with no network requests
 - Include unit tests for the markdown parsing and rendering logic that I can run from the command line with a single command, with no install step required beyond what comes with Node.js (i.e. node --test or similar built-in)
 
-The requirements above are intentionally fully specified for benchmarking purposes. Do NOT pause for clarifying questions, ambiguity exploration, or plan approval -- proceed straight through the workflow. If any skill you invoke would normally ask the human for input, treat the requirements above as the answer and continue.
+The requirements above are intentionally fully specified for benchmarking purposes. Do NOT pause for clarifying questions, ambiguity exploration, or plan approval. Do NOT create a separate implementation-plan document unless your CLI requires one internally. Proceed directly to implementation, tests, and local verification.
 
-Use the superpowers workflow, in this order, without stopping for human input between steps:
-1. superpowers:writing-plans -- produce a phased implementation plan and proceed directly to step 2 without asking for plan approval
-2. superpowers:test-driven-development -- implement against tests (write a failing test, make it pass, repeat) until the plan is complete
-3. superpowers:verification-before-completion -- run the tests, confirm the HTML file loads from disk, confirm live preview fires within 250ms, before claiming done
+Keep the run bounded:
+- Do not use external dependencies, package installs, web research, or generated planning documents.
+- Do not create files outside the current benchmark workspace.
+- Run the command-line tests you create before finishing.
+- Do not use browser automation, Playwright MCP, or manual browser smoke tests during generation; the benchmark harness will perform deterministic browser judging afterward.
 
 Deliverables when complete:
 - The HTML file (call it `markdown.html`)

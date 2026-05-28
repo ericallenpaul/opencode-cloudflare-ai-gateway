@@ -588,7 +588,12 @@ test('R9 -- XSS safety', async ({ page }) => {
       let dialogFired = false;
       page.once('dialog', async dialog => {
         dialogFired = true;
-        await dialog.dismiss();
+        try {
+          await dialog.dismiss();
+        } catch (_) {
+          // Some browser/tool combinations auto-handle dialogs. The important
+          // signal for this judge is that a dialog fired at all.
+        }
       });
 
       // Also reset the XSS sentinel

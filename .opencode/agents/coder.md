@@ -2,7 +2,7 @@
 description: Cheap hosted implementation worker for concrete code changes
 mode: subagent
 hidden: true
-model: workers-ai-via-gateway/@cf/zai-org/glm-4.7-flash
+model: openai-via-gateway/gpt-5-mini
 tools:
   task: false
   webfetch: false
