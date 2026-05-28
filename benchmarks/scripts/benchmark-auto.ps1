@@ -328,12 +328,22 @@ function Get-BenchmarkPrompt {
     param(
         [Parameter(Mandatory)][string]$Tool,
         [Parameter(Mandatory)]$Policy,
-        [Parameter(Mandatory)][string]$PromptText
+        [Parameter(Mandatory)][string]$PromptText,
+        [string]$WorkspaceDir = ""
     )
 
     $mode = [string](Get-Field $Policy @("mode") "")
     if ($Tool -ne "opencode" -or $mode -ne "architecture") {
         return $PromptText
+    }
+
+    $workspaceInstruction = ""
+    if (-not [string]::IsNullOrWhiteSpace($WorkspaceDir)) {
+        $workspaceInstruction = @"
+- Benchmark workspace: $WorkspaceDir. Before writing files or running tests, verify the current directory is exactly this workspace. If it is not, change to this workspace first.
+- After changing to the benchmark workspace, create deliverables with bare filenames only, such as markdown.html, markdown.test.js, and README.md. Do not recreate the workspace path as nested directories.
+- When delegating via the Task tool, explicitly tell the subagent to work only in the benchmark workspace above, verify its current directory before writing files, and use bare filenames only after changing directory.
+"@
     }
 
     return @"
@@ -348,7 +358,7 @@ Required execution pattern:
 - Keep the primary build agent responsible for final integration, verification, and fixes.
 - If all work is completed only by the primary agent, the harness will mark the run invalid because routing was not demonstrated.
 - Do not use Playwright, browser MCP tools, or browser smoke tests during generation. The benchmark harness runs deterministic Playwright judging after the CLI exits.
-- When delegating via the Task tool, do not specify a working directory or file path in the subagent prompt. The subagent inherits the correct working directory automatically.
+$workspaceInstruction
 
 Canonical benchmark prompt follows.
 
@@ -499,7 +509,7 @@ foreach ($tool in $toolNames) {
     $requestedModel = [string]$toolPolicy.requestedModel
     $timeoutSeconds = [int]$policy.timeoutSeconds
 
-    $toolPromptText = Get-BenchmarkPrompt -Tool $tool -Policy $policy -PromptText $promptText
+    $toolPromptText = Get-BenchmarkPrompt -Tool $tool -Policy $policy -PromptText $promptText -WorkspaceDir $workspaceDir
     Set-Content -Path $promptCopyPath -Value $toolPromptText -Encoding utf8
 
     Write-Host "Running $tool..." -ForegroundColor Cyan
