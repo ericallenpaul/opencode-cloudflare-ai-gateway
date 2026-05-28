@@ -43,8 +43,8 @@ Same shape as the other integrations:
 
 | Tier | Why LSP matters more for this tier |
 |---|---|
-| **Local subagents (searcher, reader)** | Small models can't reason their way through a large codebase. An LSP gives them precise structured signals that more than compensate for their lower reasoning capacity. This is the single biggest leverage point for the local tier. |
-| **OSS subagents (coder, planner)** | Save oss-tier tokens by not reading files to find what a function takes. Planner especially benefits — "what's the right way to call X in this codebase" becomes a direct lookup. |
+| **Mechanical subagents (searcher, reader, planner)** | Small/cheap models should not reason their way through a large codebase from raw files. An LSP gives them precise structured signals that more than compensate for lower reasoning capacity. This is the single biggest leverage point for cheap worker roles. |
+| **Implementation subagent (coder)** | The coder currently uses `gpt-5-mini`, not GLM, because markdown-editor showed cheap hosted OSS was false economy for implementation. LSP still saves coder tokens by avoiding broad file reads and by surfacing diagnostics after edits. |
 | **Frontier orchestrator** | Frontier tokens are most expensive; even a modest reduction in file-reading per request saves real money. |
 
 ## Required setup (the experimental flag)
@@ -233,11 +233,11 @@ LSP is **on by default for every agent** that touches code, because opencode's L
 
 | Agent | LSP active? | Why |
 |---|---|---|
-| **`orchestrator`** (frontier) | Yes | Asks ground-truth questions before reasoning. Frontier-tier cost makes file-reading especially wasteful. |
-| **`searcher`** (local) | Yes — **biggest leverage point** | Searcher's job is "locate things in the codebase." LSP turns this from "grep + read" into "structured lookup." Token savings here are largest. |
-| **`reader`** (local) | Yes | "Summarize this function" benefits from knowing the signature and call sites before reading. |
-| **`coder`** (oss) | Yes | Before editing, verify call sites. After editing, see diagnostics. Both via LSP. |
-| **`planner`** (oss) | Yes | "Current state of the auth module" → LSP returns the symbol map; planner doesn't need to read 30 files. |
+| **`build`** (frontier orchestrator) | Yes | Asks ground-truth questions before reasoning. Frontier-tier cost makes file-reading especially wasteful. |
+| **`searcher`** (GLM worker) | Yes — **biggest leverage point** | Searcher's job is "locate things in the codebase." LSP turns this from "grep + read" into "structured lookup." Token savings here are largest. |
+| **`reader`** (GLM worker) | Yes | "Summarize this function" benefits from knowing the signature and call sites before reading. |
+| **`coder`** (`gpt-5-mini`) | Yes | Before editing, verify call sites. After editing, see diagnostics. Both via LSP. |
+| **`planner`** (GLM worker) | Yes | "Current state of the auth module" → LSP returns the symbol map; planner doesn't need to read 30 files. |
 
 The orchestrator/subagent architecture (Phase 2) doesn't change LSP behavior — diagnostics still flow from the running LSPs to whichever agent is editing.
 

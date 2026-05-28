@@ -1,38 +1,51 @@
 # opencode-cloudflare-ai-gateway
 
-> **A note up front:** I'm new to [OpenCode](https://opencode.ai). This isn't a deep tour of the tool — it's one engineer's working setup, written down. But the shape of this setup — tiered models, single gateway, per-user attribution — feels right for the next few years of AI-assisted development, and the steps below are what it took to actually get there. If you're further along on OpenCode than I am, I'd genuinely welcome a PR or issue that sharpens any of this.
+Benchmark-driven, cost-aware agent orchestration for OpenCode.
 
-A centralized, hierarchical agent setup for OpenCode: a frontier `build` orchestrator can delegate bounded work to cheaper specialized subagents, while every paid model request routes through a single [Cloudflare AI Gateway](https://developers.cloudflare.com/ai-gateway/) for usage, cost, and per-user attribution.
+The current setup keeps a frontier model accountable for orchestration and final verification, routes bounded implementation to a cheaper-but-still-reliable worker, and reserves very cheap models for work the benchmarks say they can safely handle. Every paid request goes through [Cloudflare AI Gateway](https://developers.cloudflare.com/ai-gateway/) so model choice, tokens, cost, latency, cache behavior, project tag, and user tag are visible in one place.
 
-This is the configuration, the setup walkthrough, and the lessons learned from getting it to actually work end-to-end. It is not a router service. It is the foundation a router service would sit on.
+This repo is not a "just use a cheaper model" template. That was the wrong lesson from the first pass. GLM 4.7 Flash routed correctly and cost almost nothing, but it failed the harder markdown-editor implementation target on parser correctness, XSS safety, and self-tests. The working balanced setup is:
+
+- `build` orchestrator: `openai-via-gateway/gpt-5`
+- `coder` subagent: `openai-via-gateway/gpt-5-mini`
+- `searcher`, `reader`, `planner` subagents: `workers-ai-via-gateway/@cf/zai-org/glm-4.7-flash`
+- manual `local`, `oss`, and `frontier` agents remain available for explicit overrides
+
+The project goal is cost-per-correct-result, not lowest sticker price per token. The benchmark harness is part of the architecture because it proves when a cheaper route actually worked and when it only looked cheap.
 
 > **About pricing in this doc:** all dollar figures are "as of May 2026" and provided for rough magnitude comparison only. Provider pricing moves constantly. Always confirm current pricing against each provider's published rate card before making cost decisions.
 
-## The problem we're trying to solve
+## The Problem
 
 We're not going to stop paying for tokens. Local models keep getting better, but the frontier keeps moving with them, and the gap that lets you skip the frontier for "real work" keeps shrinking. Within a couple of years the realistic assumption is: **you pay for tokens, period.** The lever is no longer "avoid paying" — it's "make sure each token spent buys the cheapest viable answer."
 
-This repo is one attempt at that lever:
+The failed version of this idea is "move the whole job to a cheaper model." We tested that. It saves money until it quietly loses correctness, security, or verification discipline. The better version is reliability-based routing:
 
-- **Three explicit cost tiers** the user can switch between manually, plus a shipped frontier-tier orchestrator that can dispatch concrete subtasks to cheaper workers
-- **Explicit orchestration discipline**: the `build` agent owns decomposition, context handoff, fallback decisions, final verification, and the final answer; subagents are scoped workers
+- **Frontier orchestrator** for decomposition, ambiguity, fallback, integration, final review, and user-facing accountability
+- **Capable cheap coder** for concrete implementation and tests where the spec is clear
+- **Very cheap mechanical workers** for search, file reading, extraction, and narrow planning
 - **One gateway** in front of every paid provider, so every dollar shows up in one analytics view
 - **Automatic per-user and per-project metadata tagging** (app = directory basename, user = OS user) so a shared team gateway can attribute spend by person and by project
-- **Verification scripts** (PowerShell + Bash) so you can confirm what's actually addressable from your gateway before relying on it in an agent loop
+- **Deterministic benchmark gates** so a cheap route has to prove it produced correct output
 
 Full reasoning behind the architecture lives in [`docs/PROBLEM.md`](docs/PROBLEM.md).
 
-## What's in the box
+## Current Model Strategy
 
-| Tier | Default model | Provider | Cost shape (May 2026, indicative) |
-|---|---|---|---|
-| **Local** | `ollama/granite4:7b-a1b-h` | Ollama on your machine | Free (hardware cost only) |
-| **Cheap worker** | `gpt-5-mini` for `coder`; `@cf/zai-org/glm-4.7-flash` for search/read/planning | OpenAI + Workers AI via Gateway | lower than frontier; reliability-dependent |
-| **Frontier** | `gpt-5` | OpenAI via Gateway | Standard frontier pricing |
+| Role | Current model | Why |
+|---|---|---|
+| `build` | `openai-via-gateway/gpt-5` | Owns judgment, integration, fallback, final verification |
+| `coder` | `openai-via-gateway/gpt-5-mini` | Passed the markdown-editor implementation benchmark with much lower cost than frontier-direct tools |
+| `searcher` | `workers-ai-via-gateway/@cf/zai-org/glm-4.7-flash` | Cheap and reliable enough for bounded search/file discovery |
+| `reader` | `workers-ai-via-gateway/@cf/zai-org/glm-4.7-flash` | Cheap and reliable enough for local file summarization/extraction |
+| `planner` | `workers-ai-via-gateway/@cf/zai-org/glm-4.7-flash` | Useful for compact plans/risk lists when the primary gives narrow context |
+| `local` | `ollama/granite4:7b-a1b-h` | Experimental/manual read-only local tier, not the daily-driver path |
 
-> **Note (2026-05-26):** the **Local tier** is real but harder to make reliable than the table suggests. Through extensive testing we found Ollama's local tool-calling is unreliable across most models; LM Studio + qwen3-coder + n_ctx 16384 is the known-working setup (see [`docs/LEARNINGS.md`](docs/LEARNINGS.md) and [`docs/SETUP.md`](docs/SETUP.md)). Even working, dispatched local-tier subtasks run 20-40s on consumer hardware. For most daily-use scenarios, pointing the `local` tier at a gateway-hosted cheap model like `openai-via-gateway/gpt-4o-mini` (~8x cheaper than gpt-5, fast inference, reliable) preserves the tiered cost thesis without the local-inference latency tax.
+> **Note (2026-05-26):** the **Local tier** is real but not the recommended daily-driver path. Through extensive testing we found Ollama's local tool-calling unreliable across most models; LM Studio + qwen3-coder + n_ctx 16384 is the known-working local setup (see [`docs/LEARNINGS.md`](docs/LEARNINGS.md) and [`docs/SETUP.md`](docs/SETUP.md)). Even working, dispatched local subtasks run 20-40s on consumer hardware. The current default avoids that latency trap: keep local as a manual experiment, put implementation on `gpt-5-mini`, and put cheap mechanical work on GLM through the gateway.
 
-Plus the gateway-routed catalog: Claude Sonnet/Opus/Haiku 4-5 & 4-6, GPT-5 family, GPT-4.1-mini, GPT-4o-mini, Gemini 2.5 Pro/Flash, GLM 4.7 Flash, GPT-OSS 20B/120B, Qwen 3 30B A3B, Llama 3.3 70B, and DeepSeek-R1-distill 32B.
+See [`docs/CURRENT-STRATEGY.md`](docs/CURRENT-STRATEGY.md) for the authoritative routing table and the evidence behind it.
+
+The gateway-routed catalog still includes Claude Sonnet/Opus/Haiku 4-5 & 4-6, GPT-5 family, GPT-4.1-mini, GPT-4o-mini, Gemini 2.5 Pro/Flash, GLM 4.7 Flash, GPT-OSS 20B/120B, Qwen 3 30B A3B, Llama 3.3 70B, and DeepSeek-R1-distill 32B. Availability is not enough. Models only become defaults after they pass this repo's runtime checks.
 
 > **Balanced worker default (2026-05-28):** GLM remains useful for cheap search/read/planning work, but the markdown-editor architecture benchmark showed it is not reliable enough as the implementation `coder` on harder tasks. The shipped `coder` subagent now uses `openai-via-gateway/gpt-5-mini`; `searcher`, `reader`, and `planner` stay on `@cf/zai-org/glm-4.7-flash`. In the latest all-tool markdown-editor run, OpenCode (`gpt-5` + `gpt-5-mini`) passed the core deterministic judge at $0.3888, while Codex (`gpt-5.5` + `gpt-5.4-mini`) also passed at $1.0080 and Claude (`opus` + `haiku`) failed runtime rendering at $1.2273. The model catalog is broader than the subset OpenCode can reliably drive today; the default follows runtime evidence, not just catalog availability.
 
@@ -177,7 +190,8 @@ Beyond the rubric, three pragmatic factors made it the right call **for me speci
 ## Documentation
 
 - [`docs/PROBLEM.md`](docs/PROBLEM.md) — the cost-tier thesis and why this repo exists
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — the three tiers, the providers, how they connect
+- [`docs/CURRENT-STRATEGY.md`](docs/CURRENT-STRATEGY.md) — current model assignments, evidence, and operating rule
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — current routing shape, provider setup, and orchestration boundaries
 - [`docs/SETUP.md`](docs/SETUP.md) — full setup walkthrough
 - [`docs/LEARNINGS.md`](docs/LEARNINGS.md) — gotchas discovered while building this (model name format, reasoning-model handling, tool-call fumbling, etc.)
 - [`docs/ROADMAP.md`](docs/ROADMAP.md) — what's done, what's planned (orchestrator/subagents, superpowers, LSP, Groq, xAI)
@@ -191,7 +205,8 @@ Beyond the rubric, three pragmatic factors made it the right call **for me speci
 
 **Working today:**
 - All five providers reachable through the gateway
-- Local Ollama tier on read-only tools (workaround for small-model tool-call fumbling)
+- Reliability-based OpenCode orchestration: `gpt-5` primary `build`, `gpt-5-mini` `coder`, GLM-backed `searcher`/`reader`/`planner`
+- Local Ollama tier remains available on read-only tools, but is experimental rather than the recommended implementation path
 - Verified model catalog: Claude 4-5/4-6 family, GPT-5 family, Gemini 2.5, Workers AI Qwen/Llama/DeepSeek
 - Automatic `app` + `user` metadata tagging on every gateway request (app from directory basename, user from OS user) -- surfaces as filters in CF AI Gateway analytics
 - Baseline MCP integration: `context7` (current library docs), `cloudflare-docs`, and `snyk` (security scanning) ship enabled in the example config

@@ -1,5 +1,7 @@
 # Routing Brain (Flavor D) — Design
 
+> Historical design note: this spec captures the original May 2026 topology proposal. The current benchmark-backed configuration still uses the same orchestrator/subagent shape, but the model assignments changed: `build` uses `gpt-5`, `coder` uses `gpt-5-mini`, and GLM 4.7 Flash is limited to search/read/planning workers. Treat the OSS-coder assignments below as lineage, not current guidance. See [`../CURRENT-STRATEGY.md`](../CURRENT-STRATEGY.md).
+
 **Date:** 2026-05-19
 **Status:** Draft, pending user approval
 **Project:** OpenCode tiered-agent cost-optimization

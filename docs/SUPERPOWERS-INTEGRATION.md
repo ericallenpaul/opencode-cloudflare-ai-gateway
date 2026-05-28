@@ -8,12 +8,12 @@ Superpowers and the tiered model are **orthogonal**. They solve different proble
 
 |  | Cheap tier | Frontier tier |
 |---|---|---|
-| **No superpowers** | Ad-hoc work, cheap. Plausible output, frequent rework. | Ad-hoc work, expensive. Plausible output at frontier cost. |
+| **No superpowers** | Ad-hoc work, cheap. Plausible output, frequent rework when assigned work above its reliable scope. | Ad-hoc work, expensive. Plausible output at frontier cost. |
 | **With superpowers** | (Not the play — see below) | **Disciplined work at the right cost per task.** |
 
 **Tiered models save you money. Superpowers saves you rework.** They compound. Neither replaces the other:
 
-- Tiered model alone: cheap mediocre execution (cost wins, quality leaks)
+- Tiered model alone: cheap mediocre execution if routing ignores reliability (cost wins, quality leaks)
 - Superpowers alone: disciplined expensive execution (quality wins, cost leaks)
 - Together: disciplined work at the cheapest viable tier per task
 
@@ -23,10 +23,10 @@ Subagents stay skill-free. The frontier orchestrator runs skill workflows, deriv
 
 | Agent | Loads skills? | Why |
 |---|---|---|
-| **orchestrator** (frontier) | Yes, all selected skills | Process skills are multi-step state machines (TDD's loop, debugging's hypothesis chain, plan-then-execute). The frontier model has the reasoning capacity to follow them reliably. Skill tokens are a small fraction of frontier-tier cost. |
-| **searcher / reader** (local) | No | Local-tier models struggle with multi-step workflows. Their job is atomic file/grep operations; that doesn't benefit from process discipline. |
-| **coder** (oss) | Likely no — see open question #2 | Cheap models can fumble structured skill prompts. Subagent's job is "execute this concrete task," not "run the TDD loop." The orchestrator runs TDD; coder writes the test it's told to write. |
-| **planner** (oss) | No | Same reasoning as coder. Plans are produced by the orchestrator using `writing-plans` skill; planner subagent executes specific sub-investigations the plan requires. |
+| **build** (frontier orchestrator) | Yes, all selected skills | Process skills are multi-step state machines (TDD's loop, debugging's hypothesis chain, plan-then-execute). The frontier model has the reasoning capacity to follow them reliably. Skill tokens are a small fraction of frontier-tier cost. |
+| **searcher / reader** (GLM workers) | No | Cheap workers struggle with multi-step workflows. Their job is atomic file/grep operations; that doesn't benefit from process discipline. |
+| **coder** (`gpt-5-mini`) | Usually no — see open question #2 | Coder's job is "execute this concrete task," not "run the TDD loop." The orchestrator runs TDD; coder writes the test or implementation it is told to write. |
+| **planner** (GLM worker) | No | Plans are produced by the orchestrator using `writing-plans`; planner executes specific sub-investigations the plan requires. |
 
 **Key insight**: the orchestrator pattern from this repo's design spec ([routing-brain D](specs/2026-05-19-routing-brain-d-design.md)) and superpowers' own `subagent-driven-development` skill teach the **same shape**. The orchestrator does the reasoning; subagents do the concrete work. Superpowers' meta-skill *complements* the routing brain, doesn't compete with it.
 
@@ -39,9 +39,9 @@ OpenCode runs the skill on whichever model the current primary agent is using. W
 | `using-superpowers` | any | Meta-skill, lightweight discovery of other skills. Works everywhere. |
 | `brainstorming` | **frontier** | Open-ended judgment + option exploration. Smaller models flatten the option space. |
 | `writing-plans` | **frontier** | Multi-step synthesis across a problem. Cheap tiers under-decompose. |
-| `executing-plans` | oss | Plan-step execution is mechanical once steps are concrete. OSS handles it; frontier wastes tokens. |
-| `test-driven-development` | oss | Test/code/iterate loop is well-structured; OSS coders are good at this. Frontier overkill but fine. |
-| `verification-before-completion` | any (oss+) | Runs tests, parses output, asserts done-ness. Any tier with `bash` works. |
+| `executing-plans` | `build` orchestrator + workers | The orchestrator drives the plan and delegates concrete steps. Mechanical read/search/planning goes to GLM workers; implementation goes to `gpt-5-mini`. |
+| `test-driven-development` | `build` orchestrator + `coder` | The TDD loop is structured, but the orchestrator owns the loop. Coder writes tests/implementation from concrete instructions. |
+| `verification-before-completion` | `build` orchestrator | Runs tests, parses output, asserts done-ness. Coder may run local checks, but final accountability stays with the orchestrator. |
 | `systematic-debugging` | **frontier** | Hypothesis formation is core reasoning. Smaller models grab the first plausible explanation. |
 | `subagent-driven-development` | **frontier** | Meta-skill about delegation. Orchestrator territory. |
 | `dispatching-parallel-agents` | **frontier** | Judgment about when fan-out makes sense. Frontier. |
@@ -51,7 +51,7 @@ OpenCode runs the skill on whichever model the current primary agent is using. W
 | `writing-skills` | **frontier** | Authoring meta-tool — quality matters. |
 | `finishing-a-development-branch` | **frontier** | Merge / PR / cleanup decisions. |
 
-**Pattern**: judgment-heavy skills want frontier. Execution-heavy skills accept oss. Local tier never invokes skills directly — the example config sets `"skill": false` on the local agent to enforce this.
+**Pattern**: judgment-heavy skills want the frontier orchestrator. Execution-heavy steps can be delegated after the skill has decomposed the work. Cheap workers do not invoke skills directly.
 
 ## How each superpowers skill maps to our architecture
 
@@ -65,14 +65,14 @@ OpenCode runs the skill on whichever model the current primary agent is using. W
 | `dispatching-parallel-agents` | orchestrator | When the orchestrator decides to fan out to multiple subagents in parallel. |
 | `test-driven-development` | orchestrator | Orchestrator drives the red-green-refactor loop. Coder subagent writes the test, coder subagent writes the implementation. Coder never sees the full TDD context. |
 | `systematic-debugging` | orchestrator | Hypothesis-driven debugging. Searcher subagent answers "where is X used" questions; reader subagent answers "what does file Y look like." Orchestrator forms hypotheses. |
-| `verification-before-completion` | orchestrator (+ possibly coder — see open question #2) | "Don't claim done without running tests." Strong candidate to also load on coder, since coder is the one actually writing changes that need verification. |
+| `verification-before-completion` | orchestrator (+ possibly coder — see open question #2) | "Don't claim done without running tests." Coder may run scoped checks, but final verification belongs to the orchestrator because it owns requirements coverage. |
 | `writing-skills` | orchestrator | Meta-meta. Author's tool. |
 | `using-git-worktrees` | orchestrator | Workspace isolation. Orchestrator decides when to spin up a worktree. |
 | `requesting-code-review` | orchestrator | When to ask for review. |
 | `receiving-code-review` | orchestrator | How to read review feedback technically rather than performatively. |
 | `finishing-a-development-branch` | orchestrator | PR/merge/cleanup decisions. |
 
-**Net**: 13 of 14 skills load on the orchestrator. One skill (`verification-before-completion`) is a candidate for a second placement on the coder subagent — see open question #2.
+**Net**: skills load on the orchestrator. `verification-before-completion` is the only plausible candidate for partial coder placement, and even then only for scoped command execution, not final sign-off.
 
 ## The interaction with the orchestrator's system prompt
 
@@ -114,7 +114,7 @@ Doc structure: install superpowers as a clearly-marked **Phase 3a** add-on. Stan
 
 1. **Full skill catalog vs. curated subset on the orchestrator?** Loading all 14 skills swells the orchestrator's system prompt; every request pays that cost. Curated subset (e.g. `using-superpowers` + `brainstorming` + `writing-plans` + `test-driven-development` + `verification-before-completion` + `subagent-driven-development`) is leaner. Recommendation: ship lean, expand based on telemetry.
 
-2. **Does `verification-before-completion` belong on the coder subagent too?** The skill is small, the value (don't claim done without running tests) is high, and coder is the agent actually making changes. Counterargument: an oss-tier model still might not reliably execute "run tests, parse output, decide if done" without help from the orchestrator. Worth empirical test once subagents exist.
+2. **Does `verification-before-completion` belong on the coder subagent too?** The skill is small, the value is high, and coder is the agent actually making changes. Counterargument: even a `gpt-5-mini` coder is not the requirements owner. It can run scoped tests, but the orchestrator still needs to inspect the diff and judge whether all requirements were met.
 
 3. **How does the orchestrator's dispatch map interact with `subagent-driven-development` skill's guidance?** Both teach delegation behavior. Need to make sure the skill's "when to delegate vs. do yourself" advice composes cleanly with our four-subagent dispatch table. Likely fine — skill is doctrine, prompt is org chart — but worth verifying with a real session.
 
@@ -125,7 +125,7 @@ Doc structure: install superpowers as a clearly-marked **Phase 3a** add-on. Stan
 ## See also
 
 - [PROBLEM.md](PROBLEM.md) — why cost-per-token matters going forward and what's "rework" worth
-- [ARCHITECTURE.md](ARCHITECTURE.md) — the three-tier provider topology
+- [ARCHITECTURE.md](ARCHITECTURE.md) — the current orchestrator/worker topology
 - [ROADMAP.md](ROADMAP.md) — Phase 2 (orchestrator) and Phase 3a (this integration) in context
 - [routing-brain D design spec](specs/2026-05-19-routing-brain-d-design.md) — orchestrator + subagent topology this builds on
 - [obra/superpowers](https://github.com/obra/superpowers) — upstream skills source

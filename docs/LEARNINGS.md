@@ -232,7 +232,32 @@ Empirical results from a targeted reliability pass:
 
 The failure signature was the same class of error: Workers AI rejected the request body with `oneOf at '/' not met` / content-shape mismatches. This points to an adapter compatibility issue in the current stack rather than a pure model-quality issue.
 
-**Practical rule**: choose OSS defaults based on **runtime compatibility inside OpenCode**, not just on benchmark reputation or catalog presence. As of 2026-05-27, `glm-4.7-flash` is the safest hosted-OSS worker default in this repo.
+**Practical rule**: choose OSS defaults based on **runtime compatibility inside OpenCode**, not just on benchmark reputation or catalog presence. As of 2026-05-27, `glm-4.7-flash` is the safest hosted-OSS default for cheap mechanical worker roles in this repo.
+
+## Cheap coder models can be false economy
+
+(Added 2026-05-28.) The first serious architecture-mode rerun after subagents were working moved implementation work to `@cf/zai-org/glm-4.7-flash`. This proved routing, but not reliability.
+
+What happened:
+
+- The run used both `gpt-5` and GLM, so architecture-mode delegation fired.
+- The output files existed, so a shallow harness would have counted it as success.
+- The deterministic browser judge caught broken markdown rendering, unsafe XSS behavior, and command-line tests that did not prove the browser output.
+- The CLI also timed out before the orchestrator completed final integration.
+
+The lesson is not "GLM is bad." GLM remains useful for read/search/planning when the primary gives narrow scope. The lesson is that **implementation is a different capability tier**. A model can be cheap, route correctly, and still be the wrong worker for code generation with security-sensitive browser behavior.
+
+The fix was to move only the `coder` subagent to `openai-via-gateway/gpt-5-mini` while leaving `searcher`, `reader`, and `planner` on GLM. In the next markdown-editor run, OpenCode used `gpt-5` + `gpt-5-mini`, completed in about 4.5 minutes, passed the command-line tests, blocked XSS, and stayed far below the cost of direct frontier-tool runs.
+
+**Practical rule**: optimize by role, not by global model price.
+
+| Work type | Current default | Why |
+|---|---|---|
+| Search/read/extract | GLM 4.7 Flash | Cheap and reliable enough for bounded factual work |
+| Implement/test/docs | GPT-5 mini | Much better reliability while still cheaper than frontier-direct |
+| Architecture/fallback/final review | GPT-5 | Judgment and accountability stay with the orchestrator |
+
+This is the core correction to the early project direction. The goal is not "move to a less expensive model." The goal is "spend frontier tokens only where they buy reliability."
 
 ## Reasoning models burn output tokens you can't see in the response
 
@@ -294,7 +319,9 @@ Even with the working setup, qwen3-coder 30B Q4 at n_ctx 16384 on consumer GPUs 
 
 ### The pivot we considered
 
-If your hardware doesn't support practical local inference, the architectural thesis ("dispatch cheap work to cheap models") can still be tested by routing the `local` tier to a gateway-hosted cheap model -- `openai-via-gateway/gpt-4o-mini` (~$0.15/M input vs gpt-5's $1.25/M, ~8x cheaper) or `workers-ai-via-gateway/@cf/qwen/qwen2.5-coder-32b-instruct` (cents per million). Both use standard OpenAI JSON tool-call format that opencode handles natively. You lose the "free local inference" angle but gain reliable execution and fast inference. **For most daily-use scenarios this is the better trade-off.** The `local` agent definition stays the same conceptually; only the model assignment changes.
+If your hardware doesn't support practical local inference, the architectural thesis ("dispatch cheap work to cheap models") can still be tested with gateway-hosted cheap models. Earlier options included `openai-via-gateway/gpt-4o-mini` and `workers-ai-via-gateway/@cf/qwen/qwen2.5-coder-32b-instruct`, both of which avoid the local runtime/tool-call failure modes.
+
+The later benchmark evidence narrowed that idea: hosted cheap models are useful, but not all roles are safe to cheap out. GLM 4.7 Flash is now retained for search/read/planning. Implementation moved to `gpt-5-mini` after GLM failed the markdown-editor target. The local agent remains a manual experiment, not the recommended daily path.
 
 ### Generalizable lesson
 

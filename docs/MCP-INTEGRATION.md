@@ -13,7 +13,7 @@ The cheapest token is the one you don't have to spend re-doing work. MCP servers
 | **Grep the local codebase** → only finds what your repo already uses, doesn't tell you what's *correct* for a new use case. | MCP returns authoritative external knowledge. Your repo is for *your* code; MCP is for *everyone else's*. |
 | **Reason from first principles** → frontier models can fake this on familiar libraries. On obscure or recently-changed ones, hallucination rate spikes. | Structured tool result is ground truth. Reasoning operates on facts, not memory. |
 
-The token cost is small (tool definition in system prompt, tool result on use). The rework saved is large (a single hallucinated import-and-call wastes far more frontier tokens than dozens of `get-library-docs` calls). For our tiered architecture specifically, MCPs **shrink the gap between cheap-tier output and frontier-tier output** — a Workers-AI coder subagent with current docs in front of it is often as good as a frontier model winging it from memory.
+The token cost is small (tool definition in system prompt, tool result on use). The rework saved is large (a single hallucinated import-and-call wastes far more frontier tokens than dozens of `get-library-docs` calls). For our current architecture specifically, MCPs **shrink the gap between worker output and frontier output** by giving cheaper workers source-grounded context. We do not assume a Workers-AI coder is good enough for implementation anymore; the benchmark-backed coder is `gpt-5-mini`.
 
 This is why MCP integration belongs in the basic setup, not as an afterthought.
 
@@ -153,11 +153,11 @@ Now that the orchestrator/subagent baseline ships, MCP tool access needs the sam
 
 | Agent | MCP tools available | Reasoning |
 |---|---|---|
-| `orchestrator` (frontier) | All enabled MCPs | Frontier model handles tool calls reliably. The orchestrator is doing the reasoning that benefits most from external grounding. |
-| `coder` (oss) | `context7` only | Code-gen is exactly the scenario where current API docs prevent hallucination. Snyk and Cloudflare docs aren't usually needed mid-edit. |
-| `planner` (oss) | `context7` only | "Right way to use library X" is a planner question. Docs lookup is its highest-leverage tool. |
-| `searcher` (local) | None | Searcher's job is local file ops. External lookups are the orchestrator's concern. |
-| `reader` (local) | None | Same as searcher — atomic file work, no external context needed. |
+| `build` (frontier orchestrator) | All enabled MCPs | Frontier model handles tool calls reliably. The orchestrator is doing the reasoning that benefits most from external grounding. |
+| `coder` (`gpt-5-mini`) | `context7` only | Code-gen is exactly the scenario where current API docs prevent hallucination. Snyk and Cloudflare docs usually belong to the orchestrator unless the implementation task explicitly needs them. |
+| `planner` (GLM worker) | `context7` only | "Right way to use library X" is a bounded planning question. Docs lookup is its highest-leverage external tool. |
+| `searcher` (GLM worker) | None | Searcher's job is local file ops. External lookups are the orchestrator's concern. |
+| `reader` (GLM worker) | None | Same as searcher — atomic file work, no external context needed. |
 
 **Snyk specifically stays orchestrator-only** because security review is a judgment task, not an execution task. The cheap models would mostly just rubber-stamp scan results.
 

@@ -26,7 +26,9 @@ If Ollama isn't installed: https://ollama.com/download
 
 ## 1. Pull the local-tier model
 
-The local tier defaults to `granite4:7b-a1b-h` (IBM Granite 4, MoE 7B/1B active, ~4.2 GB, designed for agentic tool use). Other small models in this size class either don't handle function-calling correctly or burn too much VRAM.
+The local tier is optional and experimental. It defaults to `granite4:7b-a1b-h` (IBM Granite 4, MoE 7B/1B active, ~4.2 GB, designed for agentic tool use), but it is no longer the recommended daily-driver implementation path. The current balanced setup uses `gpt-5` for orchestration, `gpt-5-mini` for the `coder` subagent, and GLM 4.7 Flash for cheaper search/read/planning workers.
+
+You only need to pull a local model if you want to try the manual `local` agent or continue local-tier experimentation.
 
 ```bash
 ollama pull granite4:7b-a1b-h
@@ -195,16 +197,21 @@ A clean run reports `PASS` for every model. Any `FAIL` rows mean either the mode
 
 ```powershell
 opencode run --agent local "say hi"
-# expect: a clean natural-language greeting, no JSON
+# optional/experimental: expect a clean natural-language greeting, no JSON
 
 opencode run --agent oss "say hi"
-# expect: a clean greeting via Workers AI Qwen-Coder 32B (~1s)
+# expect: a cheap hosted greeting via Workers AI / GLM
 
 opencode run --agent frontier "say hi"
 # expect: a clean greeting via gpt-5 (~3s including reasoning tokens)
+
+opencode run --agent build "say hi"
+# recommended default workflow: gpt-5 orchestrator with project-local subagents available
 ```
 
 If `local` works but `oss` or `frontier` doesn't, the most common cause is a BYOK key not being stored on the gateway side. Check the gateway dashboard's Providers tab — the provider you're trying to use should show as connected.
+
+For implementation work, prefer `--agent build`, not `--agent oss`. The `oss` manual override is useful for low-stakes direct cheap-model experiments, but the benchmark-backed path is the `build` orchestrator dispatching concrete implementation to the `coder` subagent (`gpt-5-mini`) and using GLM-backed workers for cheaper mechanical work.
 
 ## 7. (Recommended) Automatic per-user and per-project attribution
 
@@ -300,7 +307,7 @@ Run a quick query in any directory, then go to the CF dashboard → AI Gateway �
 
 ## 8. (Optional) Customize the default tier
 
-The `model` field at the top of `opencode.json` is the boot default when no `--agent` flag is passed. The example config now defaults to `openai-via-gateway/gpt-5` -- in practice frontier-tier is the dominant launch case once you're past initial exploration, and it's friction to type `--model openai-via-gateway/gpt-5` every time. If you'd rather default to the free local tier and explicitly opt into frontier per session, change it to:
+The `model` field at the top of `opencode.json` is the boot default when no `--agent` flag is passed. The example config defaults to `openai-via-gateway/gpt-5` because the primary workflow is frontier orchestration with cheaper subagents, not direct cheap-model coding. If you'd rather default to the free local tier and explicitly opt into frontier per session, change it to:
 
 ```json
 "model": "ollama/granite4:7b-a1b-h"

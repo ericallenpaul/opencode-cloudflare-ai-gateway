@@ -2,7 +2,16 @@
 
 > **Pricing note:** dollar figures below are "as of May 2026" and indicative only. They exist to convey **rough order-of-magnitude** differences between tiers, not as a current rate card. Always check the provider's own published pricing before making cost decisions — it moves fast.
 
-## The three tiers
+## The Current Routing Shape
+
+The architecture is no longer a simple three-tier ladder where "cheaper" automatically means "better." The current design is reliability-based:
+
+- `build` stays on `gpt-5` and owns judgment, decomposition, fallback, final verification, and the user-facing answer.
+- `coder` runs on `gpt-5-mini` because benchmark evidence showed it is the cheapest implementation worker that stayed reliable on the markdown-editor target.
+- `searcher`, `reader`, and `planner` run on GLM 4.7 Flash because those roles are bounded enough for a very cheap hosted OSS model.
+- `local` remains a manual/experimental read-only override, not the recommended default implementation path.
+
+## Provider Shape
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -35,6 +44,8 @@
 
 ## Why this shape
 
+The early version of this repo looked like a three-tier cost story: local, OSS, frontier. That was too coarse. The markdown-editor benchmark showed that assigning implementation to the cheapest compatible model can be false economy: GLM routed correctly but produced unsafe and incomplete output. The current architecture separates "mechanical cheap work" from "implementation cheap work."
+
 ### Tier 1 — Local (Ollama)
 - **Cost:** free (your hardware)
 - **Latency:** fastest network-wise (loopback)
@@ -42,7 +53,7 @@
 - **Tool-calling reliability:** depends entirely on model choice. Granite4 is purpose-built for this and handles tool calls correctly; qwen2.5-coder:7b emits malformed tool-call JSON in the content field and is unusable for agent loops (see LEARNINGS).
 - **Sweet spot:** code search, file reads, file summarization, completion-only work
 
-### Tier 2 — OSS (Cloudflare Workers AI via Gateway)
+### Tier 2 — Mechanical cheap workers (Cloudflare Workers AI via Gateway)
 - **Cost (May 2026, indicative):** sub-dollar per million tokens for most listed models — roughly an order of magnitude or more below frontier on like-for-like work
 - **Latency:** ~1s typical
 - **Capability ceiling:** competitive with prior-generation frontier (Qwen 2.5 Coder 32B, Llama 3.3 70B, DeepSeek-R1-distill)

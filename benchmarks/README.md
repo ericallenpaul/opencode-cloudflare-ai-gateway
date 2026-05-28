@@ -1,6 +1,10 @@
 # Benchmarks
 
-Reproducible benchmarks that measure **cost, time, and quality** of building the same project across three coding-agent tools, with their recommended plugin stacks. The point: turn the "is the tiered+gateway setup actually saving tokens?" question from claims into evidence.
+Reproducible benchmarks that measure **cost, time, and correctness** across Claude Code, Codex CLI, and this OpenCode configuration. The point is no longer just "does a cheaper model save money?" That question was too shallow. The current benchmark question is:
+
+> Can a frontier orchestrator plus right-sized workers produce correct output at lower cost than frontier-direct tools?
+
+The harness is intentionally strict. It records model evidence, invalidates missing routing, captures command-line tests, runs deterministic browser checks, and preserves raw logs so a cheap run cannot pass merely by producing files.
 
 ## Headline result so far
 
@@ -12,7 +16,7 @@ Latest architecture result: `markdown-editor` run `2026-05-27-105622` compared e
 | Codex | `gpt-5.5`, `gpt-5.4-mini` | $1.0080 | Core R1-R10 pass; perf partial |
 | Claude Code | `claude-opus-4-7`, `claude-haiku-4-5` | $1.2273 | Failed browser runtime rendering due JS regex error |
 
-This supersedes the earlier GLM-as-coder experiment. GLM 4.7 Flash routed successfully and is still useful for read/search/planning, but it failed the markdown-editor implementation target on parser features, XSS safety, and tests. The current OpenCode recommendation is `gpt-5` orchestrator plus `gpt-5-mini` coder.
+This supersedes the earlier GLM-as-coder experiment. GLM 4.7 Flash routed successfully and is still useful for read/search/planning, but it failed the markdown-editor implementation target on parser features, XSS safety, and tests. The current OpenCode recommendation is `gpt-5` orchestrator plus `gpt-5-mini` coder, with GLM retained for bounded mechanical work.
 
 Two completed runs of `tic-tac-toe`, identical prompt and acceptance criteria each time. Models: opencode ran GPT-5 via this repo's gateway stack; codex ran GPT-5 (CLI mis-reports as "gpt-5.5" in session records); claude ran claude-opus-4-7.
 
@@ -57,7 +61,7 @@ For each benchmark target, each tool runs the same prompt against the same accep
 
 ## Tools being compared
 
-All three use [obra/superpowers](https://github.com/obra/superpowers) so the prompt sequence (brainstorm → plan → TDD → verify) is portable across them.
+The current runs compare each tool in its intended best-orchestrator setup. We do not force all tools onto the same model because that would answer a different question.
 
 | Tool | Plugin stack |
 |---|---|
@@ -65,7 +69,7 @@ All three use [obra/superpowers](https://github.com/obra/superpowers) so the pro
 | **Codex CLI** | Whatever Codex CLI is configured with locally; superpowers via the `npx -y skills add cloudflare/skills --skill '*' --yes --global` install per CF agent-setup docs |
 | **OpenCode** | This repo's full stack: tiered models via CF AI Gateway, LSP integration (with `OPENCODE_EXPERIMENTAL_LSP_TOOL=true`), context7 + cloudflare-docs + snyk MCPs, obra/superpowers, per-agent LSP-and-superpowers prompt nudges |
 
-**Fairness note**: we intentionally do NOT strip plugins for these runs. The benchmark question is "how does each tool perform in its *recommended* configuration" — not "how does each tool perform naked." Each tool's plugin stack is captured in the per-run notes so readers can see what they're comparing.
+**Fairness note**: we intentionally do NOT strip plugins for these runs. The benchmark question is "how does each tool perform in its *recommended* configuration" — not "how does each tool perform naked." Each tool's plugin stack and observed models are captured in the per-run notes so readers can see what they're comparing.
 
 ## The two layers
 
@@ -168,6 +172,8 @@ These are real fairness and measurement limitations. Don't ignore them when citi
 ## How we've iterated the opencode config
 
 This repo is a working OSS reference setup, not a one-shot publication. The benchmark exists to surface gaps in the agent configuration, and the gaps then get fixed. Every change to the opencode build-agent prompt or to the example MCP set is committed with a stated reason and is traceable to the benchmark observation that motivated it. **The benchmark itself -- SPEC.md, PROMPT.md, the R1-R10 Playwright assertions -- has never changed between runs.** The line we hold is *tune the tool, not the test.* Every completed run is published in the relevant `comparisons.md` -- including the ones where opencode underperformed -- so a reader can audit the lineage rather than take a single cherry-picked run on faith.
+
+The config lineage below is historical evidence, not the current recommendation. It includes stale assumptions such as OSS-as-coder and local-as-daily-driver that were later invalidated by benchmark runs. The current recommendation is summarized above and in [`docs/CURRENT-STRATEGY.md`](../docs/CURRENT-STRATEGY.md).
 
 **Discovery (2026-05-26): for runs 1-4 the live opencode config was never re-copied from the repo template after iterations v3, v4, and v6.** The opencode actually running in those four runs was the original baseline prompt, not the iterated versions named in each run's config label. We discovered this on 2026-05-26 while investigating why the README rule "kept failing to land." Once the live config was synced (commit `6f910e7`), the very next run (`2026-05-26-0829`) produced the expected output: opencode wrote a 12,907-byte README and took composite #1. The four prior runs are now annotated `[CONFIG MISMATCH]` in `markdown-editor/results/comparisons.md`. Artifacts and per-tool numbers in those runs remain real; the experimental claim that "iteration didn't land" was an artifact of measuring the wrong configuration. The repo now ships a `Test-LiveConfigSync` preflight (in `bench-run.ps1`) that compares the live `agent.build.prompt` against `opencode.example.json` and warns loudly on drift before opening a run.
 
