@@ -108,6 +108,7 @@
       }
     }
   },
+  "_comment_agents": "Coder/searcher/reader/planner subagent models are defined in .opencode/agents/*.md, not in this file. Edit those markdown files to change subagent tiers.",
   "agent": {
     "build": {
       "model": "openai-via-gateway/gpt-5",
@@ -164,7 +165,7 @@
       }
     },
     "plan": {
-      "model": "openai-via-gateway/gpt-4o-mini",
+      "model": "workers-ai-via-gateway/@cf/zai-org/glm-4.7-flash",
       "mode": "primary",
       "prompt": "Use this agent for read-only planning and review. Prefer the lsp tool for code symbol lookups when available.",
       "tools": {

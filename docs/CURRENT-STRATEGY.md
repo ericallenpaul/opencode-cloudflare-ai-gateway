@@ -41,6 +41,14 @@ Use the cheapest model that has proven reliable for the specific role:
 - Architect/debug/integrate/final-review: `gpt-5`.
 - If a worker returns incomplete, contradictory, unsafe, or unverifiable output, retry once only when missing context is likely; otherwise escalate.
 
+### Manual Overrides
+
+The shipping config also provides three single-agent override modes for ad-hoc use — not the recommended path:
+
+- `oss` — routes everything onto GLM-4.7-flash (cheap hosted experiment, no delegation).
+- `frontier` — routes everything onto gpt-5 direct, skipping the mid tier (useful for high-risk debugging).
+- `local` — routes everything onto granite4 via Ollama (offline/no-cost experiment; not daily-driver on current hardware).
+
 ## What This Is Not
 
 This is not an automatic global model router. It is an OpenCode-native orchestrator configuration plus a benchmark harness that validates whether routing happened and whether output stayed correct.
