@@ -4,7 +4,7 @@ Benchmark-driven, cost-aware agent orchestration for OpenCode.
 
 The current setup keeps a frontier model accountable for orchestration and final verification, routes bounded implementation to a cheaper-but-still-reliable worker, and reserves very cheap models for work the benchmarks say they can safely handle. Every paid request goes through [Cloudflare AI Gateway](https://developers.cloudflare.com/ai-gateway/) so model choice, tokens, cost, latency, cache behavior, project tag, and user tag are visible in one place.
 
-This repo is not a "just use a cheaper model" template. That was the wrong lesson from the first pass. GLM 4.7 Flash routed correctly and cost almost nothing, but it failed the harder markdown-editor implementation target on parser correctness, XSS safety, and self-tests. The working balanced setup is:
+This repo is not a "just use a cheaper model" template. The first attempt tried to push too much work onto a very cheap hosted OSS model. GLM 4.7 Flash routed correctly and cost almost nothing, but it failed the harder markdown-editor implementation target on parser correctness, XSS safety, and self-tests. The lesson was that cheap models are useful only when the role is narrow enough for them to stay reliable. The working balanced setup is:
 
 - `build` orchestrator: `openai-via-gateway/gpt-5`
 - `coder` subagent: `openai-via-gateway/gpt-5-mini`
@@ -12,6 +12,8 @@ This repo is not a "just use a cheaper model" template. That was the wrong lesso
 - manual `local`, `oss`, and `frontier` agents remain available for explicit overrides
 
 The project goal is cost-per-correct-result, not lowest sticker price per token. The benchmark harness is part of the architecture because it proves when a cheaper route actually worked and when it only looked cheap.
+
+> **Author context:** this repo is written from the perspective of someone actively learning OpenCode, not from an OpenCode maintainer or long-time expert. The value here is the documented experiments, failures, benchmark evidence, and working configuration, not a claim that this is the only or official way to run OpenCode.
 
 > **About pricing in this doc:** all dollar figures are "as of May 2026" and provided for rough magnitude comparison only. Provider pricing moves constantly. Always confirm current pricing against each provider's published rate card before making cost decisions.
 
