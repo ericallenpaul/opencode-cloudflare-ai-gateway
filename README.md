@@ -1,17 +1,19 @@
 # opencode-cloudflare-ai-gateway
 
-Benchmark-driven, cost-aware agent orchestration for OpenCode.
+My working setup for making OpenCode cheaper without pretending the cheapest model can do every job.
 
-The current setup keeps a frontier model accountable for orchestration and final verification, routes bounded implementation to a cheaper-but-still-reliable worker, and reserves very cheap models for work the benchmarks say they can safely handle. Every paid request goes through [Cloudflare AI Gateway](https://developers.cloudflare.com/ai-gateway/) so model choice, tokens, cost, latency, cache behavior, project tag, and user tag are visible in one place.
+I wanted one place to see what my AI coding sessions cost, which models actually got used, and whether a tiered setup could save money without quietly lowering quality. This repo is the result: OpenCode routed through [Cloudflare AI Gateway](https://developers.cloudflare.com/ai-gateway/), with a frontier model still responsible for orchestration and cheaper workers only used where the benchmarks show they can hold up.
 
-This repo is not a "just use a cheaper model" template. The first attempt tried to push too much work onto a very cheap hosted OSS model. GLM 4.7 Flash routed correctly and cost almost nothing, but it failed the harder markdown-editor implementation target on parser correctness, XSS safety, and self-tests. The lesson was that cheap models are useful only when the role is narrow enough for them to stay reliable. The working balanced setup is:
+The first version of this idea was too naive: push more work to a very cheap hosted OSS model and enjoy the savings. GLM 4.7 Flash routed correctly and cost almost nothing, but it failed the harder markdown-editor benchmark on parser correctness, XSS safety, and self-tests. So the lesson was not "use the cheapest model." The lesson was "use the cheapest model that can reliably do this specific job."
+
+Right now the setup I trust is:
 
 - `build` orchestrator: `openai-via-gateway/gpt-5`
 - `coder` subagent: `openai-via-gateway/gpt-5-mini`
 - `searcher`, `reader`, `planner` subagents: `workers-ai-via-gateway/@cf/zai-org/glm-4.7-flash`
 - manual `local`, `oss`, and `frontier` agents remain available for explicit overrides
 
-The project goal is cost-per-correct-result, not lowest sticker price per token. The benchmark harness is part of the architecture because it proves when a cheaper route actually worked and when it only looked cheap.
+The goal is cost-per-correct-result, not lowest sticker price per token. The benchmark harness is part of the setup because it catches the difference between "that was cheap" and "that was cheap and actually worked."
 
 > **A note up front:** I'm new to [OpenCode](https://opencode.ai). This isn't a deep tour of the tool — it's one engineer's working setup, written down. But the shape of this setup — tiered models, single gateway, per-user attribution — feels right for the next few years of AI-assisted development, and the steps below are what it took to actually get there. If you're further along on OpenCode than I am, I'd genuinely welcome a PR or issue that sharpens any of this.
 
@@ -19,9 +21,11 @@ The project goal is cost-per-correct-result, not lowest sticker price per token.
 
 ## The Problem
 
-We're not going to stop paying for tokens. Local models keep getting better, but the frontier keeps moving with them, and the gap that lets you skip the frontier for "real work" keeps shrinking. Within a couple of years the realistic assumption is: **you pay for tokens, period.** The lever is no longer "avoid paying" — it's "make sure each token spent buys the cheapest viable answer."
+I do not think local models are going to make paid tokens disappear for serious coding work. Local models keep getting better, but the frontier keeps moving too. For the hard parts of the job -- ambiguous requirements, architecture, debugging, review -- I still want a frontier model in the loop.
 
-The failed version of this idea is "move the whole job to a cheaper model." We tested that. It saves money until it quietly loses correctness, security, or verification discipline. The better version is reliability-based routing:
+So the lever is not "avoid paying." The lever is "make each paid token do the job it is actually needed for."
+
+The failed version of this idea is "move the whole job to a cheaper model." I tested that. It saves money until it quietly loses correctness, security, or verification discipline. The better version is reliability-based routing:
 
 - **Frontier orchestrator** for decomposition, ambiguity, fallback, integration, final review, and user-facing accountability
 - **Capable cheap coder** for concrete implementation and tests where the spec is clear
@@ -30,7 +34,7 @@ The failed version of this idea is "move the whole job to a cheaper model." We t
 - **Automatic per-user and per-project metadata tagging** (app = directory basename, user = OS user) so a shared team gateway can attribute spend by person and by project
 - **Deterministic benchmark gates** so a cheap route has to prove it produced correct output
 
-Full reasoning behind the architecture lives in [`docs/PROBLEM.md`](docs/PROBLEM.md).
+More detail on the reasoning lives in [`docs/PROBLEM.md`](docs/PROBLEM.md).
 
 ## Current Model Strategy
 
@@ -41,15 +45,15 @@ Full reasoning behind the architecture lives in [`docs/PROBLEM.md`](docs/PROBLEM
 | `searcher` | `workers-ai-via-gateway/@cf/zai-org/glm-4.7-flash` | Cheap and reliable enough for bounded search/file discovery |
 | `reader` | `workers-ai-via-gateway/@cf/zai-org/glm-4.7-flash` | Cheap and reliable enough for local file summarization/extraction |
 | `planner` | `workers-ai-via-gateway/@cf/zai-org/glm-4.7-flash` | Useful for compact plans/risk lists when the primary gives narrow context |
-| `local` | `ollama/granite4:7b-a1b-h` | Experimental/manual read-only local tier, not the daily-driver path |
+| `local` | manual experiment | Local models are not part of my recommended daily path right now |
 
 > **Note (2026-05-26):** the **Local tier** is real but not the recommended daily-driver path on my hardware. Through extensive testing we found Ollama's local tool-calling unreliable across most models; LM Studio + qwen3-coder + n_ctx 16384 is the known-working local setup (see [`docs/LEARNINGS.md`](docs/LEARNINGS.md) and [`docs/SETUP.md`](docs/SETUP.md)). Even working, dispatched local subtasks run 20-40s on consumer hardware. If you have ample hardware, local models may be viable for you, but use LM Studio; it integrates better with OpenCode. The current default avoids the local latency trap: keep local as a manual experiment, put implementation on `gpt-5-mini`, and put cheap mechanical work on GLM through the gateway.
 
-See [`docs/CURRENT-STRATEGY.md`](docs/CURRENT-STRATEGY.md) for the authoritative routing table and the evidence behind it.
+See [`docs/CURRENT-STRATEGY.md`](docs/CURRENT-STRATEGY.md) for the routing table and the test evidence behind it.
 
-The gateway-routed catalog still includes Claude Sonnet/Opus/Haiku 4-5 & 4-6, GPT-5 family, GPT-4.1-mini, GPT-4o-mini, Gemini 2.5 Pro/Flash, GLM 4.7 Flash, GPT-OSS 20B/120B, Qwen 3 30B A3B, Llama 3.3 70B, and DeepSeek-R1-distill 32B. Availability is not enough. Models only become defaults after they pass this repo's runtime checks.
+I tested more models than I ended up using. Some were reachable through the gateway but not reliable enough in OpenCode for the role I wanted them to play. Right now that means `gpt-5` for orchestration, `gpt-5-mini` for implementation, and GLM 4.7 Flash for cheap search/read/planning work.
 
-> **Balanced worker default (2026-05-28):** GLM remains useful for cheap search/read/planning work, but the markdown-editor architecture benchmark showed it is not reliable enough as the implementation `coder` on harder tasks. The shipped `coder` subagent now uses `openai-via-gateway/gpt-5-mini`; `searcher`, `reader`, and `planner` stay on `@cf/zai-org/glm-4.7-flash`. In the latest all-tool markdown-editor run, OpenCode (`gpt-5` + `gpt-5-mini`) passed the core deterministic judge at $0.3888, while Codex (`gpt-5.5` + `gpt-5.4-mini`) also passed at $1.0080 and Claude (`opus` + `haiku`) failed runtime rendering at $1.2273. The model catalog is broader than the subset OpenCode can reliably drive today; the default follows runtime evidence, not just catalog availability.
+> **Balanced worker default (2026-05-28):** GLM remains useful for cheap search/read/planning work, but the markdown-editor benchmark showed it is not reliable enough as the implementation `coder` on harder tasks. The shipped `coder` subagent now uses `openai-via-gateway/gpt-5-mini`; `searcher`, `reader`, and `planner` stay on `@cf/zai-org/glm-4.7-flash`. In the latest all-tool markdown-editor run, OpenCode (`gpt-5` + `gpt-5-mini`) passed the core deterministic judge at $0.3888, while Codex (`gpt-5.5` + `gpt-5.4-mini`) also passed at $1.0080 and Claude (`opus` + `haiku`) failed runtime rendering at $1.2273.
 
 ## Quick start
 
@@ -65,11 +69,11 @@ The fastest way to know whether you have everything in place is to run the diagn
 ./scripts/check-setup.sh
 ```
 
-It walks every prerequisite (opencode CLI, env vars, opencode.json, superpowers plugin wired up, MCP servers configured, ollama + granite4 model) and prints a PASS/FAIL per item with the exact fix command for anything missing. Pass `-InstallConfig` / `--install-config` and it will copy `opencode.example.json` into place (with a backup of any existing config). The repo's project-local subagents live under `.opencode/agents/`; keep that folder alongside the project when using the orchestrator setup. For automatic app attribution in PowerShell, run `.\scripts\install-opencode-app-tag.ps1` once. Pure diagnostic otherwise -- no env-var writes, no npm installs.
+It walks the important prerequisites (opencode CLI, env vars, opencode.json, superpowers plugin wiring, MCP servers, and optional local-model setup) and prints a PASS/FAIL per item with the exact fix command for anything missing. Pass `-InstallConfig` / `--install-config` and it will copy `opencode.example.json` into place (with a backup of any existing config). The repo's project-local subagents live under `.opencode/agents/`; keep that folder alongside the project when using the orchestrator setup. For automatic app attribution in PowerShell, run `.\scripts\install-opencode-app-tag.ps1` once. Pure diagnostic otherwise -- no env-var writes, no npm installs.
 
 If you'd rather walk through manually, the full sequence is:
 
-1. **Prerequisites:** OpenCode installed (`npm install -g opencode-ai`), Ollama running locally with at least `granite4:7b-a1b-h` pulled, a Cloudflare account with AI Gateway enabled and provider API keys stored in BYOK.
+1. **Prerequisites:** OpenCode installed (`npm install -g opencode-ai`), a Cloudflare account with AI Gateway enabled, and provider API keys stored in BYOK. Local models are optional; if you go that route, use LM Studio rather than assuming the Ollama path is production-ready.
 2. **Set three env vars** (Windows user scope, one-time):
    ```powershell
    [Environment]::SetEnvironmentVariable("CF_ACCOUNT_ID", "<your-32char-account-id>", "User")
@@ -187,7 +191,7 @@ The trigger for this repo was Cloudflare's [Internal AI Engineering Stack post](
 
 That said, the choice wasn't reflexive. Before adopting Cloudflare AI Gateway I ran a structured evaluation against eight multi-provider candidates -- Cloudflare AI Gateway, Portkey, LiteLLM, OpenRouter, Bifrost, Azure AI Foundry, AWS Bedrock, Traefik AI Gateway, plus a custom-built option -- scored against a nine-dimension weighted rubric. The dimension that carried the most weight (25%) was **provider feature fidelity**: when a provider ships something new (Anthropic web search, extended thinking, computer use, real-time voice), it should work through the gateway immediately rather than waiting for the gateway to catch up. A gateway that silently drops or rewrites provider-native features is worse than no gateway at all. Several otherwise-decent candidates (Bedrock, OpenRouter, Azure for non-Anthropic) couldn't pass the litmus test of Anthropic web-search passthrough -- an architectural limitation that recurs with every new provider feature. Cloudflare took the top spot among multi-provider candidates (4.55 / 5.00 composite) and passed every gate in a hands-on POC: web-search citations preserved, extended-thinking blocks intact through the proxy, streaming SSE fidelity with no buffering, multi-model routing through a single `cf-aig-authorization` header, all provider keys living in the gateway rather than in client code. The architectural reason it scored that high is the **transparent proxy** design -- Cloudflare forwards provider-native payloads as-is, and exposes both an OpenAI-compatible endpoint (for the easy multi-model routing case) and per-provider native endpoints (for provider-specific features) -- no translation layer, no feature stripping.
 
-Beyond the rubric, three pragmatic factors made it the right call **for me specifically**: I already had a Cloudflare account with the gateway feature available, so onboarding was minutes rather than a vendor-procurement cycle; it's free at the tiers I needed (no per-request fees, no token markups); and it's managed SaaS, so there's no infrastructure to deploy or maintain just to get a proxy running. None of these factors make Cloudflare *the* right choice for everyone -- they made it the right choice for me. The runner-up in my evaluation was Portkey (4.30 / 5.00), which has stronger built-in governance (RBAC, per-key budgets, audit logging) and is open-source MIT with a self-hosted option; if you need fine-grained access control out of the box, or you specifically want to self-host, Portkey is a defensible alternative. LiteLLM (4.05) and OpenRouter (3.95) are also solid -- both use translation-layer architectures rather than transparent proxy, which is the trade-off worth understanding before picking either. Pick the gateway whose architecture and pricing model match your situation. This one matched mine.
+Beyond the rubric, Cloudflare won for very practical reasons: I already had an account, the gateway feature was available, it was free at the scale I needed, and I did not have to run any infrastructure just to get a proxy. That does not make Cloudflare the right answer for everyone. It made it the right answer for me. Portkey was the runner-up, mostly because it has stronger governance features and a self-host option. LiteLLM and OpenRouter are also reasonable, but they make different trade-offs. Pick the gateway that matches your situation.
 
 ## Documentation
 
@@ -200,7 +204,7 @@ Beyond the rubric, three pragmatic factors made it the right call **for me speci
 - [`docs/SUPERPOWERS-INTEGRATION.md`](docs/SUPERPOWERS-INTEGRATION.md) — design for layering [obra/superpowers](https://github.com/obra/superpowers) process skills on top of the tiered architecture (Phase 3a)
 - [`docs/MCP-INTEGRATION.md`](docs/MCP-INTEGRATION.md) — which MCP servers to wire in, why MCPs beat WebFetch and training-data lookups, and how they interact with the tiers
 - [`docs/LSP-INTEGRATION.md`](docs/LSP-INTEGRATION.md) — how-to for OpenCode's native LSP support (24+ built-in language servers + custom PowerShell setup); ~order-of-magnitude token savings on code-understanding questions
-- [`docs/specs/2026-05-19-routing-brain-d-design.md`](docs/specs/2026-05-19-routing-brain-d-design.md) — design for the future orchestrator that dispatches across tiers automatically
+- [`docs/specs/2026-05-19-routing-brain-d-design.md`](docs/specs/2026-05-19-routing-brain-d-design.md) — original routing-brain design; useful history, but the current assignments have moved on
 - [`benchmarks/`](benchmarks/) — reproducible benchmarks measuring cost, time, and quality across Claude Code, Codex CLI, and OpenCode-with-this-stack; results will be published as proof (or disproof) of the cost-reduction thesis
 
 ## Status
@@ -208,8 +212,8 @@ Beyond the rubric, three pragmatic factors made it the right call **for me speci
 **Working today:**
 - All five providers reachable through the gateway
 - Reliability-based OpenCode orchestration: `gpt-5` primary `build`, `gpt-5-mini` `coder`, GLM-backed `searcher`/`reader`/`planner`
-- Local Ollama tier remains available on read-only tools, but is experimental rather than the recommended implementation path
-- Verified model catalog: Claude 4-5/4-6 family, GPT-5 family, Gemini 2.5, Workers AI Qwen/Llama/DeepSeek
+- Local models remain documented as an experiment, but my current setup is not depending on Ollama
+- Gateway routing is working across the providers I care about; the README focuses on the models that survived the benchmark path, not every reachable model
 - Automatic `app` + `user` metadata tagging on every gateway request (app from directory basename, user from OS user) -- surfaces as filters in CF AI Gateway analytics
 - Baseline MCP integration: `context7` (current library docs), `cloudflare-docs`, and `snyk` (security scanning) ship enabled in the example config
 - LSP integration: OpenCode's 24+ built-in language servers enabled with `"lsp": {}` for diagnostics-driven feedback; **agent-callable `lsp` tool** wired up (requires `OPENCODE_EXPERIMENTAL_LSP_TOOL=true` env var -- the tool is experimental in opencode 1.15.5); per-agent prompt nudging biases the model toward LSP over grep for symbol lookups; custom PowerShell setup documented
