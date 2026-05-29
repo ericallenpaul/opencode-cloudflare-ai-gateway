@@ -44,7 +44,7 @@ The current setup still supports manual tier selection (`--agent frontier`, `--a
 
 - **Not a router service.** No proxy, no semantic routing, no code-enforced cost ceilings. Just the configuration and the gateway in front of upstreams. The orchestrator handles per-task dispatch in natural language, not deterministic code.
 - **Not a cost-optimization product.** This is one engineer's setup, written down. Your mileage will vary. Real optimization needs repeated benchmark runs across targets; this repo now includes the harness, but the evidence base is still growing.
-- **Not provider-agnostic forever.** The current shape leans on Cloudflare AI Gateway. The same idea would work on a self-hosted LiteLLM or any other unified gateway — but you'd be rewriting all the configuration patterns and learnings from scratch.
+- **Not gateway-agnostic.** The current shape leans on Cloudflare AI Gateway. The same idea would work on a self-hosted LiteLLM or another unified gateway, but you would be rewriting the configuration patterns and learnings from scratch.
 
 ## When this approach pays for itself
 
