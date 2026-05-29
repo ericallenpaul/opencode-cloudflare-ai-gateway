@@ -142,7 +142,7 @@ Limitations:
 - Two unrelated directories both named `auth-api` would share a tag — fine for solo dev, fuzzy for org-scale analytics
 - Directories without a `.git` ancestor fall back to current basename — noisy for `~`/`/tmp` work but not catastrophic
 
-The proper "use the git remote slug" (e.g., `myorg/auth-api`) is on the roadmap as an opencode plugin that hooks the request lifecycle and reads `process.cwd()` per-request (see ROADMAP Phase 3c).
+If org-scale attribution ever matters, the next step would be a hook or plugin that records a git remote slug such as `myorg/auth-api` instead of just the local directory name.
 
 ## OpenCode extension points
 
@@ -153,7 +153,7 @@ Beyond the tier+gateway core, OpenCode supports four distinct extension mechanis
 | **MCP servers** | External tools (docs lookup, security scans, browser automation, etc.) | [MCP-INTEGRATION.md](MCP-INTEGRATION.md) |
 | **Plugins / skills** | Process discipline + custom skill packs, loaded via `opencode plugin <module>` or `"plugin"` field in `opencode.json` | [SUPERPOWERS-INTEGRATION.md](SUPERPOWERS-INTEGRATION.md) |
 | **LSPs** | Structured code Q&A — definition / references / hover / diagnostics | [LSP-INTEGRATION.md](LSP-INTEGRATION.md) |
-| **Hooks** | `pre-tool-use`, `post-tool-use`, `session-start`, etc. fired by OpenCode at well-defined moments. Useful for cost tracking, audit logging, security gates, blocking edits to specific paths. | Not yet — see ROADMAP "Open questions" |
+| **Hooks** | `pre-tool-use`, `post-tool-use`, `session-start`, etc. fired by OpenCode at well-defined moments. Useful for cost tracking, audit logging, security gates, blocking edits to specific paths. | Mentioned here as an extension point; not part of the shipped setup |
 
 Two specific additions worth knowing beyond the integrations we ship by default:
 
@@ -178,14 +178,8 @@ Every subagent handoff should include the objective, relevant file paths and con
 
 The fault-tolerance rule is deliberately simple: retry a worker once only when the failure is likely missing context, then escalate to the primary agent or a more capable path. The benchmark harness records when routing does not happen or when a worker model is absent, so cost-saving claims have to be backed by actual model evidence.
 
-This stays an OpenCode-native config change — no external service. The practical adjustment from the original design is reliability-first routing: the shipped subagents use cheap hosted models rather than the experimental truly-local tier, and the implementation worker is stronger than the read/search workers. The manual `local` primary agent still exists for read-only local work and for future local-tier experimentation.
+This stays an OpenCode-native config change — no external service. The practical adjustment from the original design is reliability-first routing: the shipped subagents use cheap hosted models rather than the optional local tier, and the implementation worker is stronger than the read/search workers. The manual `local` primary agent still exists for read-only local work when your hardware makes that practical.
 
-If the orchestrator's natural-language dispatch still proves too undisciplined, the further-future "Option C" remains an external routing brain (CF Worker or local proxy) that enforces tier selection in code.
+Superpowers skills are available in the current setup. They add process discipline — TDD, brainstorming, code review, plan-then-execute workflows — while the orchestrator still decides what concrete work to dispatch to cheaper subagents.
 
-## Future shape — superpowers (Phase 3a)
-
-One more layer planned on top of the orchestrator pattern: process-level discipline via [obra/superpowers](https://github.com/obra/superpowers).
-
-Adds skills — TDD discipline, brainstorming before code changes, structured code review, plan-then-execute workflows. Skills get loaded on the **orchestrator** agent only (frontier tier) where the reasoning model can follow multi-step skill workflows reliably. Subagents stay skill-free: the orchestrator derives a concrete task from the skill's process and dispatches only that task. Keeps cheap-tier dispatch cheap. (Full design in [SUPERPOWERS-INTEGRATION.md](SUPERPOWERS-INTEGRATION.md).)
-
-LSP integration was originally on this roadmap as Phase 3b but turned out to be native in OpenCode — see [LSP-INTEGRATION.md](LSP-INTEGRATION.md) for the how-to. Enabled via `"lsp": {}` in `opencode.json`; the example config does this by default.
+LSP integration is native in OpenCode — see [LSP-INTEGRATION.md](LSP-INTEGRATION.md) for the how-to. Enabled via `"lsp": {}` in `opencode.json`; the example config does this by default.

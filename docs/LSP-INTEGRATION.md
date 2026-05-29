@@ -239,7 +239,7 @@ LSP is **on by default for every agent** that touches code, because opencode's L
 | **`coder`** (`gpt-5-mini`) | Yes | Before editing, verify call sites. After editing, see diagnostics. Both via LSP. |
 | **`planner`** (GLM worker) | Yes | "Current state of the auth module" → LSP returns the symbol map; planner doesn't need to read 30 files. |
 
-The orchestrator/subagent architecture (Phase 2) doesn't change LSP behavior — diagnostics still flow from the running LSPs to whichever agent is editing.
+The orchestrator/subagent architecture doesn't change LSP behavior — diagnostics still flow from the running LSPs to whichever agent is editing.
 
 ## Why LSP is the cheapest "force multiplier" available
 
@@ -249,7 +249,7 @@ Comparing the three integration layers on top of the core tier setup:
 |---|---|---|---|---|
 | **MCPs** (shipped) | External grounding (docs, security) | Modest tool defs + occasional results | Reduces hallucination on lib usage | Mixed — saves rework, costs per-lookup |
 | **LSP** (now shipped) | Structured code Q&A + diagnostics feedback | Trivial — opencode-internal | Diagnostics-driven self-correction, order-of-magnitude per code question | Cost down dramatically + quality up |
-| **Superpowers** (Phase 3a) | Process discipline (TDD, brainstorming, etc.) | Skill prompts on orchestrator | Reduces rework | Quality up |
+| **Superpowers** | Process discipline (TDD, brainstorming, etc.) | Skill prompts on orchestrator | Reduces rework | Quality up |
 
 LSP is unique in being **almost pure win** — virtually no static cost to the agent's context (opencode mediates), large per-query and per-edit-cycle benefit, available for nearly every mainstream language via the built-in set. The only friction is installing the toolchain for languages that require one (`.NET SDK`, Java SDK, Go toolchain, etc.) — which you almost certainly already have if you're editing those languages.
 
@@ -257,7 +257,7 @@ LSP is unique in being **almost pure win** — virtually no static cost to the a
 
 - [PROBLEM.md](PROBLEM.md) — the cost-tier thesis this builds on
 - [ARCHITECTURE.md](ARCHITECTURE.md) — where LSPs sit in the tier topology
-- [SUPERPOWERS-INTEGRATION.md](SUPERPOWERS-INTEGRATION.md) — the related Phase 3a integration
+- [SUPERPOWERS-INTEGRATION.md](SUPERPOWERS-INTEGRATION.md) — how process skills fit with the orchestrator/subagent setup
 - [MCP-INTEGRATION.md](MCP-INTEGRATION.md) — companion external-grounding layer
 - [OpenCode LSP docs](https://opencode.ai/docs/lsp/) — authoritative reference for the built-in list and config schema
 - [Language Server Protocol spec](https://microsoft.github.io/language-server-protocol/) — the underlying standard

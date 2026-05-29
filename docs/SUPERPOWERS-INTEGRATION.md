@@ -1,6 +1,6 @@
 # Superpowers Integration
 
-How [obra/superpowers](https://github.com/obra/superpowers) fits into the tiered-agent architecture in this repo. This is a **design doc** — Phase 3a in the roadmap, planned but not yet built. The thinking below is what we'd implement, and what to verify when we do.
+How [obra/superpowers](https://github.com/obra/superpowers) fits into the tiered-agent architecture in this repo. This doc captures the design constraints and verification notes for using process skills on the orchestrator without pushing that extra context into cheap worker subagents.
 
 ## Why both — what each does, what they don't
 
@@ -98,7 +98,7 @@ In the orchestrator's loop:
 4. **Update the orchestrator's system prompt** with a section explaining: "you have superpowers skills available; invoke them when they apply; skills run on you, not on subagents — derive concrete tasks from skill processes and dispatch only the concrete tasks."
 5. **Leave subagent configs alone.** No `skill` permission, no skill-related prompt text. Subagents stay simple.
 
-The shipped example config now includes the orchestrator/subagent baseline. Phase 3a is the remaining step: layering superpowers deliberately onto that primary orchestrator without bloating or destabilizing the cheap worker agents.
+The shipped example config includes the orchestrator/subagent baseline and loads Superpowers through OpenCode's plugin mechanism. The key constraint is still the same: use process skills on the primary orchestrator without bloating or destabilizing the cheap worker agents.
 
 ## Optional vs. required
 
@@ -108,7 +108,7 @@ The shipped example config now includes the orchestrator/subagent baseline. Phas
 - Superpowers compounds value but adds setup overhead (separate plugin, separate npm dep, separate learning curve for users who haven't used it before).
 - Some users have their own process tooling and won't want this layer.
 
-Doc structure: install superpowers as a clearly-marked **Phase 3a** add-on. Stand-alone install instructions, separate quickstart, clear "here's what you gain" framing. Users who stop after Phase 2 (orchestrator only) still have a working setup.
+Doc structure: keep Superpowers as its own focused integration note. Stand-alone install instructions, separate quickstart, clear "here's what you gain" framing. Users who only want the gateway/orchestrator setup still have a working setup.
 
 ## Open questions (resolve when implementing)
 
@@ -126,6 +126,5 @@ Doc structure: install superpowers as a clearly-marked **Phase 3a** add-on. Stan
 
 - [PROBLEM.md](PROBLEM.md) — why cost-per-token matters going forward and what's "rework" worth
 - [ARCHITECTURE.md](ARCHITECTURE.md) — the current orchestrator/worker topology
-- [ROADMAP.md](ROADMAP.md) — Phase 2 (orchestrator) and Phase 3a (this integration) in context
 - [routing-brain D design spec](specs/2026-05-19-routing-brain-d-design.md) — orchestrator + subagent topology this builds on
 - [obra/superpowers](https://github.com/obra/superpowers) — upstream skills source
