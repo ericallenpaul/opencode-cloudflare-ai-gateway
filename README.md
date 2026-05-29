@@ -1,8 +1,7 @@
 # opencode-cloudflare-ai-gateway
 
-My working setup for making OpenCode cheaper without pretending the cheapest model can do every job.
-
-I wanted one place to see what my AI coding sessions cost, which models actually got used, and whether a tiered setup could save money without quietly lowering quality. This repo is the result: OpenCode routed through [Cloudflare AI Gateway](https://developers.cloudflare.com/ai-gateway/), with a frontier model still responsible for orchestration and cheaper workers only used where the benchmarks show they can hold up.
+I wanted to see whether a tiered setup could save money without lowering quality. OpenCode supports a lot of different models, which made it the right tool for this experiment.
+This repo is the result of that experiment: OpenCode routed through [Cloudflare AI Gateway](https://developers.cloudflare.com/ai-gateway/), with a frontier model still responsible for orchestration and cheaper workers only used where the benchmarks show they can hold up.
 
 The first version of this idea was too naive: push more work to a very cheap hosted OSS model and enjoy the savings. GLM 4.7 Flash routed correctly and cost almost nothing, but it failed the harder markdown-editor benchmark on parser correctness, XSS safety, and self-tests. So the lesson was not "use the cheapest model." The lesson was "use the cheapest model that can reliably do this specific job."
 
@@ -45,9 +44,10 @@ More detail on the reasoning lives in [`docs/PROBLEM.md`](docs/PROBLEM.md).
 | `searcher` | `workers-ai-via-gateway/@cf/zai-org/glm-4.7-flash` | Cheap and reliable enough for bounded search/file discovery |
 | `reader` | `workers-ai-via-gateway/@cf/zai-org/glm-4.7-flash` | Cheap and reliable enough for local file summarization/extraction |
 | `planner` | `workers-ai-via-gateway/@cf/zai-org/glm-4.7-flash` | Useful for compact plans/risk lists when the primary gives narrow context |
-| `local` | manual experiment | Local models are not part of my recommended daily path right now |
+| `local` | manual experiment | Local models are still too slow on my hardware for daily use |
 
-Local models are documented, but they are not the default recommendation on my hardware. Through testing, LM Studio has been the more promising local path; Ollama tool-calling has been unreliable across most models I tried. The current default avoids that latency and reliability trap: keep local as an experiment, put implementation on `gpt-5-mini`, and put cheap mechanical work on GLM through the gateway.
+Local models can reduce costs even further, but on my laptop they are too slow to be practical. Tool calling and context size heavily affect which local models are usable.
+I tried both Ollama and LM Studio, and LM Studio was more reliable for me. If you have a fast GPU with 16GB or more of VRAM, local models may reduce the cost further.
 
 See [`docs/CURRENT-STRATEGY.md`](docs/CURRENT-STRATEGY.md) for the routing table and evidence behind it.
 
@@ -70,10 +70,10 @@ It checks the important prerequisites: OpenCode, environment variables, `opencod
 The manual setup path is:
 
 1. Install OpenCode: `npm install -g opencode-ai`
-2. Create a Cloudflare AI Gateway and store provider API keys in BYOK.
-3. Set `CF_ACCOUNT_ID`, `CF_GATEWAY_NAME`, and `CF_AIG_TOKEN`.
+2. Create a Cloudflare AI Gateway and store provider API keys in BYOK / bring-your-own-key.
+3. Set `CF_ACCOUNT_ID`, `CF_GATEWAY_NAME`, and `CF_AIG_TOKEN` environment variables.
 4. Copy `opencode.example.json` to `~/.config/opencode/opencode.json`.
-5. Keep this repo's `.opencode/agents/` folder with the project if you want the shipped orchestrator/subagents.
+5. Copy `.opencode\agents\` from this repo to `%USERPROFILE%\.config\opencode\agents\`, next to `opencode.json`, so the included orchestrator and worker subagents are available globally.
 6. Verify model reachability with `.\scripts\verify-models.ps1` or `./scripts/verify-models.sh`.
 
 Full walkthrough with screenshots and gotchas: [`docs/SETUP.md`](docs/SETUP.md).
@@ -84,7 +84,7 @@ Short answer: **yes, the tiered setup saves money when cheap workers are assigne
 
 The decisive target is `markdown-editor`, because it exercises parser correctness, XSS handling, live-preview event wiring, tests, docs, and model routing in one run.
 
-Latest markdown-editor evidence (`2026-05-27-105622`, native best-orchestrator setup per tool):
+Latest markdown-editor evidence (`2026-05-27-105622`, using each tool's best native orchestration setup):
 
 | Tool | Models observed | Cost | Deterministic judge |
 |---|---|---:|---|
@@ -106,7 +106,7 @@ Cloudflare AI Gateway gives me one control plane in front of Anthropic, OpenAI, 
 - Identical requests can be cached.
 - Rate limits and fallbacks can live outside the client.
 
-The gateway hop adds some latency, and OpenCode adapter quirks still matter. The trade-off has been worth it for my use case because the gateway turns model routing from "trust me, I used the cheaper model" into something visible and auditable.
+The gateway hop adds some latency, but the trade-off is worth it. The gateway turns model routing into something visible and auditable.
 
 ## Why Cloudflare AI Gateway
 
@@ -135,7 +135,7 @@ Working today:
 - Automatic `app` + `user` metadata tagging on every gateway request
 - Baseline MCP integration: `context7`, `cloudflare-docs`, and `snyk`
 - LSP integration with `"lsp": {}` and the experimental agent-callable `lsp` tool
-- Project-local `searcher`, `reader`, `coder`, and `planner` subagents invoked through OpenCode's Task tool
+- Included `searcher`, `reader`, `coder`, and `planner` subagents invoked through OpenCode's Task tool
 - Superpowers process skills integrated into the workflow where they fit
 - Reproducible benchmark infrastructure with deterministic Playwright judging and qualitative review prompts
 
