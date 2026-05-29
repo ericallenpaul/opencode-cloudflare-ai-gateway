@@ -2,11 +2,9 @@
 #
 # verify-models.sh
 #
-# Reads an opencode.json configuration, probes every configured model through
-# the appropriate Cloudflare AI Gateway (or local Ollama) endpoint, and writes
-# Markdown + JSON reports. Reports sanitize CF_ACCOUNT_ID, CF_GATEWAY_NAME, and
-# CF_AIG_TOKEN so they can be shared safely (e.g. pasted into a GitHub issue
-# or AI assistant for help diagnosing failures).
+# Reads an opencode.json configuration, probes configured gateway models, and
+# writes Markdown + JSON reports. Local providers such as LM Studio are skipped
+# by default because they are optional experiments, not required setup.
 #
 # Requires: bash 4+, jq, curl. Optional: python3 (for millisecond-precision
 # latency on systems whose date(1) doesn't support %N).
@@ -24,11 +22,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 OUTPUT_DIR="$SCRIPT_DIR"
 PROMPT="Reply with exactly: VERIFY OK"
 TIMEOUT_SEC=60
-SKIP_OLLAMA=false
+INCLUDE_LOCAL=false
 
 usage() {
   cat <<EOF
-verify-models.sh — probe every model in opencode.json via Cloudflare AI Gateway
+verify-models.sh -- probe configured gateway models in opencode.json
 
 Usage: $0 [options]
 
@@ -38,7 +36,7 @@ Options:
   -o, --output-dir DIR    Where to write reports (default: this script's directory)
   -p, --prompt TEXT       Test prompt (default: "Reply with exactly: VERIFY OK")
   -t, --timeout SEC       Per-request timeout in seconds (default: 60)
-      --skip-ollama       Skip local Ollama checks
+      --include-local     Also probe local OpenAI-compatible providers such as LM Studio
   -h, --help              Show this help and exit
 
 Required env vars (must be set BEFORE running):
@@ -54,7 +52,7 @@ while [[ $# -gt 0 ]]; do
     -o|--output-dir) OUTPUT_DIR="$2"; shift 2 ;;
     -p|--prompt) PROMPT="$2"; shift 2 ;;
     -t|--timeout) TIMEOUT_SEC="$2"; shift 2 ;;
-    --skip-ollama) SKIP_OLLAMA=true; shift ;;
+    --include-local) INCLUDE_LOCAL=true; shift ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Unknown option: $1" >&2; usage >&2; exit 1 ;;
   esac
@@ -231,11 +229,11 @@ while IFS= read -r provider_key; do
     printf '  %s/%s ... ' "$provider_key" "$model_key"
 
     if $is_local; then
-      if $SKIP_OLLAMA; then
+      if ! $INCLUDE_LOCAL; then
         echo "SKIP"
         r=$(jq -n --arg p "$provider_key" --arg m "$model_key" --arg u "$base_url" \
           '{provider:$p, model:$m, status:"SKIP", latency_ms:0,
-            response:"skipped by --skip-ollama", actual_model:null, error:null, request_url:$u}')
+            response:"skipped local provider; pass --include-local to probe", actual_model:null, error:null, request_url:$u}')
         append_result "$r"
         continue
       fi
@@ -343,7 +341,7 @@ json_path="$OUTPUT_DIR/verify-models-$timestamp.json"
     echo "- **HTTP 401** — auth header issue; verify \`CF_AIG_TOKEN\` is fresh and gateway has Authenticated Gateway enabled"
     echo "- **HTTP 404 / model_not_found** — model name typo or model not accessible from your account"
     echo "- **HTTP 429** — provider rate-limit or billing issue (e.g. depleted prepayment credits)"
-    echo "- **Connection refused on Ollama** — start ollama service: \`ollama serve\` or restart the Ollama app"
+    echo "- **Connection refused on local provider** -- start LM Studio's local server, or ignore it if local models are not part of your setup"
     echo
     echo "> URLs and identifiers below have been sanitized for safe sharing."
 

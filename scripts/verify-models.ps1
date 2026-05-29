@@ -1,14 +1,15 @@
 <#
 .SYNOPSIS
-  Verifies every model configured in opencode.json is reachable through the
-  Cloudflare AI Gateway (or local Ollama) by sending a tiny "say hi" request.
+  Verifies configured gateway models in opencode.json are reachable by sending
+  a tiny "say hi" request.
 
 .DESCRIPTION
-  Reads the OpenCode configuration file, iterates each provider's models, and
-  sends a short test prompt to each through the appropriate endpoint. Writes
-  two reports: a human-readable Markdown summary and a machine-readable JSON
-  file that can be fed back to an AI assistant for help diagnosing any
-  failures.
+  Reads the OpenCode configuration file, iterates each non-local provider's
+  models, and sends a short test prompt to each through the appropriate
+  endpoint. Local providers such as LM Studio are skipped by default because
+  they are optional experiments, not required setup. Writes two reports: a
+  human-readable Markdown summary and a machine-readable JSON file that can be
+  fed back to an AI assistant for help diagnosing any failures.
 
   Does NOT use the opencode CLI itself — talks directly to the configured
   HTTP endpoints. This is intentional: opencode run is hard to drive
@@ -27,8 +28,8 @@
 .PARAMETER TimeoutSec
   Per-request timeout. Defaults to 60 seconds (reasoning models can be slow).
 
-.PARAMETER SkipOllama
-  Skip local Ollama checks. Useful when Ollama isn't running.
+.PARAMETER IncludeLocal
+  Also probe local OpenAI-compatible providers such as LM Studio.
 
 .EXAMPLE
   .\verify-models.ps1
@@ -42,7 +43,7 @@ param(
     [string]$OutputDir = $PSScriptRoot,
     [string]$Prompt = "Reply with exactly: VERIFY OK",
     [int]$TimeoutSec = 60,
-    [switch]$SkipOllama
+    [switch]$IncludeLocal
 )
 
 $ErrorActionPreference = "Stop"
@@ -207,7 +208,7 @@ function Test-OpenAICompatibleModel($providerKey, $modelKey, $baseUrl) {
         }
 }
 
-function Test-OllamaModel($providerKey, $modelKey, $baseUrl) {
+function Test-LocalOpenAICompatibleModel($providerKey, $modelKey, $baseUrl) {
     $url = "$baseUrl/chat/completions"
     Invoke-Probe -ProviderKey $providerKey -ModelKey $modelKey `
         -Url $url -Timeout $TimeoutSec `
@@ -233,21 +234,21 @@ function Test-Provider($providerKey, $provider) {
         Write-Host "  $providerKey/$modelKey ... " -NoNewline
 
         if ($isLocal) {
-            if ($SkipOllama) {
+            if (-not $IncludeLocal) {
                 Write-Host "SKIP" -ForegroundColor Yellow
                 $results += [PSCustomObject]@{
                     provider     = $providerKey
                     model        = $modelKey
                     status       = "SKIP"
                     latency_ms   = 0
-                    response     = "skipped by --SkipOllama"
+                    response     = "skipped local provider; pass -IncludeLocal to probe"
                     actual_model = $null
                     error        = $null
                     request_url  = $baseUrl
                 }
                 continue
             }
-            $r = Test-OllamaModel $providerKey $modelKey $baseUrl
+            $r = Test-LocalOpenAICompatibleModel $providerKey $modelKey $baseUrl
         }
         elseif ($npm -eq "@ai-sdk/anthropic") {
             $r = Test-AnthropicModel $providerKey $modelKey $baseUrl
@@ -346,7 +347,7 @@ if ($fail -gt 0) {
     $md += "- **HTTP 401** — auth header issue; verify ``CF_AIG_TOKEN`` is fresh and gateway has Authenticated Gateway enabled"
     $md += "- **HTTP 404 / model_not_found** — model name typo or model not accessible from your account"
     $md += "- **HTTP 429** — provider rate-limit or billing issue (e.g. depleted prepayment credits)"
-    $md += "- **Connection refused on Ollama** — start ollama service: ``ollama serve`` or restart the Ollama app"
+    $md += "- **Connection refused on local provider** -- start LM Studio's local server, or ignore it if local models are not part of your setup"
     $md += ""
     $md += "> URLs and identifiers below have been sanitized for safe sharing."
     foreach ($f in ($allResults | Where-Object status -eq "FAIL")) {

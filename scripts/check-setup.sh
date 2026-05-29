@@ -409,45 +409,45 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# Check 10 -- Ollama running (optional)
+# Check 10 -- LM Studio local server (optional)
 # ---------------------------------------------------------------------------
 
 idx=10
-label="Ollama running"
-ollama_ok=0
-if ollama_ver=$(ollama --version 2>&1) && ollama list >/dev/null 2>&1; then
-  ollama_ver="$(printf '%s' "$ollama_ver" | head -1 | tr -d '\r\n')"
-  ollama_ok=1
-  line="$(format_check_line "$idx" "$label" "PASS ($ollama_ver)" "optional")"
+label="LM Studio local server"
+lmstudio_ok=0
+if models_json=$(curl -fsS --max-time 3 "http://127.0.0.1:1234/v1/models" 2>/dev/null); then
+  lmstudio_ok=1
+  model_count="$(printf '%s' "$models_json" | jq '.data | length' 2>/dev/null || printf 'unknown')"
+  line="$(format_check_line "$idx" "$label" "PASS (${model_count} models)" "optional")"
   pass_line "$line"
-  add_result "$idx" "$label" 1 1 "$ollama_ver"
+  add_result "$idx" "$label" 1 1 "${model_count} models"
 else
-  line="$(format_check_line "$idx" "$label" "FAIL" "optional")"
+  line="$(format_check_line "$idx" "$label" "SKIP (not running)" "optional")"
   warn_line "$line"
-  info_line "        Local agent tier unavailable. Start Ollama or install from https://ollama.com"
-  add_result "$idx" "$label" 0 1 "not running or not installed"
+  info_line "        Local models are optional. Start LM Studio only if you want to test the local agent."
+  add_result "$idx" "$label" 0 1 "not running"
 fi
 
 # ---------------------------------------------------------------------------
-# Check 11 -- granite4 model pulled (optional, skipped if check 10 failed)
+# Check 11 -- Qwen3 Coder loaded in LM Studio (optional, skipped if check 10 failed)
 # ---------------------------------------------------------------------------
 
 idx=11
-label="granite4 model pulled"
-if [[ $ollama_ok -eq 0 ]]; then
-  line="$(format_check_line "$idx" "$label" "SKIP (Ollama not running)" "optional")"
+label="Qwen3 Coder loaded"
+if [[ $lmstudio_ok -eq 0 ]]; then
+  line="$(format_check_line "$idx" "$label" "SKIP (LM Studio not running)" "optional")"
   warn_line "$line"
-  add_result "$idx" "$label" 0 1 "skipped -- Ollama not running"
+  add_result "$idx" "$label" 0 1 "skipped -- LM Studio not running"
 else
-  if ollama list 2>/dev/null | grep -q "granite4"; then
+  if printf '%s' "$models_json" | jq -r '.data[].id' 2>/dev/null | grep -qi "qwen3-coder"; then
     line="$(format_check_line "$idx" "$label" "PASS" "optional")"
     pass_line "$line"
-    add_result "$idx" "$label" 1 1 "found in ollama list"
+    add_result "$idx" "$label" 1 1 "found in LM Studio models"
   else
-    line="$(format_check_line "$idx" "$label" "FAIL (not in ollama list)" "optional")"
+    line="$(format_check_line "$idx" "$label" "SKIP (not loaded)" "optional")"
     warn_line "$line"
-    info_line "        Fix: ollama pull granite4:7b-a1b-h"
-    add_result "$idx" "$label" 0 1 "not in ollama list"
+    info_line "        Optional: load qwen3-coder-30b-a3b-instruct in LM Studio with n_ctx=16384+."
+    add_result "$idx" "$label" 0 1 "not loaded"
   fi
 fi
 

@@ -17,8 +17,8 @@ Checks performed (in order):
 7. opencode.json exists at `~/.config/opencode/opencode.json`
 8. Superpowers plugin installed AND wired up in opencode.json's `plugin` array
 9. MCP servers configured (context7 required; cloudflare-docs and snyk optional)
-10. Ollama running (optional -- local tier won't work without it)
-11. granite4 model pulled in Ollama (optional)
+10. LM Studio local server running (optional -- only needed for local-model experiments)
+11. Qwen3 Coder loaded in LM Studio (optional)
 12. PowerShell 7+ / Bash 4+ (defensive self-check)
 
 Exit code 0 only if all REQUIRED checks pass. Optional failures emit warnings but don't fail the run.
@@ -70,7 +70,7 @@ Two flavors:
 | `verify-models.ps1` | Windows (PowerShell 7+) | None beyond PS itself |
 | `verify-models.sh` | macOS / Linux / Git Bash on Windows | `bash 4+`, `jq`, `curl` |
 
-Both do the exact same thing: read `opencode.json`, walk every model entry in every configured provider, send a tiny "say hi" request through the appropriate gateway/local endpoint, and write pass/fail reports as both Markdown and JSON.
+Both do the exact same thing: read `opencode.json`, walk the configured gateway models, send a tiny "say hi" request through the appropriate endpoint, and write pass/fail reports as both Markdown and JSON. Local providers such as LM Studio are skipped by default because they are optional.
 
 ## verify-models usage
 
@@ -83,8 +83,8 @@ Both do the exact same thing: read `opencode.json`, walk every model entry in ev
 # Custom output directory
 .\verify-models.ps1 -OutputDir .\reports
 
-# Skip Ollama if it's not running
-.\verify-models.ps1 -SkipOllama
+# Include optional local providers such as LM Studio
+.\verify-models.ps1 -IncludeLocal
 
 # Shorter timeout (default is 60s for reasoning-model patience)
 .\verify-models.ps1 -TimeoutSec 20
@@ -97,7 +97,7 @@ chmod +x ./verify-models.sh       # one-time
 
 ./verify-models.sh                                  # defaults
 ./verify-models.sh -o ./reports                     # custom output
-./verify-models.sh --skip-ollama                    # skip local
+./verify-models.sh --include-local                  # include optional local providers
 ./verify-models.sh -t 20                            # shorter timeout
 ./verify-models.sh -c ~/my-opencode.json            # alternate config
 ./verify-models.sh -h                               # help
@@ -126,7 +126,7 @@ The JSON includes the request URL pattern, model key, full error response, and p
 
 - **Don't use the OpenCode CLI** — they talk straight to the HTTP endpoints. This is intentional. `opencode run` is hard to drive programmatically (see `docs/LEARNINGS.md`), and bypassing it lets us isolate failures to the gateway/model layer.
 - **Don't write to opencode config** — read-only. They only diagnose; fixing is on you.
-- **Don't test tool calling** — they just send a chat message and read the response. To verify a model handles tools correctly (the granite4 vs qwen-coder distinction), probe Ollama directly per the procedure in `docs/LEARNINGS.md`.
+- **Don't test tool calling** — they just send a chat message and read the response. To verify local tool calling, use the LM Studio notes in `docs/SETUP.md` and the longer debug write-up in `docs/LEARNINGS.md`.
 
 ## Exit codes
 

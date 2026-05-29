@@ -434,57 +434,58 @@ if (-not $configExists) {
 }
 
 # ---------------------------------------------------------------------------
-# Check 10 -- Ollama running (optional)
+# Check 10 -- LM Studio local server (optional)
 # ---------------------------------------------------------------------------
 
 $idx = 10
-$label = "Ollama running"
-$ollamaOk = $false
+$label = "LM Studio local server"
+$lmStudioOk = $false
 try {
-    $ollamaVer = (& ollama --version 2>&1 | Out-String).Trim()
-    $null = & ollama list 2>&1
-    $ollamaOk = $true
-    $line = Format-CheckLine $idx $label "PASS ($ollamaVer)" "optional"
+    $modelsResp = Invoke-RestMethod -Uri "http://127.0.0.1:1234/v1/models" -Method Get -TimeoutSec 3
+    $lmStudioOk = $true
+    $count = @($modelsResp.data).Count
+    $line = Format-CheckLine $idx $label "PASS ($count models)" "optional"
     Write-Pass $line
-    Add-Result -Index $idx -Label $label -Passed $true -Optional $true -Detail $ollamaVer -FixLines @()
+    Add-Result -Index $idx -Label $label -Passed $true -Optional $true -Detail "$count models" -FixLines @()
 } catch {
-    $line = Format-CheckLine $idx $label "FAIL" "optional"
+    $line = Format-CheckLine $idx $label "SKIP (not running)" "optional"
     Write-Warn $line
-    Write-Info "        Local agent tier unavailable. Start Ollama or install from https://ollama.com"
-    Add-Result -Index $idx -Label $label -Passed $false -Optional $true -Detail "not running or not installed" -FixLines @(
-        "Start Ollama (ollama serve) or install from https://ollama.com"
+    Write-Info "        Local models are optional. Start LM Studio only if you want to test the local agent."
+    Add-Result -Index $idx -Label $label -Passed $false -Optional $true -Detail "not running" -FixLines @(
+        "Optional: start LM Studio's local server on http://127.0.0.1:1234"
     )
 }
 
 # ---------------------------------------------------------------------------
-# Check 11 -- granite4 model pulled (optional, skipped if check 10 failed)
+# Check 11 -- Qwen3 Coder loaded in LM Studio (optional, skipped if check 10 failed)
 # ---------------------------------------------------------------------------
 
 $idx = 11
-$label = "granite4 model pulled"
-if (-not $ollamaOk) {
-    $line = Format-CheckLine $idx $label "SKIP (Ollama not running)" "optional"
+$label = "Qwen3 Coder loaded"
+if (-not $lmStudioOk) {
+    $line = Format-CheckLine $idx $label "SKIP (LM Studio not running)" "optional"
     Write-Warn $line
-    Add-Result -Index $idx -Label $label -Passed $false -Optional $true -Detail "skipped -- Ollama not running" -FixLines @()
+    Add-Result -Index $idx -Label $label -Passed $false -Optional $true -Detail "skipped -- LM Studio not running" -FixLines @()
 } else {
     try {
-        $ollamaList = (& ollama list 2>&1 | Out-String)
-        if ($ollamaList -match "granite4") {
+        $modelsResp = Invoke-RestMethod -Uri "http://127.0.0.1:1234/v1/models" -Method Get -TimeoutSec 3
+        $modelIds = @($modelsResp.data | ForEach-Object { $_.id })
+        if (($modelIds -join "`n") -match "qwen3-coder") {
             $line = Format-CheckLine $idx $label "PASS" "optional"
             Write-Pass $line
-            Add-Result -Index $idx -Label $label -Passed $true -Optional $true -Detail "found in ollama list" -FixLines @()
+            Add-Result -Index $idx -Label $label -Passed $true -Optional $true -Detail "found in LM Studio models" -FixLines @()
         } else {
-            $line = Format-CheckLine $idx $label "FAIL (not in ollama list)" "optional"
+            $line = Format-CheckLine $idx $label "SKIP (not loaded)" "optional"
             Write-Warn $line
-            Write-Info "        Fix: ollama pull granite4:7b-a1b-h"
-            Add-Result -Index $idx -Label $label -Passed $false -Optional $true -Detail "not in ollama list" -FixLines @(
-                "ollama pull granite4:7b-a1b-h"
+            Write-Info "        Optional: load qwen3-coder-30b-a3b-instruct in LM Studio with n_ctx=16384+."
+            Add-Result -Index $idx -Label $label -Passed $false -Optional $true -Detail "not loaded" -FixLines @(
+                "Optional: load qwen3-coder-30b-a3b-instruct in LM Studio with n_ctx=16384+"
             )
         }
     } catch {
-        $line = Format-CheckLine $idx $label "FAIL (could not query ollama list)" "optional"
+        $line = Format-CheckLine $idx $label "SKIP (could not query LM Studio)" "optional"
         Write-Warn $line
-        Add-Result -Index $idx -Label $label -Passed $false -Optional $true -Detail "ollama list failed" -FixLines @()
+        Add-Result -Index $idx -Label $label -Passed $false -Optional $true -Detail "LM Studio query failed" -FixLines @()
     }
 }
 
