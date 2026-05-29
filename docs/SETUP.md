@@ -248,7 +248,7 @@ Run a quick query in any directory, then go to the CF dashboard -> AI Gateway ->
 
 ## 7. (Optional) Local models
 
-Local models are no longer part of the required setup. I tried hard to make the local tier useful because "free local workers" sounds like the cleanest version of the cost-saving story. I did get local tool-calling working, but only with the right runtime, model, context size, and tool-call format. On my hardware, it was still too slow to be my daily path.
+Local models are no longer part of the required setup. I tried hard to make the local tier useful because "free local workers" sounds like the cleanest version of the cost-saving story. I did get local tool-calling working, but only with the right runtime, model, context size, and tool-call format. On my hardware, it was still too slow to be my daily driver.
 
 What I learned:
 
