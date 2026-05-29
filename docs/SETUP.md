@@ -1,8 +1,8 @@
 # Setup walkthrough
 
-End-to-end setup, ~30 minutes if you already have a Cloudflare account. Most of that is dashboard clicks and getting the config into the right place. Tested on Windows 11 with PowerShell 7; the steps translate cleanly to macOS/Linux -- the only Windows-specific bits are env var commands.
+End-to-end setup, ~30 minutes if you already have a Cloudflare account. Most of that is dashboard clicks and putting the config in the right place. Tested on Windows 11 with PowerShell 7; the steps translate cleanly to macOS/Linux -- the only Windows-specific bits are env var commands.
 
-> **Shortcut**: at any point during this walkthrough -- and especially when you think you're done -- run `scripts/check-setup.ps1` (or `.sh`) to confirm every prerequisite is in place. It walks the required gateway/OpenCode checks plus optional local-model checks and prints exact fix commands for anything missing. Pass `-InstallConfig` (or `--install-config`) to also copy `opencode.example.json` into your opencode config dir with a backup of any existing file. The included orchestrator workers live under this repo's `.opencode/agents/`; copy that folder into your OpenCode config directory next to `opencode.json` so the workers are available globally. See [`scripts/README.md`](../scripts/README.md) for details.
+> **Shortcut**: at any point during this walkthrough -- and especially when you think you're done -- run `scripts/check-setup.ps1` (or `.sh`) to confirm every prerequisite is in place. It checks the required gateway/OpenCode setup, plus optional local-model pieces, and prints exact fix commands for anything missing. Pass `-InstallConfig` (or `--install-config`) to also copy `opencode.example.json` into your opencode config dir with a backup of any existing file. The included orchestrator workers live under this repo's `.opencode/agents/`; copy that folder into your OpenCode config directory next to `opencode.json` so the workers are available globally. See [`scripts/README.md`](../scripts/README.md) for details.
 
 ## Prerequisites
 
@@ -90,7 +90,7 @@ cp ./opencode.example.json ~/.config/opencode/opencode.json
 
 If you already have an opencode.json, **back it up first**: the example config wholesale replaces the `provider` and `agent` sections.
 
-The repo also ships agent definitions in `.opencode/agents/`. Those files are part of the working setup, not optional examples. Copy them into your OpenCode config directory next to `opencode.json`:
+This repo also includes agent definitions in `.opencode/agents/`. Those files are part of the working setup, not optional examples. Copy them into your OpenCode config directory next to `opencode.json`:
 
 ```powershell
 # Windows
@@ -102,7 +102,7 @@ Copy-Item .\.opencode\agents "$env:USERPROFILE\.config\opencode\agents" -Recurse
 cp -R ./.opencode/agents ~/.config/opencode/agents
 ```
 
-That makes the included `searcher`, `reader`, `coder`, and `planner` subagents available globally. Without them, the primary `build` agent's Task-based orchestration has nothing to call.
+That makes the included `searcher`, `reader`, `coder`, and `planner` subagents available globally. Without them, the primary `build` agent cannot call its worker subagents.
 
 ## 4. Verify everything is reachable
 
@@ -119,10 +119,10 @@ chmod +x ./scripts/verify-models.sh
 ./scripts/verify-models.sh
 ```
 
-Both scripts do the same thing: read your opencode.json, walk the configured gateway models, send a tiny test request to each, and write two report files. Local providers such as LM Studio are skipped by default because they are optional.
+Both scripts do the same thing: read your opencode.json, check the configured gateway models, send a tiny test request to each, and write two report files. Local providers such as LM Studio are skipped by default because they are optional.
 
 - `verify-models-<timestamp>.md` — human-readable summary
-- `verify-models-<timestamp>.json` — machine-readable, feed to AI for help diagnosing any failures
+- `verify-models-<timestamp>.json` — machine-readable, useful when asking an AI assistant to diagnose failures
 
 Reports sanitize your account ID, gateway name, and gateway token before writing, so they're safe to paste into issues or chat for AI-assisted debugging.
 
@@ -144,13 +144,13 @@ opencode run --agent local "say hi"
 # optional/experimental: only useful if you configured LM Studio or another local provider
 ```
 
-If `oss` or `frontier` fails, the most common cause is a BYOK key not being stored on the gateway side. Check the gateway dashboard's Providers tab -- the provider you're trying to use should show as connected.
+If `oss` or `frontier` fails, the most common cause is a BYOK key not being stored on the gateway side. Check the gateway dashboard's Providers tab and make sure the provider you are using shows as connected.
 
 For implementation work, prefer `--agent build`, not `--agent oss`. The `oss` manual override is useful for low-stakes direct cheap-model experiments, but the benchmark-backed path is the `build` orchestrator dispatching concrete implementation to the `coder` subagent (`gpt-5-mini`) and using GLM-backed workers for cheaper mechanical work.
 
 ## 6. (Recommended) Automatic per-user and per-project attribution
 
-The example config attaches a `cf-aig-metadata` header to every gateway-routed request, tagging it with `app` (the directory you launched opencode from) and `user` (you). Both come from env vars: `OPENCODE_APP_TAG` and `OPENCODE_USER_TAG`. If neither is set, the header still works but values come through as empty strings — your gateway analytics won't be useful for slicing.
+The example config attaches a `cf-aig-metadata` header to every gateway-routed request, tagging it with `app` (the directory you launched opencode from) and `user` (you). Both come from env vars: `OPENCODE_APP_TAG` and `OPENCODE_USER_TAG`. If neither is set, the header still works but values come through as empty strings -- your gateway analytics will be harder to filter.
 
 Two small bits of one-time setup make this automatic for every future opencode invocation:
 
@@ -166,7 +166,7 @@ Two small bits of one-time setup make this automatic for every future opencode i
 export OPENCODE_USER_TAG="$USER"
 ```
 
-**Register a directory-change hook that walks up to the project root and sets the app tag.** This is a native shell mechanism -- no wrapping of the `opencode` command, no prompt redefinition. The hook runs once when the shell loads to initialize `OPENCODE_APP_TAG`, then again on every `cd`. It walks up to find the nearest `.git` ancestor and uses that directory's name as the app tag. So whether you're in `~/code/auth-api` or `~/code/auth-api/src/components`, the tag stays `auth-api`.
+**Register a directory-change hook that walks up to the project root and sets the app tag.** The hook runs when your shell starts and again whenever you `cd`. It finds the nearest `.git` directory and uses that repo name as the app tag, so nested paths like `~/code/auth-api/src/components` still report as `auth-api`.
 
 Once opencode launches, the env var is captured into the opencode process and stays fixed for that session — even if you `cd` elsewhere in your terminal afterwards.
 
@@ -237,17 +237,17 @@ Run a quick query in any directory, then go to the CF dashboard -> AI Gateway ->
 ### Caveats
 
 - **Config-load timing is what we want.** OpenCode resolves `{env:...}` substitutions when it starts, captures the values into its process environment, and never re-reads them. That means once opencode is running, even if you `cd` elsewhere in your terminal, the session keeps its original tag — which is what we want. Each opencode session = one project tag.
-- **Outside a git repo, the tag is just the current directory's basename.** Ad-hoc one-off use of opencode in `~` or `/tmp` will produce noisy tags. If you care about clean analytics, run opencode from inside a git-tracked project.
+- **Outside a git repo, the tag is just the current directory's basename.** One-off use of opencode in `~` or `/tmp` will produce noisy tags. If you care about clean analytics, run opencode from inside a git-tracked project.
 - **Project root = nearest `.git`.** Works for normal repos, git submodules (`.git` is a file pointing at the parent), and git worktrees. If your project uses a different convention (e.g., no git, just a `package.json` at root), you can extend the hook function to look for that marker too.
 
 ## 7. (Optional) Local models
 
-Local models are not part of the required setup anymore. I tried hard to make the local tier useful because "free local workers" sounds like the cleanest version of the cost-saving story. In practice, local tool-calling is real, but it is runtime-sensitive and slow enough on my hardware that it is not my daily path.
+Local models are no longer part of the required setup. I tried hard to make the local tier useful because "free local workers" sounds like the cleanest version of the cost-saving story. In practice, local tool-calling is real, but it is runtime-sensitive and slow enough on my hardware that it is not my daily path.
 
 What I learned:
 
 - Ollama was not reliable enough for OpenCode tool-calling in this setup.
-- The failures were model-specific but all annoying: silent runs, malformed tool tags, wrong protocol, or tool definitions getting lost.
+- The failures were model-specific but all frustrating: silent runs, malformed tool tags, wrong protocol, or tool definitions getting lost.
 - LM Studio worked better because its OpenAI-compatible server and model templates were more reliable.
 - Context size matters. The default `n_ctx=4096` was too small once OpenCode prompts, tool definitions, MCP tools, and the user request were all in the window.
 - The first local setup that actually worked was LM Studio + `qwen3-coder-30b-a3b-instruct` + `n_ctx=16384` + `"tools": true`.
@@ -268,7 +268,7 @@ If you do want to keep experimenting locally, use LM Studio first:
 5. Keep the `lmstudio` provider block from `opencode.example.json`.
 6. Point `agent.local.model` at `lmstudio/qwen3-coder-30b-a3b-instruct`.
 
-The important OpenCode config shape is:
+The important part of the OpenCode config is:
 
 ```json
 "lmstudio": {
