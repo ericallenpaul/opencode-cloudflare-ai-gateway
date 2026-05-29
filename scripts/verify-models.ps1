@@ -7,7 +7,7 @@
   Reads the OpenCode configuration file, iterates each non-local provider's
   models, and sends a short test prompt to each through the appropriate
   endpoint. Local providers such as LM Studio are skipped by default because
-  they are optional experiments, not required setup. Writes two reports: a
+  they are optional and hardware-dependent, not required setup. Writes two reports: a
   human-readable Markdown summary and a machine-readable JSON file that can be
   fed back to an AI assistant for help diagnosing any failures.
 

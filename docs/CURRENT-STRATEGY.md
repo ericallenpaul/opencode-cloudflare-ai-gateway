@@ -11,7 +11,7 @@ As of 2026-05-28, the recommended setup is reliability-based routing, not blanke
 | `searcher` subagent | `workers-ai-via-gateway/@cf/zai-org/glm-4.7-flash` | Cheap and sufficient for bounded repository discovery, grep/glob/LSP lookup, and file inventory. |
 | `reader` subagent | `workers-ai-via-gateway/@cf/zai-org/glm-4.7-flash` | Cheap and sufficient for reading local files and extracting facts when the primary gives exact scope. |
 | `planner` subagent | `workers-ai-via-gateway/@cf/zai-org/glm-4.7-flash` | Cheap and sufficient for compact plans, risk lists, and decomposition when the task is narrow. |
-| `local` primary override | `lmstudio/qwen3-coder-30b-a3b-instruct` | Optional experimental read-only path. Local inference is not currently the daily-driver recommendation on this hardware. |
+| `local` primary override | `lmstudio/qwen3-coder-30b-a3b-instruct` | Optional read-only path. Local inference works with the right hardware/runtime setup, but is not currently the daily-driver recommendation on this hardware. |
 
 ## Evidence
 
@@ -47,7 +47,7 @@ The shipping config also provides three single-agent override modes for ad-hoc u
 
 - `oss` — routes everything onto GLM-4.7-flash (cheap hosted experiment, no delegation).
 - `frontier` — routes everything onto gpt-5 direct, skipping the mid tier (useful for high-risk debugging).
-- `local` — optional LM Studio experiment for local read-only work; not daily-driver on current hardware.
+- `local` — optional LM Studio path for local read-only work; hardware-dependent and not daily-driver on current hardware.
 
 ## What This Is Not
 

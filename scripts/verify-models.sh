@@ -4,7 +4,7 @@
 #
 # Reads an opencode.json configuration, probes configured gateway models, and
 # writes Markdown + JSON reports. Local providers such as LM Studio are skipped
-# by default because they are optional experiments, not required setup.
+# by default because they are optional and hardware-dependent, not required setup.
 #
 # Requires: bash 4+, jq, curl. Optional: python3 (for millisecond-precision
 # latency on systems whose date(1) doesn't support %N).

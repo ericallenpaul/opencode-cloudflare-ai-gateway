@@ -130,9 +130,17 @@ A clean run reports `PASS` for every required gateway model, with optional local
 
 ## 5. First real run
 
+For normal use, start OpenCode from your project directory:
+
+```powershell
+opencode
+```
+
+The named agents are still available when you want to test or override a specific path:
+
 ```powershell
 opencode run --agent build "say hi"
-# recommended default workflow: gpt-5 orchestrator with included subagents available
+# expect: the main orchestrator path
 
 opencode run --agent oss "say hi"
 # expect: a cheap hosted greeting via Workers AI / GLM
@@ -141,12 +149,10 @@ opencode run --agent frontier "say hi"
 # expect: a clean greeting via gpt-5 (~3s including reasoning tokens)
 
 opencode run --agent local "say hi"
-# optional/experimental: only useful if you configured LM Studio or another local provider
+# optional: only useful if you configured LM Studio or another local provider
 ```
 
 If `oss` or `frontier` fails, the most common cause is a BYOK key not being stored on the gateway side. Check the gateway dashboard's Providers tab and make sure the provider you are using shows as connected.
-
-For implementation work, prefer `--agent build`, not `--agent oss`. The `oss` manual override is useful for low-stakes direct cheap-model experiments, but the benchmark-backed path is the `build` orchestrator dispatching concrete implementation to the `coder` subagent (`gpt-5-mini`) and using GLM-backed workers for cheaper mechanical work.
 
 ## 6. (Recommended) Automatic per-user and per-project attribution
 
@@ -242,7 +248,7 @@ Run a quick query in any directory, then go to the CF dashboard -> AI Gateway ->
 
 ## 7. (Optional) Local models
 
-Local models are no longer part of the required setup. I tried hard to make the local tier useful because "free local workers" sounds like the cleanest version of the cost-saving story. In practice, local tool-calling is real, but it is runtime-sensitive and slow enough on my hardware that it is not my daily path.
+Local models are no longer part of the required setup. I tried hard to make the local tier useful because "free local workers" sounds like the cleanest version of the cost-saving story. I did get local tool-calling working, but only with the right runtime, model, context size, and tool-call format. On my hardware, it was still too slow to be my daily path.
 
 What I learned:
 
@@ -251,15 +257,15 @@ What I learned:
 - LM Studio worked better because its OpenAI-compatible server and model templates were more reliable.
 - Context size matters. The default `n_ctx=4096` was too small once OpenCode prompts, tool definitions, MCP tools, and the user request were all in the window.
 - The first local setup that actually worked was LM Studio + `qwen3-coder-30b-a3b-instruct` + `n_ctx=16384` + `"tools": true`.
-- Even when it worked, local subagent calls took 20-40+ seconds on consumer GPU hardware.
+- Even when it worked, local subagent calls took 120-240 seconds on consumer GPU hardware.
 
-So the current config keeps local as an experiment, not a required dependency. The recommended path is still:
+So the current config keeps local as optional and hardware-dependent, not required. The recommended path is still:
 
 - `gpt-5` for the primary `build` orchestrator
 - `gpt-5-mini` for the implementation `coder`
 - GLM 4.7 Flash for cheap search/read/planning workers through Cloudflare AI Gateway
 
-If you do want to keep experimenting locally, use LM Studio first:
+If you do want to use local models, start with LM Studio:
 
 1. Install LM Studio from [lmstudio.ai](https://lmstudio.ai).
 2. Download `qwen3-coder-30b-a3b-instruct` or another Qwen3 Coder variant that fits your GPU.
@@ -304,4 +310,4 @@ See [LEARNINGS.md](LEARNINGS.md) for the full catalog. The quick hits:
 | `code 2001 "Please configure AI Gateway"` | Gateway slug typo in `CF_GATEWAY_NAME`, or no BYOK keys stored | Verify slug matches dashboard exactly; check Providers tab |
 | `Unknown parameter: 'reasoningSummary'` | Using `@ai-sdk/openai-compatible` for gpt-5 family | Already handled — example uses `@ai-sdk/openai` for OpenAI |
 | Included subagent not found | `.opencode/agents/` was not copied into the OpenCode config directory | Copy `.opencode\agents\` to `%USERPROFILE%\.config\opencode\agents\` on Windows, or `./.opencode/agents` to `~/.config/opencode/agents` on macOS/Linux |
-| Local model returns no tool calls | Local runtime/model/context shape is wrong | Treat local as optional; if experimenting, use LM Studio, Qwen3 Coder, `n_ctx=16384+`, and `"tools": true` |
+| Local model returns no tool calls | Local runtime/model/context shape is wrong | Treat local as optional; if using it, use LM Studio, Qwen3 Coder, `n_ctx=16384+`, and `"tools": true` |

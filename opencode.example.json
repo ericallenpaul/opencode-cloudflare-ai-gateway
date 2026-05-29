@@ -114,7 +114,7 @@
       }
     },
     "local": {
-      "description": "Primary manual override: optional experimental local inference via LM Studio. Best kept read-only.",
+      "description": "Primary manual override: optional local inference via LM Studio. Best kept read-only.",
       "model": "lmstudio/qwen3-coder-30b-a3b-instruct",
       "mode": "primary",
       "prompt": "Use this agent for cheap local read-only work. Prefer the lsp tool for code symbol lookups when available. Fall back to grep for plain-text searches. Do not attempt edits or shell commands.",

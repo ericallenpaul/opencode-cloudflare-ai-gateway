@@ -17,7 +17,7 @@ Checks performed (in order):
 7. opencode.json exists at `~/.config/opencode/opencode.json`
 8. Superpowers plugin installed AND wired up in opencode.json's `plugin` array
 9. MCP servers configured (context7 required; cloudflare-docs and snyk optional)
-10. LM Studio local server running (optional -- only needed for local-model experiments)
+10. LM Studio local server running (optional -- only needed if you use local models)
 11. Qwen3 Coder loaded in LM Studio (optional)
 12. PowerShell 7+ / Bash 4+ (defensive self-check)
 
