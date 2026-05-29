@@ -199,5 +199,4 @@ After that, the MCPs in the example `opencode.json` work on next opencode launch
 
 - [PROBLEM.md](PROBLEM.md) — the cost-vs-rework framing this builds on
 - [ARCHITECTURE.md](ARCHITECTURE.md) — where MCPs sit in the tier topology
-- [SUPERPOWERS-INTEGRATION.md](SUPERPOWERS-INTEGRATION.md) — the related "load on orchestrator only" decision for process skills
 - [OpenCode MCP docs](https://opencode.ai/docs/mcp/) — how MCPs wire into OpenCode at runtime

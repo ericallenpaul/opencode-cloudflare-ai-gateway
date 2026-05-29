@@ -151,7 +151,7 @@ Beyond the tier+gateway core, OpenCode supports four distinct extension mechanis
 | Mechanism | What it adds | Covered in this repo |
 |---|---|---|
 | **MCP servers** | External tools (docs lookup, security scans, browser automation, etc.) | [MCP-INTEGRATION.md](MCP-INTEGRATION.md) |
-| **Plugins / skills** | Process discipline + custom skill packs, loaded via `opencode plugin <module>` or `"plugin"` field in `opencode.json` | [SUPERPOWERS-INTEGRATION.md](SUPERPOWERS-INTEGRATION.md) |
+| **Plugins / skills** | Process discipline + custom skill packs, loaded via `opencode plugin <module>` or `"plugin"` field in `opencode.json` | Superpowers is wired in the example config |
 | **LSPs** | Structured code Q&A — definition / references / hover / diagnostics | [LSP-INTEGRATION.md](LSP-INTEGRATION.md) |
 | **Hooks** | `pre-tool-use`, `post-tool-use`, `session-start`, etc. fired by OpenCode at well-defined moments. Useful for cost tracking, audit logging, security gates, blocking edits to specific paths. | Mentioned here as an extension point; not part of the shipped setup |
 

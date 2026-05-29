@@ -257,7 +257,6 @@ LSP is unique in being **almost pure win** — virtually no static cost to the a
 
 - [PROBLEM.md](PROBLEM.md) — the cost-tier thesis this builds on
 - [ARCHITECTURE.md](ARCHITECTURE.md) — where LSPs sit in the tier topology
-- [SUPERPOWERS-INTEGRATION.md](SUPERPOWERS-INTEGRATION.md) — how process skills fit with the orchestrator/subagent setup
 - [MCP-INTEGRATION.md](MCP-INTEGRATION.md) — companion external-grounding layer
 - [OpenCode LSP docs](https://opencode.ai/docs/lsp/) — authoritative reference for the built-in list and config schema
 - [Language Server Protocol spec](https://microsoft.github.io/language-server-protocol/) — the underlying standard
