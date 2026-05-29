@@ -1,93 +1,58 @@
 # Architecture
 
-> **Pricing note:** dollar figures below are "as of May 2026" and indicative only. They exist to convey **rough order-of-magnitude** differences between tiers, not as a current rate card. Always check the provider's own published pricing before making cost decisions — it moves fast.
+> **Pricing note:** dollar figures below are "as of May 2026" and indicative only. They exist to convey rough order-of-magnitude differences between tiers, not as a current rate card. Always check each provider's published pricing before making cost decisions.
 
-## The Current Routing Shape
+## Current Shape
 
-The architecture is no longer a simple three-tier ladder where "cheaper" automatically means "better." The current design is reliability-based:
+This repo is no longer a simple "local, cheap, frontier" ladder. I tested that version, and it was too blunt. The current setup is reliability-based:
 
-- `build` stays on `gpt-5` and owns judgment, decomposition, fallback, final verification, and the user-facing answer.
-- `coder` runs on `gpt-5-mini` because benchmark evidence showed it is the cheapest implementation worker that stayed reliable on the markdown-editor target.
-- `searcher`, `reader`, and `planner` run on GLM 4.7 Flash because those roles are bounded enough for a very cheap hosted OSS model.
-- `local` remains a manual/experimental read-only override, not the recommended default implementation path.
+- `build` is the primary orchestrator on `openai-via-gateway/gpt-5`.
+- `coder` is the implementation worker on `openai-via-gateway/gpt-5-mini`.
+- `searcher`, `reader`, and `planner` are cheap hosted workers on `workers-ai-via-gateway/@cf/zai-org/glm-4.7-flash`.
+- `local` is optional and hardware-dependent. It points at LM Studio, not Ollama, and is useful only if local inference is fast enough on your machine.
+- Superpowers is already wired through the OpenCode plugin mechanism; the orchestrator uses skills when they apply.
+- MCPs and LSP are part of the working setup, not future add-ons.
+
+The important lesson from the benchmark work is simple: cheap is only useful when the model is reliable for that role. GLM is fine for bounded search/read/planning work. It was not reliable enough as the default implementation coder on the harder markdown-editor benchmark.
+
+## Request Flow
+
+![OpenCode and Cloudflare AI Gateway architecture](assets/opencode-cloudflare-architecture.png)
+
+All paid model traffic goes through Cloudflare AI Gateway. The optional LM Studio path is local and does not show up in gateway analytics.
 
 ## Provider Shape
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                       OpenCode                              │
-│                                                             │
-│   --agent local      --agent oss      --agent frontier      │
-│        │                  │                  │              │
-│        ▼                  ▼                  ▼              │
-└────────┼──────────────────┼──────────────────┼──────────────┘
-         │                  │                  │
-         │                  │                  │
-    ┌────▼────┐        ┌────▼─────────────────────────────┐
-    │ Ollama  │        │     Cloudflare AI Gateway        │
-    │ (local) │        │  ┌────────────────────────────┐  │
-    │         │        │  │ /anthropic   /openai       │  │
-    │ granite4│        │  │ /google-ai-studio          │  │
-    │ qwen3   │        │  │ /workers-ai                │  │
-    └─────────┘        │  └──────────┬─────────────────┘  │
-                       │             │                    │
-                       │   BYOK: provider keys stored     │
-                       │   gateway-side. Single client    │
-                       │   auth token covers all.         │
-                       └─────────────┼────────────────────┘
-                                     │
-        ┌────────────────┬───────────┼──────────────┬────────────┐
-        ▼                ▼           ▼              ▼            ▼
-    Anthropic        OpenAI     Google AI    CF Workers AI    (Groq/xAI
-    Claude 4.5/4.6   GPT-5,etc  Gemini 2.5   Qwen/Llama/DS    deferred)
-```
+The gateway is the default control plane. Provider API keys live in Cloudflare BYOK, not on each developer machine. OpenCode authenticates to the gateway with `CF_AIG_TOKEN`, and the gateway forwards requests to the right upstream provider.
 
-## Why this shape
+## Model Roles
 
-The early version of this repo looked like a three-tier cost story: local, OSS, frontier. That was too coarse. The markdown-editor benchmark showed that assigning implementation to the cheapest compatible model can be false economy: GLM routed correctly but produced unsafe and incomplete output. The current architecture separates "mechanical cheap work" from "implementation cheap work."
+| Role | Model | Why |
+|---|---|---|
+| `build` | `openai-via-gateway/gpt-5` | Keeps judgment, ambiguity handling, fallback decisions, integration review, and final user-facing accountability on the strongest configured model. |
+| `coder` | `openai-via-gateway/gpt-5-mini` | Best current balance of reliability and cost for implementation. It passed the markdown-editor benchmark where GLM failed. |
+| `searcher` | `workers-ai-via-gateway/@cf/zai-org/glm-4.7-flash` | Cheap and sufficient for repository discovery, grep/glob/LSP lookup, and file inventory. |
+| `reader` | `workers-ai-via-gateway/@cf/zai-org/glm-4.7-flash` | Cheap and sufficient for reading local files and extracting facts when scope is clear. |
+| `planner` | `workers-ai-via-gateway/@cf/zai-org/glm-4.7-flash` | Cheap and sufficient for compact plans, risk lists, and decomposition when the task is narrow. |
+| `local` | `lmstudio/qwen3-coder-30b-a3b-instruct` | Optional read-only local path. It works with the right runtime/model/context setup, but it was too slow on my hardware to be my daily driver. |
 
-### Tier 1 — Local (Ollama)
-- **Cost:** free (your hardware)
-- **Latency:** fastest network-wise (loopback)
-- **Capability ceiling:** ~7B-class instruction-tuned models
-- **Tool-calling reliability:** depends entirely on model choice. Granite4 is purpose-built for this and handles tool calls correctly; qwen2.5-coder:7b emits malformed tool-call JSON in the content field and is unusable for agent loops (see LEARNINGS).
-- **Sweet spot:** code search, file reads, file summarization, completion-only work
+## Why One Gateway
 
-### Tier 2 — Mechanical cheap workers (Cloudflare Workers AI via Gateway)
-- **Cost (May 2026, indicative):** sub-dollar per million tokens for most listed models — roughly an order of magnitude or more below frontier on like-for-like work
-- **Latency:** ~1s typical
-- **Capability ceiling:** competitive with prior-generation frontier (Qwen 2.5 Coder 32B, Llama 3.3 70B, DeepSeek-R1-distill)
-- **Sweet spot:** search, file reading, summarization, narrow planning, and mechanical context extraction. Recent benchmark evidence showed GLM 4.7 Flash is not reliable enough as the default implementation coder on harder app-building tasks.
+The gateway gives me five things direct provider connections do not:
 
-### Tier 2.5 — Cheap hosted implementation worker
-- **Default model:** `openai-via-gateway/gpt-5-mini`
-- **Cost (May 2026, indicative):** materially below frontier orchestration while preserving much better coding reliability than the hosted OSS coder attempt
-- **Sweet spot:** concrete implementation tasks with clear acceptance criteria, tests, README generation, and scoped fixes
-- **Evidence:** the markdown-editor architecture run `2026-05-27-103313` completed in about 4.5 minutes at $0.1416 using `gpt-5` + `gpt-5-mini`; the all-tool run `2026-05-27-105622` kept OpenCode valid and core-functional at $0.3888, versus Codex at $1.0080 and Claude at $1.2273.
-
-### Tier 3 — Frontier (Anthropic / OpenAI / Google via Gateway)
-- **Cost (May 2026, indicative):** multi-dollar per million tokens; reasoning-model output is more expensive than non-reasoning even on the same provider
-- **Latency:** ~2–10s for frontier; reasoning models spend time on internal reasoning before output
-- **Capability ceiling:** current state of the art
-- **Sweet spot:** novel reasoning, architecture decisions, ambiguous intent, large-context synthesis, final code review
-
-## Why one gateway instead of direct connections
-
-The gateway gives us five things we can't get with direct provider connections:
-
-| Capability | How |
+| Capability | Why it matters |
 |---|---|
-| **Unified analytics** | Every paid request appears in one dashboard with model, tokens, cost, latency. |
-| **Per-user attribution** | `cf-aig-metadata` header tags each request with `{app, user}`. Filter the dashboard by user to see who spent what. |
-| **BYOK key storage** | Provider keys live in gateway settings, not on user machines. Revoke / rotate centrally. |
-| **Free caching** | Identical requests within the cache window cost nothing extra. Particularly useful for agent loops. |
-| **Fallbacks and rate limits** | If a provider is down, gateway can fall back to another. Hard rate limits prevent runaway spend. |
+| Unified analytics | Every paid request appears in one dashboard with model, tokens, cost, and latency. |
+| Per-user attribution | `cf-aig-metadata` tags each request with `{app, user}`. |
+| BYOK key storage | Provider keys live in Cloudflare settings, not on each machine. |
+| Caching | Identical requests can be cached by the gateway. |
+| Rate limits and fallback | Spend control and fallback behavior can live outside the client. |
 
-The cost: one extra network hop (~50–150ms observed at time of publish).
+The cost is one extra network hop. In practice that has been worth it because it turns model routing and spend into something visible.
 
-## Provider configuration pattern
+## Provider Configuration
 
-Each upstream gets its own OpenCode provider entry using the **proper SDK** (not openai-compatible) wherever possible, pointed at the gateway's **per-provider endpoint**:
+Each upstream gets its own OpenCode provider entry. The current example config uses provider-native SDKs wherever possible and points them at Cloudflare's per-provider gateway endpoints:
 
 | Provider key | npm package | Gateway endpoint |
 |---|---|---|
@@ -95,91 +60,72 @@ Each upstream gets its own OpenCode provider entry using the **proper SDK** (not
 | `openai-via-gateway` | `@ai-sdk/openai` | `/openai` |
 | `google-via-gateway` | `@ai-sdk/google` | `/google-ai-studio/v1beta` |
 | `workers-ai-via-gateway` | `@ai-sdk/openai-compatible` | `/workers-ai/v1` |
-| `ollama` | `@ai-sdk/openai-compatible` | `http://127.0.0.1:11434/v1` |
+| `lmstudio` | `@ai-sdk/openai-compatible` | `http://127.0.0.1:1234/v1` |
 
-**Why proper SDKs over `@ai-sdk/openai-compatible`-for-everything:** the openai-compatible adapter doesn't fully translate between OpenAI's request shape and each provider's native one. OpenAI reasoning models in particular (gpt-5 family) require `max_completion_tokens` not `max_tokens` and have nested `reasoning` params — the compat adapter sends a malformed mix and OpenAI rejects with "Unknown parameter." Using `@ai-sdk/openai` directly fixes this. Same logic for Anthropic and Google: native SDKs handle their respective quirks.
+Using the provider-native SDKs matters. OpenAI reasoning models, Anthropic models, and Google models all have provider-specific request shapes. The OpenAI-compatible adapter is useful where the endpoint really does speak that shape, but it is not a universal compatibility layer.
 
-**Model name format:** OpenCode sends the **key** (not the `name` field) to the upstream API. Per-provider endpoints accept bare model names (`gpt-5`, `claude-sonnet-4-5`). The compat endpoint requires provider-prefixed names (`openai/gpt-5`, `anthropic/claude-sonnet-4-5`). Our config uses per-provider endpoints with bare keys throughout.
+OpenCode sends the model **key** to the upstream API. Per-provider endpoints accept bare model names such as `gpt-5` and `claude-sonnet-4-5`. The Workers AI endpoint uses Workers AI model IDs such as `@cf/zai-org/glm-4.7-flash`.
 
 ## Authentication
 
-All gateway-routed traffic uses the same pattern:
+All gateway-routed traffic uses:
 
-```
+```text
 Authorization: Bearer ${CF_AIG_TOKEN}
 ```
 
-The gateway recognizes this as its own auth, strips it before forwarding upstream, and substitutes the stored provider API key (BYOK). No provider keys live client-side.
+The gateway recognizes that as gateway auth, strips it before forwarding upstream, and substitutes the provider key stored in BYOK. No OpenAI, Anthropic, or Google API keys need to live in the local OpenCode config.
 
-Importantly, do **not** send a `cf-aig-authorization` header in addition to `Authorization` — the gateway forwards the unknown one to the upstream as a provider auth header, which Anthropic and OpenAI then reject. Just send one Authorization header with the gateway token.
+Do **not** also send `cf-aig-authorization`. The gateway can forward unknown auth-looking headers upstream, and providers may reject them.
 
-## Per-user / per-project attribution
+## Attribution
 
 The example config attaches a `cf-aig-metadata` header to every gateway-routed request:
 
 ```json
-"options": {
-  "headers": {
-    "cf-aig-metadata": "{\"app\":\"{env:OPENCODE_APP_TAG}\",\"user\":\"{env:OPENCODE_USER_TAG}\"}"
-  }
+"headers": {
+  "cf-aig-metadata": "{\"app\":\"{env:OPENCODE_APP_TAG}\",\"user\":\"{env:OPENCODE_USER_TAG}\"}"
 }
 ```
 
-Two env vars drive it:
+Two environment variables drive that metadata:
 
-- **`OPENCODE_USER_TAG`** — set once in your user environment (e.g. to your OS username, your initials, your email handle). Persistent.
-- **`OPENCODE_APP_TAG`** — auto-updated by a native shell directory-change hook that **walks up to the nearest `.git`** and uses that directory's basename. So `~/code/auth-api/src/components` still tags as `auth-api`, not `components`. No wrapper around the `opencode` command, no prompt redefinition. PowerShell uses `LocationChangedAction`; bash uses `PROMPT_COMMAND`; zsh uses `chpwd`. Once opencode launches, the value is captured into its process env and stays fixed for the session.
+- `OPENCODE_USER_TAG`: set once, usually to your OS username or short handle.
+- `OPENCODE_APP_TAG`: set by the shell hook from [SETUP.md](SETUP.md#6-recommended-automatic-per-user-and-per-project-attribution).
 
-In the CF AI Gateway dashboard, this surfaces as filterable metadata: pick a user to see their burn rate, pick an app to see how much was spent on each project, or filter on both at once.
+The app tag walks up to the nearest `.git` directory and uses that directory name. So `~/code/auth-api/src/components` still reports as `auth-api`. Once OpenCode starts, the value is captured for that session.
 
-See [SETUP.md](SETUP.md#7-optional-but-recommended-automatic-per-user-and-per-project-attribution) for the one-line directory-change hook that makes the app tag automatic.
+This is intentionally simple. If org-scale attribution ever matters, a hook or plugin could record a git remote slug such as `myorg/auth-api` instead.
 
-### Why git-root basename and not full git remote slug
+## Tooling Layers
 
-We walk up to `.git` and use that directory's name. Pure filesystem checks, no `git` subprocess on every `cd`. Works for normal repos, submodules, and worktrees.
+The model routing is only one part of the setup. The surrounding tools are what keep the cheaper paths honest:
 
-Limitations:
-- Two unrelated directories both named `auth-api` would share a tag — fine for solo dev, fuzzy for org-scale analytics
-- Directories without a `.git` ancestor fall back to current basename — noisy for `~`/`/tmp` work but not catastrophic
+| Layer | What it adds |
+|---|---|
+| MCP servers | Current docs, security scanning, and browser verification. See [MCP-INTEGRATION.md](MCP-INTEGRATION.md). |
+| LSP | Symbol lookup and diagnostics without dumping whole files into context. See [LSP-INTEGRATION.md](LSP-INTEGRATION.md). |
+| Superpowers | Process skills such as TDD, brainstorming, debugging, and verification. Already wired through the OpenCode plugin entry. |
+| Benchmark harness | Evidence that routing happened and output still passed deterministic checks. See [benchmarks/README.md](../benchmarks/README.md). |
 
-If org-scale attribution ever matters, the next step would be a hook or plugin that records a git remote slug such as `myorg/auth-api` instead of just the local directory name.
+Superpowers belongs on the orchestrator, not the cheap workers. The plugin loads the skills, and the `build` prompt tells the orchestrator to use them when they apply while keeping delegated subagent tasks concrete and bounded.
 
-## OpenCode extension points
+## Worker Boundaries
 
-Beyond the tier+gateway core, OpenCode supports four distinct extension mechanisms. Each solves a different problem; knowing which to reach for matters more than knowing every available plugin.
+The worker split is deliberately conservative:
 
-| Mechanism | What it adds | Covered in this repo |
-|---|---|---|
-| **MCP servers** | External tools (docs lookup, security scans, browser automation, etc.) | [MCP-INTEGRATION.md](MCP-INTEGRATION.md) |
-| **Plugins / skills** | Process discipline + custom skill packs, loaded via `opencode plugin <module>` or `"plugin"` field in `opencode.json` | Superpowers is wired in the example config |
-| **LSPs** | Structured code Q&A — definition / references / hover / diagnostics | [LSP-INTEGRATION.md](LSP-INTEGRATION.md) |
-| **Hooks** | `pre-tool-use`, `post-tool-use`, `session-start`, etc. fired by OpenCode at well-defined moments. Useful for cost tracking, audit logging, security gates, blocking edits to specific paths. | Mentioned here as an extension point; not part of the shipped setup |
+- `searcher` finds files, symbols, and local references.
+- `reader` extracts facts from files.
+- `planner` drafts compact plans or risk lists from bounded context.
+- `coder` makes scoped edits and runs specified checks.
+- `build` owns final judgment.
 
-Two specific additions worth knowing beyond the integrations we ship by default:
+Subagents do not coordinate with each other, decide whether the overall task is done, or broaden scope. The orchestrator gives them the objective, context, scope, expected output, and success criteria, then verifies the result before treating it as true.
 
-- **[Cloudflare Skills](https://github.com/cloudflare/skills)** — `npx -y skills add cloudflare/skills --skill '*' --yes --global`. Official skill pack from Cloudflare for working on Workers / Pages / AI / D1 / R2. Since this repo already routes through CF AI Gateway, anyone building on the platform beyond just routing tokens through it gets the same structured-doctrine benefit superpowers provides, scoped to CF.
-- **Hooks as a power user tool.** OpenCode's hooks are underused but powerful — they fire deterministically at lifecycle points and can modify or block agent behavior in code, not natural language. Worth knowing exists even if you don't use them right away.
+The retry rule is intentionally simple: retry a worker once only when the failure looks like missing context. Otherwise, escalate to the primary agent or a stronger path instead of looping.
 
-The plugin ecosystem is still young. Most extension value today flows through MCPs and skills; the rest is per-team customization via hooks. As the ecosystem matures we may promote this section to a dedicated doc.
+## Local Models
 
-## Shipped orchestrator
+Local models are optional. I did get local tool-calling working, but only with the right runtime, model, context size, and tool-call format. The working path was LM Studio + Qwen3 Coder + a larger context window. On my hardware, local subagent calls were still too slow to be the daily driver.
 
-The shipped setup is a centralized, hierarchical orchestration pattern. The `build` primary agent is the orchestrator: it owns decomposition, task assignment, dependency sequencing, final verification, fallback decisions, and the user-facing answer. The project-local subagents are specialized workers with narrow scopes; they do not decide whether the overall user request is complete.
-
-The shipped example config now uses the primary `build` agent as a frontier-tier orchestrator. It can dispatch concrete subtasks through OpenCode's native Task tool to project-local subagents under `.opencode/agents/`:
-
-- `searcher` subagent — cheap hosted search/LSP/grep worker
-- `reader` subagent — cheap hosted file-reading and extraction worker
-- `coder` subagent — cheap hosted implementation worker (`gpt-5-mini`)
-- `planner` subagent — cheap hosted decomposition and planning worker
-- `build` primary agent — frontier reasoning, dispatch, synthesis, and final review
-
-Every subagent handoff should include the objective, relevant file paths and constraints, scope boundaries, expected output format, and success criteria. This keeps context transfer explicit and prevents vague worker results from becoming hidden assumptions.
-
-The fault-tolerance rule is deliberately simple: retry a worker once only when the failure is likely missing context, then escalate to the primary agent or a more capable path. The benchmark harness records when routing does not happen or when a worker model is absent, so cost-saving claims have to be backed by actual model evidence.
-
-This stays an OpenCode-native config change — no external service. The practical adjustment from the original design is reliability-first routing: the shipped subagents use cheap hosted models rather than the optional local tier, and the implementation worker is stronger than the read/search workers. The manual `local` primary agent still exists for read-only local work when your hardware makes that practical.
-
-Superpowers skills are available in the current setup. They add process discipline — TDD, brainstorming, code review, plan-then-execute workflows — while the orchestrator still decides what concrete work to dispatch to cheaper subagents.
-
-LSP integration is native in OpenCode — see [LSP-INTEGRATION.md](LSP-INTEGRATION.md) for the how-to. Enabled via `"lsp": {}` in `opencode.json`; the example config does this by default.
+That is why local is a manual override, not part of the required setup. If your hardware is better, the architecture can use it. If not, the cost-saving thesis still works through hosted cheap workers behind the gateway.
