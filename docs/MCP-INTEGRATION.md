@@ -111,39 +111,7 @@ npx -y @playwright/mcp@latest --help    # triggers the install and prints help
 
 The `verification-before-completion` skill in superpowers pairs naturally with this -- when both are present, the agent has a clear path: build, run unit tests, then open the deliverable in a real browser and exercise it before declaring done.
 
-## Recommended optional MCPs
-
-Not shipped enabled, but document-worthy because they're transformative for specific workflows. Add to your `opencode.json` as needed.
-
-### Microsoft Learn — Microsoft / Azure / .NET docs
-
-- **URL**: depends on your setup; check Microsoft's MCP docs
-- **Why**: If your stack is .NET, Azure, or anything Microsoft-platform, this gives the agent the same docs lookup advantage `context7` gives JS/Python ecosystems.
-
-### Atlassian (Jira / Confluence)
-
-- **Auth**: OAuth via Atlassian
-- **Why**: Agent can read tickets, search Confluence, link work to issues. High value if your team lives there.
-
-### Database MCPs — Postgres, MySQL
-
-- **Why**: Agent can introspect schemas, run sample queries, sanity-check generated SQL against the actual database. Avoid wiring against production; use a dev DB.
-
-### Brave Search / Exa
-
-- **Why**: Web search if OpenCode's native search isn't enough for your workflow.
-
-## What we intentionally **don't** ship
-
-### GitHub MCP
-
-OpenCode has native `opencode github` and `opencode pr` subcommands. Adding a third-party GitHub MCP on top is duplication, and it'd be GitHub-specific anyway — same platform-lock as the native commands.
-
-For Bitbucket / GitLab users, neither the native commands nor the GitHub MCP help. The right answer there is a Bitbucket or GitLab MCP, which you'd add yourself when relevant. Documented here for awareness; not in the default config.
-
-### Provider-specific MCPs already wrapped by our gateway
-
-We route Anthropic, OpenAI, Google, and Workers AI traffic through Cloudflare AI Gateway. Their individual MCP servers (if they exist) would bypass the gateway and break the unified-analytics story. Always go through the gateway.
+You may have other MCPs that make sense for your stack: Microsoft Learn for .NET/Azure, Atlassian for Jira/Confluence, database MCPs for schema work, or something else entirely. Add those when they solve a real workflow; they are not part of this repo's default setup.
 
 ## Interaction with the tiered-agent architecture
 
@@ -169,31 +137,6 @@ MCP tools have two cost components:
 2. **Dynamic**: tool *results* land in the conversation context. A context7 doc fetch might be 2–5k tokens. A Playwright screenshot or DOM dump can be 10–50k. Adds up if the agent is making heavy use.
 
 **If you see cost climbing**: filter MCPs per-agent (table above), or disable the heavy ones (Playwright) when not in active use. CF AI Gateway analytics with the `app` metadata tag makes this measurable per project.
-
-## Setup commands
-
-```powershell
-# Windows
-# 1. Install Snyk CLI (one-time)
-npm install -g snyk
-snyk auth                         # opens browser for SSO / free-tier signup
-snyk config set org=<your-slug>   # find at https://app.snyk.io URL
-
-# 2. Pre-pull Playwright browsers (one-time, ~500 MB).
-#    The MCP entry auto-installs on first use, but pre-pulling avoids
-#    a multi-minute pause the first time the agent invokes a browser tool.
-npx -y @playwright/mcp@latest --help
-```
-
-```bash
-# macOS / Linux
-npm install -g snyk
-snyk auth
-snyk config set org=<your-slug>
-npx -y @playwright/mcp@latest --help
-```
-
-After that, the MCPs in the example `opencode.json` work on next opencode launch.
 
 ## See also
 
