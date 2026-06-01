@@ -537,6 +537,7 @@ foreach ($tool in $toolNames) {
     Write-Host "Running $tool..." -ForegroundColor Cyan
     Invoke-CcusageSnapshot -Tool $tool -JsonPath $beforeJsonPath -TextPath $beforeTxtPath
 
+    $toolStartUtc = (Get-Date).ToUniversalTime()
     if ($DryRun) {
         Write-Host "  [dry-run] skipping CLI execution" -ForegroundColor Yellow
         $process = @{ exitCode = 0; timedOut = $false }
@@ -549,7 +550,6 @@ foreach ($tool in $toolNames) {
             -WorkspaceDir $workspaceDir `
             -ScriptPath $invokeScriptPath `
             -AppTag "bench:${Benchmark}:${RunId}"
-        $toolStartUtc = (Get-Date).ToUniversalTime()
         $process = Invoke-LoggedProcess `
             -FilePath "pwsh" `
             -Arguments @("-File", $invokeScriptPath) `

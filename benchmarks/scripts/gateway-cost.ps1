@@ -69,7 +69,9 @@ function Invoke-GatewayGraphQL {
     $resp = Invoke-RestMethod -Method Post -Uri "https://api.cloudflare.com/client/v4/graphql" `
         -Headers $headers -ContentType "application/json" -Body $body
     if ($resp.errors) { throw "GraphQL errors: $($resp.errors | ConvertTo-Json -Depth 6 -Compress)" }
-    return @($resp.data.viewer.accounts[0].aiGatewayRequestsAdaptiveGroups)
+    $accounts = @($resp.data.viewer.accounts)
+    if ($accounts.Count -eq 0) { throw "No account returned for the given accountTag (check CLOUDFLARE_ACCOUNT_ID and token scopes: Account Analytics: Read)" }
+    return @($accounts[0].aiGatewayRequestsAdaptiveGroups)
 }
 
 function Get-OpenCodeGatewayCost {
