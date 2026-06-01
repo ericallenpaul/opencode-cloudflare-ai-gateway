@@ -352,22 +352,20 @@ function Get-BenchmarkPrompt {
     )
 
     $mode = [string](Get-Field $Policy @("mode") "")
-    if ($Tool -ne "opencode") {
+    if ($Tool -ne "opencode" -or $mode -ne "architecture") {
         return $PromptText
     }
 
     $workspaceInstruction = ""
     if (-not [string]::IsNullOrWhiteSpace($WorkspaceDir)) {
         $workspaceInstruction = @"
-AUTOMATED BENCHMARK — WORKSPACE
 - Benchmark workspace: $WorkspaceDir. Before writing files or running tests, verify the current directory is exactly this workspace. If it is not, change to this workspace first.
 - After changing to the benchmark workspace, create deliverables with bare filenames only, such as markdown.html, markdown.test.js, and README.md. Do not recreate the workspace path as nested directories.
 - When delegating via the Task tool, explicitly tell the subagent to work only in the benchmark workspace above, verify its current directory before writing files, and use bare filenames only after changing directory.
 "@
     }
 
-    if ($mode -eq "architecture") {
-        return @"
+    return @"
 AUTOMATED BENCHMARK CONTRACT
 
 This target policy mode is architecture. A valid OpenCode run must demonstrate the configured tiered architecture, not just solve the app in the primary GPT-5 session.
@@ -385,18 +383,6 @@ Canonical benchmark prompt follows.
 
 $PromptText
 "@
-    }
-
-    # opencode, non-architecture mode: inject workspace instruction only
-    if (-not [string]::IsNullOrWhiteSpace($workspaceInstruction)) {
-        return @"
-$workspaceInstruction
-
-$PromptText
-"@
-    }
-
-    return $PromptText
 }
 
 function Test-PolicyCompliance {

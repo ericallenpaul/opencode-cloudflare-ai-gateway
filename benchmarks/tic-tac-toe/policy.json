@@ -1,7 +1,7 @@
 {
   "name": "tic-tac-toe",
-  "mode": "tool",
-  "timeoutSeconds": 900,
+  "mode": "architecture",
+  "timeoutSeconds": 1200,
   "runJudge": true,
   "runQualitativeJudge": false,
   "expectedOutputs": {
@@ -43,13 +43,15 @@
       "enabled": true,
       "requestedModel": "openai-via-gateway/gpt-5",
       "expectedModels": [
-        "gpt-5"
+        "gpt-5",
+        "gpt-5-mini"
       ],
       "requiredModels": [
-        "gpt-5"
+        "gpt-5",
+        "gpt-5-mini"
       ],
       "allowAdditionalModels": true,
-      "requireRouting": false
+      "requireRouting": true
     }
   }
 }
