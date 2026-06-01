@@ -359,6 +359,7 @@ function Get-BenchmarkPrompt {
     $workspaceInstruction = ""
     if (-not [string]::IsNullOrWhiteSpace($WorkspaceDir)) {
         $workspaceInstruction = @"
+AUTOMATED BENCHMARK — WORKSPACE
 - Benchmark workspace: $WorkspaceDir. Before writing files or running tests, verify the current directory is exactly this workspace. If it is not, change to this workspace first.
 - After changing to the benchmark workspace, create deliverables with bare filenames only, such as markdown.html, markdown.test.js, and README.md. Do not recreate the workspace path as nested directories.
 - When delegating via the Task tool, explicitly tell the subagent to work only in the benchmark workspace above, verify its current directory before writing files, and use bare filenames only after changing directory.

@@ -84,6 +84,7 @@ try {
 
     $tttPrompt = Get-Content $tttPromptPath -Raw -Encoding utf8
 
+    Assert-Contains -Text $tttPrompt -Expected "AUTOMATED BENCHMARK — WORKSPACE"
     Assert-Contains -Text $tttPrompt -Expected "Benchmark workspace: $tttWorkspaceDir."
     Assert-Contains -Text $tttPrompt -Expected "Before writing files or running tests, verify the current directory is exactly this workspace."
     Assert-Contains -Text $tttPrompt -Expected "create deliverables with bare filenames only"

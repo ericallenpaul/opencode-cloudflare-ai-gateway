@@ -95,6 +95,7 @@ function Get-OpenCodeGatewayCost {
             $endIso = (Get-Date).ToUniversalTime().AddHours(1).ToString("yyyy-MM-ddTHH:00:00Z")
             $query  = Get-GatewayCostQuery -AccountTag $accountTag -Gateway $gateway -StartIso $startIso -EndIso $endIso -MetadataLike $RunTag
             $groups = Invoke-GatewayGraphQL -Query $query -ApiKey $apiKey
+            if ($null -eq $groups) { $groups = @() }
             $result = Convert-GatewayCostResult -Groups $groups
             $req    = [double]$result.total.requests
             Write-Host "  gateway cost poll $i/${MaxAttempts}: $req requests, cost=$($result.total.cost)" -ForegroundColor DarkGray
