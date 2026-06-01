@@ -546,6 +546,7 @@ foreach ($tool in $toolNames) {
             -WorkspaceDir $workspaceDir `
             -ScriptPath $invokeScriptPath `
             -AppTag "bench:${Benchmark}:${RunId}"
+        $toolStartUtc = (Get-Date).ToUniversalTime()
         $process = Invoke-LoggedProcess `
             -FilePath "pwsh" `
             -Arguments @("-File", $invokeScriptPath) `
@@ -614,6 +615,22 @@ foreach ($tool in $toolNames) {
         resultDir = $resultToolDir
         stdoutPath = $stdoutPath
         stderrPath = $stderrPath
+    }
+
+    if ($tool -eq "opencode" -and -not $DryRun) {
+        . (Join-Path $PSScriptRoot "gateway-cost.ps1")
+        $runTag = "bench:${Benchmark}:${RunId}"
+        Write-Host "  querying gateway analytics for $runTag ..." -ForegroundColor Cyan
+        $gwCost = Get-OpenCodeGatewayCost -RunTag $runTag -StartUtc $toolStartUtc
+        $gwCost | ConvertTo-Json -Depth 12 | Set-Content -Path (Join-Path $resultToolDir "_gateway-cost.json") -Encoding utf8
+        if ($gwCost.source -eq "gateway") {
+            $record.metrics.totalCost = [double]$gwCost.total.cost
+            $record.costSource = "gateway"
+            Write-Host "  opencode cost (gateway): $($gwCost.total.cost)" -ForegroundColor Green
+        } else {
+            $record.costSource = "ccusage (gateway-unavailable: $($gwCost.error))"
+            Write-Host "  gateway unavailable, keeping ccusage cost: $($gwCost.error)" -ForegroundColor Yellow
+        }
     }
 
     $recordPath = Join-Path $resultToolDir "_run-result.json"
