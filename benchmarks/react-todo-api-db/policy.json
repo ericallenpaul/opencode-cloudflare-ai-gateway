@@ -1,0 +1,73 @@
+{
+  "name": "react-todo-api-db",
+  "mode": "architecture",
+  "timeoutSeconds": 1800,
+  "runJudge": true,
+  "runQualitativeJudge": false,
+  "expectedOutputs": {
+    "package": [
+      "package.json"
+    ],
+    "html": [
+      "index.html"
+    ],
+    "source": [
+      "*.js",
+      "*.jsx",
+      "*.mjs",
+      "*.ts",
+      "*.tsx",
+      "server.js",
+      "server.mjs",
+      "api.js",
+      "api.mjs"
+    ],
+    "tests": [
+      "*.test.js",
+      "*.test.mjs",
+      "*.spec.js",
+      "*.spec.mjs"
+    ],
+    "docs": [
+      "README.md"
+    ]
+  },
+  "tools": {
+    "claude": {
+      "enabled": true,
+      "requestedModel": "opus",
+      "expectedModels": [
+        "opus"
+      ],
+      "requiredModels": [
+        "opus"
+      ],
+      "allowAdditionalModels": true
+    },
+    "codex": {
+      "enabled": true,
+      "requestedModel": "gpt-5.5",
+      "expectedModels": [
+        "gpt-5.5"
+      ],
+      "requiredModels": [
+        "gpt-5.5"
+      ],
+      "allowAdditionalModels": true
+    },
+    "opencode": {
+      "enabled": true,
+      "requestedModel": "openai-via-gateway/gpt-5",
+      "expectedModels": [
+        "gpt-5",
+        "gpt-5-mini"
+      ],
+      "requiredModels": [
+        "gpt-5",
+        "gpt-5-mini"
+      ],
+      "allowAdditionalModels": true,
+      "requireRouting": true
+    }
+  }
+}

@@ -1,0 +1,19 @@
+﻿
+> react-todo-api-db@1.0.0 test
+> node --test
+
+(node:25568) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Γ£ö GET /api/todos returns an empty list for a new database (23.4948ms)
+Γ£ö POST /api/todos creates a todo and rejects blank titles (24.5974ms)
+Γ£ö PUT /api/todos/:id updates title and completion and DELETE removes a todo (20.8484ms)
+Γ£ö todos persist in a real on-disk sqlite file across store restarts (6.7825ms)
+Γä╣ tests 4
+Γä╣ suites 0
+Γä╣ pass 4
+Γä╣ fail 0
+Γä╣ cancelled 0
+Γä╣ skipped 0
+Γä╣ todo 0
+Γä╣ duration_ms 261.9472
+

@@ -1,0 +1,64 @@
+﻿{
+    "tool":  "codex",
+    "benchmark":  "react-todo-api-db",
+    "runId":  "2026-05-31-164112",
+    "requestedModel":  "gpt-5.5",
+    "actualModels":  [
+                         "gpt-5.4",
+                         "gpt-5.5"
+                     ],
+    "exitCode":  0,
+    "timedOut":  false,
+    "valid":  true,
+    "invalidationReasons":  [
+
+                            ],
+    "outputs":  {
+                    "package":  [
+                                    "C:\\Users\\eric.paul\\source\\repos\\opencode-cloudflare-ai-gateway\\benchmarks\\runs\\2026-05-31-164112\\react-todo-api-db\\codex\\workspace\\package.json"
+                                ],
+                    "html":  [
+                                 "C:\\Users\\eric.paul\\source\\repos\\opencode-cloudflare-ai-gateway\\benchmarks\\runs\\2026-05-31-164112\\react-todo-api-db\\codex\\workspace\\index.html"
+                             ],
+                    "source":  [
+                                   "C:\\Users\\eric.paul\\source\\repos\\opencode-cloudflare-ai-gateway\\benchmarks\\runs\\2026-05-31-164112\\react-todo-api-db\\codex\\workspace\\public\\assets\\app.js",
+                                   "C:\\Users\\eric.paul\\source\\repos\\opencode-cloudflare-ai-gateway\\benchmarks\\runs\\2026-05-31-164112\\react-todo-api-db\\codex\\workspace\\scripts\\build.mjs",
+                                   "C:\\Users\\eric.paul\\source\\repos\\opencode-cloudflare-ai-gateway\\benchmarks\\runs\\2026-05-31-164112\\react-todo-api-db\\codex\\workspace\\server\\app.js",
+                                   "C:\\Users\\eric.paul\\source\\repos\\opencode-cloudflare-ai-gateway\\benchmarks\\runs\\2026-05-31-164112\\react-todo-api-db\\codex\\workspace\\server\\db.js",
+                                   "C:\\Users\\eric.paul\\source\\repos\\opencode-cloudflare-ai-gateway\\benchmarks\\runs\\2026-05-31-164112\\react-todo-api-db\\codex\\workspace\\server\\index.js",
+                                   "C:\\Users\\eric.paul\\source\\repos\\opencode-cloudflare-ai-gateway\\benchmarks\\runs\\2026-05-31-164112\\react-todo-api-db\\codex\\workspace\\src\\api.js",
+                                   "C:\\Users\\eric.paul\\source\\repos\\opencode-cloudflare-ai-gateway\\benchmarks\\runs\\2026-05-31-164112\\react-todo-api-db\\codex\\workspace\\src\\App.jsx",
+                                   "C:\\Users\\eric.paul\\source\\repos\\opencode-cloudflare-ai-gateway\\benchmarks\\runs\\2026-05-31-164112\\react-todo-api-db\\codex\\workspace\\src\\main.jsx",
+                                   "C:\\Users\\eric.paul\\source\\repos\\opencode-cloudflare-ai-gateway\\benchmarks\\runs\\2026-05-31-164112\\react-todo-api-db\\codex\\workspace\\test\\api.test.js"
+                               ],
+                    "tests":  [
+                                  "C:\\Users\\eric.paul\\source\\repos\\opencode-cloudflare-ai-gateway\\benchmarks\\runs\\2026-05-31-164112\\react-todo-api-db\\codex\\workspace\\test\\api.test.js"
+                              ],
+                    "docs":  [
+                                 "C:\\Users\\eric.paul\\source\\repos\\opencode-cloudflare-ai-gateway\\benchmarks\\runs\\2026-05-31-164112\\react-todo-api-db\\codex\\workspace\\README.md"
+                             ]
+                },
+    "missingOutputs":  [
+
+                       ],
+    "metrics":  {
+                    "inputTokens":  201449,
+                    "outputTokens":  27329,
+                    "cacheReadTokens":  0,
+                    "cacheCreationTokens":  0,
+                    "cachedInputTokens":  1781376,
+                    "reasoningOutputTokens":  8742,
+                    "totalTokens":  2010154,
+                    "totalCost":  2.032277
+                },
+    "sessionCount":  3,
+    "sessionIds":  [
+                       "2026/05/31/rollout-2026-05-31T17-43-51-019e7ffe-472e-7843-96a8-7783062441a7",
+                       "2026/05/31/rollout-2026-05-31T17-45-12-019e7fff-8508-7dd1-b248-0967ff8ad158",
+                       "2026/05/31/rollout-2026-05-31T17-50-34-019e8004-6e7e-7be3-9881-8d233ffdf766"
+                   ],
+    "scratchDir":  "C:\\Users\\eric.paul\\source\\repos\\opencode-cloudflare-ai-gateway\\benchmarks\\runs\\2026-05-31-164112\\react-todo-api-db\\codex",
+    "resultDir":  "C:\\Users\\eric.paul\\source\\repos\\opencode-cloudflare-ai-gateway\\benchmarks\\react-todo-api-db\\results\\runs\\2026-05-31-164112\\codex",
+    "stdoutPath":  "C:\\Users\\eric.paul\\source\\repos\\opencode-cloudflare-ai-gateway\\benchmarks\\runs\\2026-05-31-164112\\react-todo-api-db\\codex\\stdout.log",
+    "stderrPath":  "C:\\Users\\eric.paul\\source\\repos\\opencode-cloudflare-ai-gateway\\benchmarks\\runs\\2026-05-31-164112\\react-todo-api-db\\codex\\stderr.log"
+}

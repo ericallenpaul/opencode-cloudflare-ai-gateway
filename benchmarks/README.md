@@ -195,6 +195,17 @@ A reader who's skeptical that we're tuning to make opencode look better can veri
 
 - [tic-tac-toe](tic-tac-toe/) -- standalone HTML tic-tac-toe, ~200-400 lines, exercises plan/execute/verify with bounded scope. **Status: automated smoke path is working. Policy mode is `tool`, so OpenCode does not need to route to a worker model for this tiny target.**
 - [markdown-editor](markdown-editor/) -- standalone HTML markdown editor with live preview, ~300-500 lines, exercises parser design and XSS defensiveness. **Status: 6 runs complete. Runs 1-4 marked `[CONFIG MISMATCH]`. Policy mode is `architecture`, so OpenCode must show both frontier and cheaper worker models for a valid tier-routing result.**
+- [react-todo-api-db](react-todo-api-db/) -- small full-stack React + API + SQLite app, dependency installs allowed, exercises project setup, persistence, validation, and frontend/API/database wiring. **Status: 1 valid run complete; all three tools pass with a real on-disk SQLite database. Policy mode is `architecture`, so OpenCode must show both frontier and cheaper worker models for a valid tier-routing result.**
+
+  Latest run `2026-05-31-164112`:
+
+  | Tool | Models observed | Cost | Functional result |
+  |---|---|---:|---|
+  | **OpenCode** | `gpt-5`, `gpt-5-mini` | **$0.193** | R1-R10 10/10 pass; SQLite file `data/todos.sqlite3` |
+  | Codex | `gpt-5.4`, `gpt-5.5` | $2.032 | R1-R10 10/10 pass; SQLite file `data/todos.sqlite` |
+  | Claude Code | `claude-opus-4-8`, `claude-sonnet-4-6`, `claude-haiku-4-5` | $1.580 | R1-R10 9/10 (R9 partial); SQLite file `data/todos.db` |
+
+  Cross-run ranking log: [`react-todo-api-db/results/comparisons.md`](react-todo-api-db/results/comparisons.md).
 - Current OpenCode architecture baseline: `gpt-5` orchestrator + `gpt-5-mini` coder. GLM remains assigned to cheaper search/read/planning workers, not implementation.
 
 ## Adding a new benchmark target

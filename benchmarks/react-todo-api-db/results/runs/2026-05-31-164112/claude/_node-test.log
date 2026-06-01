@@ -1,0 +1,43 @@
+﻿
+> react-todo-api-db@1.0.0 test
+> node --experimental-sqlite --test test/*.test.js
+
+(node:15536) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Γû╢ GET /api/todos
+  Γ£ö returns empty array when no todos (22.4583ms)
+  Γ£ö returns all todos (24.1699ms)
+Γ£ö GET /api/todos (47.0252ms)
+Γû╢ POST /api/todos
+  Γ£ö creates a todo (13.0063ms)
+  Γ£ö rejects empty title with 400 (8.0603ms)
+  Γ£ö rejects whitespace-only title with 400 (5.4012ms)
+  Γ£ö rejects missing title with 400 (5.4281ms)
+Γ£ö POST /api/todos (32.1618ms)
+Γû╢ PUT /api/todos/:id
+  Γ£ö updates todo title (14.6123ms)
+  Γ£ö toggles completed (16.6029ms)
+  Γ£ö rejects empty title with 400 (13.1889ms)
+  Γ£ö returns 404 for nonexistent id (9.1984ms)
+  Γ£ö bumps updatedAt on update (32.3816ms)
+Γ£ö PUT /api/todos/:id (86.2838ms)
+Γû╢ DELETE /api/todos/:id
+  Γ£ö deletes a todo (17.9111ms)
+  Γ£ö returns 404 for nonexistent id (7.7658ms)
+Γ£ö DELETE /api/todos/:id (25.8081ms)
+(node:2388) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Γû╢ Persistence
+  Γ£ö data survives close and reopen of the DB file (10.8069ms)
+  Γ£ö updates and deletes persist across DB reopens (16.7751ms)
+  Γ£ö createdAt and updatedAt are ISO strings (7.5309ms)
+Γ£ö Persistence (35.7022ms)
+Γä╣ tests 16
+Γä╣ suites 5
+Γä╣ pass 16
+Γä╣ fail 0
+Γä╣ cancelled 0
+Γä╣ skipped 0
+Γä╣ todo 0
+Γä╣ duration_ms 401.9815
+

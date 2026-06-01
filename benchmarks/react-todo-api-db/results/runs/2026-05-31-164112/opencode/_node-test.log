@@ -1,0 +1,13 @@
+﻿
+> react-todo-api-db@1.0.0 test
+> mocha --exit
+
+
+
+  API tests
+    Γ£ö creates, reads, updates, toggles, deletes, and persists todos (57ms)
+
+
+  1 passing (72ms)
+
+

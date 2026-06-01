@@ -1,0 +1,1782 @@
+﻿{
+  "sessions": [
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 515328,
+      "inputTokens": 48785,
+      "modelsUsed": [
+        "gpt-5-mini"
+      ],
+      "outputTokens": 12643,
+      "sessionId": "ses_185a0ee45ffevNZxohKdpOlcHm",
+      "totalCost": 0.059453449999999984,
+      "totalTokens": 581300
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 986368,
+      "inputTokens": 44062,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 5243,
+      "sessionId": "ses_185a2760affel6Dzl91Y3ZDvzP",
+      "totalCost": 0.2813635,
+      "totalTokens": 1040729
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 126208,
+      "inputTokens": 5240,
+      "modelsUsed": [
+        "gpt-5-mini"
+      ],
+      "outputTokens": 1501,
+      "sessionId": "ses_18a01db9cffeErnzWkCHlF7Fn2",
+      "totalCost": 0.010411199999999999,
+      "totalTokens": 134421
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 790784,
+      "inputTokens": 41321,
+      "modelsUsed": [
+        "gpt-5-mini"
+      ],
+      "outputTokens": 10281,
+      "sessionId": "ses_18a06eaadffe0EksjMpZEKqJEx",
+      "totalCost": 0.062437849999999996,
+      "totalTokens": 848274
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 360832,
+      "inputTokens": 42378,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 3508,
+      "sessionId": "ses_18a08f39fffeo2xdNr3ns3hoL5",
+      "totalCost": 0.17795650000000005,
+      "totalTokens": 411198
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 777856,
+      "inputTokens": 63328,
+      "modelsUsed": [
+        "gpt-5-mini"
+      ],
+      "outputTokens": 11525,
+      "sessionId": "ses_18a4f7911ffeqxUVGHirhACDpB",
+      "totalCost": 0.06716040000000001,
+      "totalTokens": 857125
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 664960,
+      "inputTokens": 39073,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 4338,
+      "sessionId": "ses_18a522644ffeKmwMZHcsIrPPyU",
+      "totalCost": 0.22014125,
+      "totalTokens": 712851
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 229376,
+      "inputTokens": 39475,
+      "modelsUsed": [
+        "gpt-5-mini"
+      ],
+      "outputTokens": 12215,
+      "sessionId": "ses_18ac6ff29ffeJ2A2NNL48e1PAw",
+      "totalCost": 0.04745715,
+      "totalTokens": 284778
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 732800,
+      "inputTokens": 122549,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 5387,
+      "sessionId": "ses_18ac94a26ffe97XGgLqOzm5SGd",
+      "totalCost": 0.3402562500000001,
+      "totalTokens": 864896
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 804736,
+      "inputTokens": 149700,
+      "modelsUsed": [
+        "gpt-5-mini"
+      ],
+      "outputTokens": 14527,
+      "sessionId": "ses_18affcc9fffeuG5sB3hDPgyNfJ",
+      "totalCost": 0.1040054,
+      "totalTokens": 977667
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 360320,
+      "inputTokens": 233572,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 4380,
+      "sessionId": "ses_18b012acbffeyJEQI6HIGY5CVe",
+      "totalCost": 0.43200500000000003,
+      "totalTokens": 603392
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "inputTokens": 59081,
+      "modelsUsed": [
+        "@cf/zai-org/glm-4.7-flash"
+      ],
+      "outputTokens": 2881,
+      "sessionId": "ses_18b2ec247ffel9z250ak47VrGp",
+      "totalCost": 0.0047268004999999995,
+      "totalTokens": 61962
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 488192,
+      "inputTokens": 42842,
+      "modelsUsed": [
+        "gpt-5-mini"
+      ],
+      "outputTokens": 11081,
+      "sessionId": "ses_18b33b288ffe1EFEQxVxw1w8A6",
+      "totalCost": 0.053141299999999995,
+      "totalTokens": 546147
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 83968,
+      "inputTokens": 59332,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 4083,
+      "sessionId": "ses_18b36662dffesQGaqwiuFihNZc",
+      "totalCost": 0.179251,
+      "totalTokens": 152759
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 309120,
+      "inputTokens": 15170,
+      "modelsUsed": [
+        "gpt-5-mini"
+      ],
+      "outputTokens": 5911,
+      "sessionId": "ses_18b6ca740ffeNxyn4QziToloW4",
+      "totalCost": 0.027694499999999997,
+      "totalTokens": 332377
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 238208,
+      "inputTokens": 23107,
+      "modelsUsed": [
+        "gpt-5-mini"
+      ],
+      "outputTokens": 7279,
+      "sessionId": "ses_18b724415ffe3f0JcsNYr7wSjg",
+      "totalCost": 0.03140995,
+      "totalTokens": 271154
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 900096,
+      "inputTokens": 132489,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 9410,
+      "sessionId": "ses_18b7502c1ffeybJzCYNh61MO6v",
+      "totalCost": 0.4496632499999999,
+      "totalTokens": 1049739
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 244096,
+      "inputTokens": 41470,
+      "modelsUsed": [
+        "gpt-5-mini"
+      ],
+      "outputTokens": 7577,
+      "sessionId": "ses_18b8e282dffebiDI0TgFwFuZmc",
+      "totalCost": 0.0352079,
+      "totalTokens": 294935
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 916224,
+      "inputTokens": 79000,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 6653,
+      "sessionId": "ses_18b8ff62effep5btZIqPXj5VPV",
+      "totalCost": 0.334848,
+      "totalTokens": 1007381
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 923648,
+      "inputTokens": 65555,
+      "modelsUsed": [
+        "gpt-5-mini"
+      ],
+      "outputTokens": 13937,
+      "sessionId": "ses_18bd98472ffeF4jPWneno07Agp",
+      "totalCost": 0.07708195,
+      "totalTokens": 1008004
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 486400,
+      "inputTokens": 73773,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 4228,
+      "sessionId": "ses_18bdb195affeiT9t6HAwYbo7TJ",
+      "totalCost": 0.24905625,
+      "totalTokens": 569777
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 1571200,
+      "inputTokens": 43564,
+      "modelsUsed": [
+        "gpt-5-mini"
+      ],
+      "outputTokens": 17101,
+      "sessionId": "ses_18f9c9cbcffe6M2lTaUAc2Dd03",
+      "totalCost": 0.099349,
+      "totalTokens": 1639353
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 134912,
+      "inputTokens": 14463,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 2479,
+      "sessionId": "ses_18f9daf53ffe38P2wAwRno7F2u",
+      "totalCost": 0.07957275,
+      "totalTokens": 153838
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 1453696,
+      "inputTokens": 55071,
+      "modelsUsed": [
+        "gpt-5-mini"
+      ],
+      "outputTokens": 17942,
+      "sessionId": "ses_18fb1fd82fferLYY1jQ8Y3sM2N",
+      "totalCost": 0.10314615000000002,
+      "totalTokens": 1535285
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 216960,
+      "inputTokens": 28860,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 2626,
+      "sessionId": "ses_18fb39538ffevQJXT7ohDo6zSj",
+      "totalCost": 0.120175,
+      "totalTokens": 251518
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 266752,
+      "inputTokens": 62332,
+      "modelsUsed": [
+        "gpt-5-mini"
+      ],
+      "outputTokens": 9092,
+      "sessionId": "ses_1900d8e21ffeiLOnr1txBYd63m",
+      "totalCost": 0.046323800000000005,
+      "totalTokens": 341120
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 275072,
+      "inputTokens": 33129,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 1890,
+      "sessionId": "ses_1900efd10ffeJaAVSDPput44DJ",
+      "totalCost": 0.13309525,
+      "totalTokens": 313931
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 363008,
+      "inputTokens": 39187,
+      "modelsUsed": [
+        "gpt-5-mini"
+      ],
+      "outputTokens": 10328,
+      "sessionId": "ses_1905189cdffeqed6s5UFtokoTd",
+      "totalCost": 0.04579994999999999,
+      "totalTokens": 415659
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 216576,
+      "inputTokens": 23075,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 2139,
+      "sessionId": "ses_19053265fffeq0VouCdSXxMWfX",
+      "totalCost": 0.11250575,
+      "totalTokens": 245310
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 321408,
+      "inputTokens": 33023,
+      "modelsUsed": [
+        "gpt-5-mini"
+      ],
+      "outputTokens": 8701,
+      "sessionId": "ses_1905babc6ffeDhdjIy3JiNcrMR",
+      "totalCost": 0.038940949999999995,
+      "totalTokens": 365756
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 265344,
+      "inputTokens": 12986,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 1487,
+      "sessionId": "ses_1905d294cffeHUxUstpuEzcFY7",
+      "totalCost": 0.11547049999999999,
+      "totalTokens": 284937
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 22144,
+      "inputTokens": 23073,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 64,
+      "sessionId": "ses_19067df3affexaDvqYJhndVW3y",
+      "totalCost": 0.052729250000000005,
+      "totalTokens": 47329
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 35968,
+      "inputTokens": 1095,
+      "modelsUsed": [
+        "gpt-5-mini"
+      ],
+      "outputTokens": 574,
+      "sessionId": "ses_195fc147fffe55O3wFfQSYtF2M",
+      "totalCost": 0.0057769499999999994,
+      "totalTokens": 39365
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 110976,
+      "inputTokens": 8282,
+      "modelsUsed": [
+        "gpt-5-mini"
+      ],
+      "outputTokens": 1232,
+      "sessionId": "ses_195fd75ecffel80GPHFK8SAVBq",
+      "totalCost": 0.0108929,
+      "totalTokens": 122282
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 99072,
+      "inputTokens": 21150,
+      "modelsUsed": [
+        "gpt-5-mini"
+      ],
+      "outputTokens": 4169,
+      "sessionId": "ses_195ff0e0affeDPYQpUtE6si16X",
+      "totalCost": 0.0193023,
+      "totalTokens": 125991
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 141696,
+      "inputTokens": 10327,
+      "modelsUsed": [
+        "gpt-5-mini"
+      ],
+      "outputTokens": 1311,
+      "sessionId": "ses_1960027f8ffeGw99m9yNns3HZp",
+      "totalCost": 0.011562149999999998,
+      "totalTokens": 154742
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 126464,
+      "inputTokens": 8698,
+      "modelsUsed": [
+        "gpt-5-mini"
+      ],
+      "outputTokens": 3154,
+      "sessionId": "ses_196016ba5ffe5OV1aMOJcX2H1C",
+      "totalCost": 0.0130521,
+      "totalTokens": 139020
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 57984,
+      "inputTokens": 5455,
+      "modelsUsed": [
+        "gpt-5-mini"
+      ],
+      "outputTokens": 3619,
+      "sessionId": "ses_196033e11fferA09NLlECwg46l",
+      "totalCost": 0.015555349999999997,
+      "totalTokens": 69810
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 27904,
+      "inputTokens": 12023,
+      "modelsUsed": [
+        "gpt-5-mini"
+      ],
+      "outputTokens": 3271,
+      "sessionId": "ses_19604de9dffeUUUX6iwClfbtK5",
+      "totalCost": 0.014597349999999999,
+      "totalTokens": 45374
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 760960,
+      "inputTokens": 86532,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 4294,
+      "sessionId": "ses_196070a80ffeMVAk1B22WkNWBZ",
+      "totalCost": 0.2980650000000001,
+      "totalTokens": 856970
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 180608,
+      "inputTokens": 30087,
+      "modelsUsed": [
+        "gpt-5-mini"
+      ],
+      "outputTokens": 6530,
+      "sessionId": "ses_19623b6cfffe5OG6G9yWsAgWHK",
+      "totalCost": 0.03072895,
+      "totalTokens": 220041
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 240384,
+      "inputTokens": 19882,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 1754,
+      "sessionId": "ses_196254f2dffewp2LH0ty5GuIUY",
+      "totalCost": 0.11084050000000001,
+      "totalTokens": 265860
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "inputTokens": 7140901,
+      "modelsUsed": [
+        "@cf/zai-org/glm-4.7-flash"
+      ],
+      "outputTokens": 45387,
+      "sessionId": "ses_1963b84d9ffe6V1yr05Aei7Ypu",
+      "totalCost": 0.4501793105,
+      "totalTokens": 7186288
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 1551616,
+      "inputTokens": 105286,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 21879,
+      "sessionId": "ses_1963d1fdaffe4U4pwTE8aRfCXA",
+      "totalCost": 0.6441895,
+      "totalTokens": 1688765
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "inputTokens": 2288321,
+      "modelsUsed": [
+        "@cf/zai-org/glm-4.7-flash"
+      ],
+      "outputTokens": 24019,
+      "sessionId": "ses_1965acac6ffeG8L8VkCgG0g7p4",
+      "totalCost": 0.1480510205,
+      "totalTokens": 2312340
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 1065728,
+      "inputTokens": 43712,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 18913,
+      "sessionId": "ses_1965ea3edffepOx1BKtm6dLzRx",
+      "totalCost": 0.4947459999999999,
+      "totalTokens": 1140129
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 812032,
+      "inputTokens": 44397,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 15795,
+      "sessionId": "ses_196691637ffeauViuClsKT6sou",
+      "totalCost": 0.38663025000000006,
+      "totalTokens": 879392
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 634368,
+      "inputTokens": 46363,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 8118,
+      "sessionId": "ses_196915931ffeaFucBYzQ2gWSRk",
+      "totalCost": 0.28434975000000007,
+      "totalTokens": 695441
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 581504,
+      "inputTokens": 69974,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 11500,
+      "sessionId": "ses_196a0e4d5ffey5Xz6UWuMXcGD1",
+      "totalCost": 0.3154755,
+      "totalTokens": 667010
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 955776,
+      "inputTokens": 42807,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 20623,
+      "sessionId": "ses_196b8f231ffeQcZPFe0HJqmCli",
+      "totalCost": 0.4707307499999999,
+      "totalTokens": 1028358
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 9856,
+      "inputTokens": 8252,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 97,
+      "sessionId": "ses_196bacf69ffeWGd2vpjgAxIY6Y",
+      "totalCost": 0.015077000000000002,
+      "totalTokens": 18461
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 11776,
+      "inputTokens": 6737,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 7,
+      "sessionId": "ses_196c7042effewZM3Y16BWU2OVX",
+      "totalCost": 0.01060325,
+      "totalTokens": 18584
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "inputTokens": 452938,
+      "modelsUsed": [
+        "@cf/zai-org/glm-4.7-flash"
+      ],
+      "outputTokens": 3032,
+      "sessionId": "ses_196d48ab7ffes2Wu8FZr7oci5L",
+      "totalCost": 0.028615548999999997,
+      "totalTokens": 455970
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "inputTokens": 25701,
+      "modelsUsed": [
+        "@cf/zai-org/glm-4.7-flash"
+      ],
+      "outputTokens": 386,
+      "sessionId": "ses_196d58ef8ffewm8rmlwx7oPVXR",
+      "totalCost": 0.0017093104999999996,
+      "totalTokens": 26087
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 52352,
+      "inputTokens": 8036,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 474,
+      "sessionId": "ses_196d642b5ffechKhZT47DR5vHc",
+      "totalCost": 0.044369000000000006,
+      "totalTokens": 63166
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 18816,
+      "inputTokens": 18655,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 245,
+      "sessionId": "ses_196d6451bffec3BWsFjelR7GSW",
+      "totalCost": 0.03324075,
+      "totalTokens": 38228
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "inputTokens": 33644,
+      "modelsUsed": [
+        "gpt-4o-mini"
+      ],
+      "outputTokens": 90,
+      "sessionId": "ses_196d80d88ffeHYhvN4JDCP6lTk",
+      "totalCost": 0.0051006,
+      "totalTokens": 33734
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "inputTokens": 40144,
+      "modelsUsed": [
+        "@cf/zai-org/glm-4.7-flash"
+      ],
+      "outputTokens": 359,
+      "sessionId": "ses_196d80ffeffeFiHBy7K1JvMU1M",
+      "totalCost": 0.0025723119999999998,
+      "totalTokens": 40503
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 14976,
+      "inputTokens": 64570,
+      "modelsUsed": [
+        "gpt-4o-mini"
+      ],
+      "outputTokens": 181,
+      "sessionId": "ses_196d98911ffecwXYObcIRSYZwU",
+      "totalCost": 0.0109173,
+      "totalTokens": 79727
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "inputTokens": 39986,
+      "modelsUsed": [
+        "@cf/zai-org/glm-4.7-flash"
+      ],
+      "outputTokens": 232,
+      "sessionId": "ses_196d98d76ffeZEdQbWwxbqgaCP",
+      "totalCost": 0.002511953,
+      "totalTokens": 40218
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "inputTokens": 45800,
+      "modelsUsed": [
+        "@cf/zai-org/glm-4.7-flash"
+      ],
+      "outputTokens": 497,
+      "sessionId": "ses_196da9e54ffe1p1CbvmXs07Jds",
+      "totalCost": 0.0029696999999999996,
+      "totalTokens": 46297
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "inputTokens": 20735,
+      "modelsUsed": [
+        "gpt-4o-mini"
+      ],
+      "outputTokens": 38,
+      "sessionId": "ses_1994b213effeyVLo6qiJqlCX3L",
+      "totalCost": 0.00313305,
+      "totalTokens": 20773
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 19584,
+      "inputTokens": 19150,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 294,
+      "sessionId": "ses_1994c046cffe2OdUNIxR3R47CL",
+      "totalCost": 0.04084550000000001,
+      "totalTokens": 40180
+    },
+    {
+      "cacheCreationTokens": 9735,
+      "cacheReadTokens": 170110,
+      "inputTokens": 8,
+      "modelsUsed": [
+        "claude-opus-4-6"
+      ],
+      "outputTokens": 2294,
+      "sessionId": "ses_199d1d315ffef0HfHwdUg1Jl1q",
+      "totalCost": 0.20328875,
+      "totalTokens": 182147
+    },
+    {
+      "cacheCreationTokens": 4006,
+      "cacheReadTokens": 75209,
+      "inputTokens": 5,
+      "modelsUsed": [
+        "claude-opus-4-6"
+      ],
+      "outputTokens": 1806,
+      "sessionId": "ses_199d26b59ffecnwoZdx9Od0MMX",
+      "totalCost": 0.10781700000000001,
+      "totalTokens": 81026
+    },
+    {
+      "cacheCreationTokens": 4648,
+      "cacheReadTokens": 76046,
+      "inputTokens": 5,
+      "modelsUsed": [
+        "claude-opus-4-6"
+      ],
+      "outputTokens": 1065,
+      "sessionId": "ses_199d33329ffeLmJpphxIQ9N4NY",
+      "totalCost": 0.093723,
+      "totalTokens": 81764
+    },
+    {
+      "cacheCreationTokens": 4448,
+      "cacheReadTokens": 180575,
+      "inputTokens": 9,
+      "modelsUsed": [
+        "claude-opus-4-6"
+      ],
+      "outputTokens": 2135,
+      "sessionId": "ses_199d4df06ffeSoO5Hu6MnYs948",
+      "totalCost": 0.1715075,
+      "totalTokens": 187167
+    },
+    {
+      "cacheCreationTokens": 2648,
+      "cacheReadTokens": 48485,
+      "inputTokens": 4,
+      "modelsUsed": [
+        "claude-opus-4-6"
+      ],
+      "outputTokens": 354,
+      "sessionId": "ses_199d55656ffeiShZe9slH7vKs2",
+      "totalCost": 0.0496625,
+      "totalTokens": 51491
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 10100,
+      "inputTokens": 10209,
+      "modelsUsed": [
+        "@cf/moonshotai/kimi-k2.5"
+      ],
+      "outputTokens": 158,
+      "sessionId": "ses_199d66329ffexjoeIF5uhf1OPB",
+      "totalCost": 0.0076094000000000005,
+      "totalTokens": 20467
+    },
+    {
+      "cacheCreationTokens": 26559,
+      "cacheReadTokens": 25194,
+      "inputTokens": 4,
+      "modelsUsed": [
+        "claude-opus-4-6"
+      ],
+      "outputTokens": 340,
+      "sessionId": "ses_199d7ce47ffeOS3EkF6MBLEalA",
+      "totalCost": 0.18711075,
+      "totalTokens": 52097
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 20503,
+      "inputTokens": 20903,
+      "modelsUsed": [
+        "@cf/moonshotai/kimi-k2.5"
+      ],
+      "outputTokens": 1366,
+      "sessionId": "ses_199d7d843ffeTbolIaaXNx8z2J",
+      "totalCost": 0.0186901,
+      "totalTokens": 42772
+    },
+    {
+      "cacheCreationTokens": 72751,
+      "cacheReadTokens": 2391733,
+      "inputTokens": 32,
+      "modelsUsed": [
+        "claude-haiku-4-5"
+      ],
+      "outputTokens": 24789,
+      "sessionId": "ses_199dbcb74ffekPi3tksaicuAbq",
+      "totalCost": 0.45408905000000005,
+      "totalTokens": 2489305
+    },
+    {
+      "cacheCreationTokens": 50778,
+      "cacheReadTokens": 1263931,
+      "inputTokens": 36,
+      "modelsUsed": [
+        "claude-opus-4-6"
+      ],
+      "outputTokens": 14250,
+      "sessionId": "ses_199dd828bffeAjr2FewKV9MnFu",
+      "totalCost": 1.305758,
+      "totalTokens": 1328995
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 10064,
+      "inputTokens": 10817,
+      "modelsUsed": [
+        "@cf/moonshotai/kimi-k2.5"
+      ],
+      "outputTokens": 662,
+      "sessionId": "ses_199e7569bffedCKmLZ0NS29amS",
+      "totalCost": 0.0094826,
+      "totalTokens": 21543
+    },
+    {
+      "cacheCreationTokens": 47388,
+      "cacheReadTokens": 23950,
+      "inputTokens": 5,
+      "modelsUsed": [
+        "claude-opus-4-6"
+      ],
+      "outputTokens": 617,
+      "sessionId": "ses_199e759b7ffeGRs2B1yWwwrjqU",
+      "totalCost": 0.3236,
+      "totalTokens": 71960
+    },
+    {
+      "cacheCreationTokens": 26016,
+      "cacheReadTokens": 25143,
+      "inputTokens": 4,
+      "modelsUsed": [
+        "claude-opus-4-6"
+      ],
+      "outputTokens": 763,
+      "sessionId": "ses_199eee90affebMa3XHDxfXNCVQ",
+      "totalCost": 0.1942665,
+      "totalTokens": 51926
+    },
+    {
+      "cacheCreationTokens": 47623,
+      "cacheReadTokens": 47536,
+      "inputTokens": 6,
+      "modelsUsed": [
+        "claude-opus-4-6"
+      ],
+      "outputTokens": 678,
+      "sessionId": "ses_199ef03b5ffeMz5p2RkUQGvdl1",
+      "totalCost": 0.33839175,
+      "totalTokens": 95843
+    },
+    {
+      "cacheCreationTokens": 2899,
+      "cacheReadTokens": 43624,
+      "inputTokens": 4,
+      "modelsUsed": [
+        "claude-opus-4-6"
+      ],
+      "outputTokens": 764,
+      "sessionId": "ses_19a04ccb6ffesi7OmxbilHodDh",
+      "totalCost": 0.05905075,
+      "totalTokens": 47291
+    },
+    {
+      "cacheCreationTokens": 24359,
+      "cacheReadTokens": 70809,
+      "inputTokens": 6,
+      "modelsUsed": [
+        "claude-opus-4-6"
+      ],
+      "outputTokens": 736,
+      "sessionId": "ses_19a04f526ffefDjQhytuY27PEy",
+      "totalCost": 0.20607825000000002,
+      "totalTokens": 95910
+    },
+    {
+      "cacheCreationTokens": 23698,
+      "cacheReadTokens": 22825,
+      "inputTokens": 4,
+      "modelsUsed": [
+        "claude-opus-4-6"
+      ],
+      "outputTokens": 838,
+      "sessionId": "ses_19a082fc1ffeE5v0Vq5G3pfLoZ",
+      "totalCost": 0.18049500000000002,
+      "totalTokens": 47365
+    },
+    {
+      "cacheCreationTokens": 24593,
+      "cacheReadTokens": 70712,
+      "inputTokens": 6,
+      "modelsUsed": [
+        "claude-opus-4-6"
+      ],
+      "outputTokens": 669,
+      "sessionId": "ses_19a08684effedso535fiSoUnmO",
+      "totalCost": 0.20581725,
+      "totalTokens": 95980
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 201216,
+      "inputTokens": 28969,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 7878,
+      "sessionId": "ses_19a1c6ca5ffeK1fCs6ixRG4lTU",
+      "totalCost": 0.19646325000000003,
+      "totalTokens": 243695
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "inputTokens": 19174,
+      "modelsUsed": [
+        "gpt-4o-mini"
+      ],
+      "outputTokens": 53,
+      "sessionId": "ses_19a20a029ffeCRHCW246jn4SQa",
+      "totalCost": 0.0029078999999999997,
+      "totalTokens": 19227
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 17280,
+      "inputTokens": 16823,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 139,
+      "sessionId": "ses_19a20e318ffeMz74e9Au872p5P",
+      "totalCost": 0.03097875,
+      "totalTokens": 34882
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "inputTokens": 25532,
+      "modelsUsed": [
+        "qwen3-coder-30b-a3b-instruct"
+      ],
+      "outputTokens": 50,
+      "sessionId": "ses_19a3ede9fffegdNyQk7TH9FxZM",
+      "totalCost": 0.0038598,
+      "totalTokens": 25582
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 30208,
+      "inputTokens": 4201,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 177,
+      "sessionId": "ses_19a3ee203ffeZ7c7eoqgPdLNM1",
+      "totalCost": 0.01719725,
+      "totalTokens": 35226
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 32896,
+      "inputTokens": 952,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 111,
+      "sessionId": "ses_19a58ccc6ffeIaPA3U464mv9MU",
+      "totalCost": 0.010252,
+      "totalTokens": 34343
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 48000,
+      "inputTokens": 4482,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 267,
+      "sessionId": "ses_19a592861ffegBaEL0sZuzqfeb",
+      "totalCost": 0.0232325,
+      "totalTokens": 53645
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 29056,
+      "inputTokens": 5153,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 101,
+      "sessionId": "ses_19a640221ffefmJ9dqy7AJiF2y",
+      "totalCost": 0.019403250000000004,
+      "totalTokens": 35142
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "inputTokens": 16384,
+      "modelsUsed": [
+        "qwen3-coder:30b"
+      ],
+      "outputTokens": 130,
+      "sessionId": "ses_19a65cfdbffeenvOl4HwvFS1Xq",
+      "totalCost": 0.0076068,
+      "totalTokens": 16514
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 64640,
+      "inputTokens": 25753,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 602,
+      "sessionId": "ses_19a65d39dffeEsPX784MqgK16A",
+      "totalCost": 0.06037125000000001,
+      "totalTokens": 92403
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 5504,
+      "inputTokens": 27981,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 179,
+      "sessionId": "ses_19a6701b2ffeYRwawSvWxghRHl",
+      "totalCost": 0.043854250000000004,
+      "totalTokens": 34304
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "inputTokens": 20480,
+      "modelsUsed": [
+        "gpt-oss:20b"
+      ],
+      "outputTokens": 718,
+      "sessionId": "ses_19a68f6ceffet4a0j6UAjpl4Ay",
+      "totalCost": 0.0,
+      "totalTokens": 21198
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "inputTokens": 16822,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 152,
+      "sessionId": "ses_19a68fa33ffeF72Y9f8GMphR1t",
+      "totalCost": 0.027027500000000003,
+      "totalTokens": 17422
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 16768,
+      "inputTokens": 17250,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 95,
+      "sessionId": "ses_19a6dbf96ffeenA7IOaujVchkB",
+      "totalCost": 0.029728499999999998,
+      "totalTokens": 34625
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "inputTokens": 4096,
+      "modelsUsed": [
+        "qwen2.5-coder:7b-instruct-q4_K_M"
+      ],
+      "outputTokens": 32,
+      "sessionId": "ses_19a6e5af6ffeDZQH47t2dPzEHj",
+      "totalCost": 0.0,
+      "totalTokens": 4128
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 18048,
+      "inputTokens": 34610,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 343,
+      "sessionId": "ses_19a6e5eaaffeGRTTpr87Ubs386",
+      "totalCost": 0.0585485,
+      "totalTokens": 53961
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "inputTokens": 33909,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 103,
+      "sessionId": "ses_19a73a1eaffe0lt6ta6dtH2ifM",
+      "totalCost": 0.04853625,
+      "totalTokens": 34524
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "inputTokens": 4096,
+      "modelsUsed": [
+        "qwen2.5-coder:7b-instruct-q4_K_M"
+      ],
+      "outputTokens": 24,
+      "sessionId": "ses_19a740cbdffeqMCiYzdQCGQnqN",
+      "totalCost": 0.0,
+      "totalTokens": 4120
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 29952,
+      "inputTokens": 22732,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 321,
+      "sessionId": "ses_19a7483adffezLzdIbqE0NqjrF",
+      "totalCost": 0.045609000000000004,
+      "totalTokens": 54029
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "inputTokens": 8192,
+      "modelsUsed": [
+        "qwen2.5-coder:7b-instruct-q4_K_M"
+      ],
+      "outputTokens": 27,
+      "sessionId": "ses_19a7af877ffeonJfaTnWzXl9i0",
+      "totalCost": 0.0,
+      "totalTokens": 8219
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 35712,
+      "inputTokens": 17065,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 301,
+      "sessionId": "ses_19a7afe8efferEUxhZraTt9E8l",
+      "totalCost": 0.04096525000000001,
+      "totalTokens": 54294
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "inputTokens": 8192,
+      "modelsUsed": [
+        "qwen2.5-coder:7b-instruct-q4_K_M"
+      ],
+      "outputTokens": 29,
+      "sessionId": "ses_19a802214ffe9a3wbxQmt7x2eq",
+      "totalCost": 0.0,
+      "totalTokens": 8221
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 33536,
+      "inputTokens": 18840,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 291,
+      "sessionId": "ses_19a802536ffe1iswtuW4R2qwE0",
+      "totalCost": 0.03897200000000001,
+      "totalTokens": 53499
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "inputTokens": 4096,
+      "modelsUsed": [
+        "granite4:7b-a1b-h"
+      ],
+      "outputTokens": 281,
+      "sessionId": "ses_19a80f44affeGnZx6Ue6kxP5TB",
+      "totalCost": 0.0,
+      "totalTokens": 4377
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "inputTokens": 8192,
+      "modelsUsed": [
+        "granite4:7b-a1b-h"
+      ],
+      "outputTokens": 138,
+      "sessionId": "ses_19a901c97ffe7efNq3MCRuI96l",
+      "totalCost": 0.0,
+      "totalTokens": 8330
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 35200,
+      "inputTokens": 34614,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 704,
+      "sessionId": "ses_19a90bca9ffeF1kU5NYLeLVUPf",
+      "totalCost": 0.0783875,
+      "totalTokens": 72886
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "inputTokens": 37909,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 156,
+      "sessionId": "ses_19aea4061ffe05C0cNSf2r9Jyz",
+      "totalCost": 0.05662625,
+      "totalTokens": 38833
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 1474560,
+      "inputTokens": 149480,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 22937,
+      "sessionId": "ses_19b14f4c6ffe5pZfoZhwr2X5hR",
+      "totalCost": 0.6491799999999999,
+      "totalTokens": 1651841
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 19584,
+      "inputTokens": 20702,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 143,
+      "sessionId": "ses_19b1c969bffexp0Gww9rl3zC7k",
+      "totalCost": 0.03871550000000001,
+      "totalTokens": 41325
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "inputTokens": 4096,
+      "modelsUsed": [
+        "granite4:7b-a1b-h"
+      ],
+      "outputTokens": 67,
+      "sessionId": "ses_19b23a65cffeWFHR7jrfA5hrxW",
+      "totalCost": 0.0,
+      "totalTokens": 4163
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 39424,
+      "inputTokens": 19761,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 273,
+      "sessionId": "ses_19b281104ffebFR6HC3p3vjqip",
+      "totalCost": 0.04835925,
+      "totalTokens": 61058
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 1835264,
+      "inputTokens": 273796,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 19200,
+      "sessionId": "ses_19bbade26ffe0aGKfcL5JYCIiF",
+      "totalCost": 0.8346930000000004,
+      "totalTokens": 2135364
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 818304,
+      "inputTokens": 40349,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 11983,
+      "sessionId": "ses_19fffdfbeffeomUxaj5X6POZea",
+      "totalCost": 0.38903424999999997,
+      "totalTokens": 882284
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 772736,
+      "inputTokens": 148232,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 15168,
+      "sessionId": "ses_1a48c8dbcffeqQzPw3gHlP3Igi",
+      "totalCost": 0.5500420000000001,
+      "totalTokens": 947784
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 1022208,
+      "inputTokens": 115174,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 16483,
+      "sessionId": "ses_1a6241154ffelh3Z7Gtdid7G6q",
+      "totalCost": 0.5236135000000001,
+      "totalTokens": 1162569
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 1305984,
+      "inputTokens": 90452,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 17643,
+      "sessionId": "ses_1b009c787ffe6f68Db6vnR1qYh",
+      "totalCost": 0.523143,
+      "totalTokens": 1421119
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 491136,
+      "inputTokens": 67447,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 11527,
+      "sessionId": "ses_1b04d69c0ffeJtnG17FF7XBIdv",
+      "totalCost": 0.34097075,
+      "totalTokens": 578110
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 503424,
+      "inputTokens": 52124,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 8970,
+      "sessionId": "ses_1b07a800fffeSBBqEt8rj6u8x0",
+      "totalCost": 0.25298299999999996,
+      "totalTokens": 568038
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 588544,
+      "inputTokens": 34022,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 10862,
+      "sessionId": "ses_1b584b69cffecUyK2OLuvIv3ez",
+      "totalCost": 0.27911549999999996,
+      "totalTokens": 638868
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 615680,
+      "inputTokens": 35301,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 11369,
+      "sessionId": "ses_1b8c15278ffeB3m0xbi3ha3jzJ",
+      "totalCost": 0.28277625,
+      "totalTokens": 667150
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "inputTokens": 20480,
+      "modelsUsed": [
+        "granite4:7b-a1b-h"
+      ],
+      "outputTokens": 1282,
+      "sessionId": "ses_1b8c915dbffeJA7degul2xlUxx",
+      "totalCost": 0.0,
+      "totalTokens": 21762
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 225792,
+      "inputTokens": 32302,
+      "modelsUsed": [
+        "gpt-5-mini"
+      ],
+      "outputTokens": 1211,
+      "sessionId": "ses_1b9327929ffebkEGdvMMa3e57R",
+      "totalCost": 0.022158299999999995,
+      "totalTokens": 262313
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 113152,
+      "inputTokens": 27128,
+      "modelsUsed": [
+        "granite4:7b-a1b-h",
+        "gpt-5-mini"
+      ],
+      "outputTokens": 1642,
+      "sessionId": "ses_1b9396984ffesL7oT8cKP2KOpq",
+      "totalCost": 0.013580799999999999,
+      "totalTokens": 143266
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 343040,
+      "inputTokens": 47336,
+      "modelsUsed": [
+        "gpt-5-mini"
+      ],
+      "outputTokens": 4998,
+      "sessionId": "ses_1b9503ae5ffe37Wo4APui3SXaM",
+      "totalCost": 0.04141399999999999,
+      "totalTokens": 400878
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 31360,
+      "inputTokens": 14188,
+      "modelsUsed": [
+        "gpt-5-mini"
+      ],
+      "outputTokens": 123,
+      "sessionId": "ses_1b95679ccffedlc8TFgEw5SGPA",
+      "totalCost": 0.006369,
+      "totalTokens": 46567
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 34688,
+      "inputTokens": 8874,
+      "modelsUsed": [
+        "gpt-5-mini"
+      ],
+      "outputTokens": 152,
+      "sessionId": "ses_1b9594ee4ffeFn43eoxLwYGJLj",
+      "totalCost": 0.0042857,
+      "totalTokens": 44162
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 2560,
+      "inputTokens": 19003,
+      "modelsUsed": [
+        "gpt-5-mini"
+      ],
+      "outputTokens": 62,
+      "sessionId": "ses_1b95bc40effe2W5Jpw4faxwsKX",
+      "totalCost": 0.00545075,
+      "totalTokens": 21881
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 33408,
+      "inputTokens": 9558,
+      "modelsUsed": [
+        "gpt-5-mini"
+      ],
+      "outputTokens": 147,
+      "sessionId": "ses_1b95d717effeg5I0aYiCkB54H4",
+      "totalCost": 0.0046707,
+      "totalTokens": 43689
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 23680,
+      "inputTokens": 20183,
+      "modelsUsed": [
+        "gpt-5-mini"
+      ],
+      "outputTokens": 139,
+      "sessionId": "ses_1b9614f88ffetqTSfM96fMB4Vp",
+      "totalCost": 0.00745175,
+      "totalTokens": 44770
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 23680,
+      "inputTokens": 20183,
+      "modelsUsed": [
+        "gpt-5-mini"
+      ],
+      "outputTokens": 139,
+      "sessionId": "ses_1b966f678ffeioW34ps6Kono2a",
+      "totalCost": 0.00745175,
+      "totalTokens": 44770
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 524032,
+      "inputTokens": 49965,
+      "modelsUsed": [
+        "gpt-5-mini"
+      ],
+      "outputTokens": 2454,
+      "sessionId": "ses_1b97122f6ffeoAnykUF7OPblnL",
+      "totalCost": 0.03587604999999999,
+      "totalTokens": 579139
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 183040,
+      "inputTokens": 71031,
+      "modelsUsed": [
+        "granite4:7b-a1b-h",
+        "gpt-5-mini"
+      ],
+      "outputTokens": 2500,
+      "sessionId": "ses_1b980a0ebffe4jI9j1NefkGsDK",
+      "totalCost": 0.028201749999999998,
+      "totalTokens": 258107
+    },
+    {
+      "cacheCreationTokens": 27953,
+      "cacheReadTokens": 0,
+      "inputTokens": 23157,
+      "modelsUsed": [
+        "claude-haiku-4-5",
+        "gpt-5"
+      ],
+      "outputTokens": 97,
+      "sessionId": "ses_1ba0ef486ffeKmtFji2Pcpb9sa",
+      "totalCost": 0.06588675000000001,
+      "totalTokens": 51335
+    },
+    {
+      "cacheCreationTokens": 27953,
+      "cacheReadTokens": 0,
+      "inputTokens": 3,
+      "modelsUsed": [
+        "claude-sonnet-4-5"
+      ],
+      "outputTokens": 28,
+      "sessionId": "ses_1ba3207caffeQa1dUEJh38e4SL",
+      "totalCost": 0.10525275,
+      "totalTokens": 27984
+    },
+    {
+      "cacheCreationTokens": 33045,
+      "cacheReadTokens": 242002,
+      "inputTokens": 11,
+      "modelsUsed": [
+        "claude-sonnet-4-6"
+      ],
+      "outputTokens": 1050,
+      "sessionId": "ses_1ba688b4affeJexETM5k5NOL6A",
+      "totalCost": 0.21230235000000003,
+      "totalTokens": 276108
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "inputTokens": 20146,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 25,
+      "sessionId": "ses_1ba84b5f5ffeowfDGO4ngOjQNk",
+      "totalCost": 0.026072500000000002,
+      "totalTokens": 20235
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "inputTokens": 19918,
+      "modelsUsed": [
+        "gpt-5"
+      ],
+      "outputTokens": 38,
+      "sessionId": "ses_1ba85c69bffe8s3B2UGjc65VqB",
+      "totalCost": 0.025917500000000003,
+      "totalTokens": 20020
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "inputTokens": 11547,
+      "modelsUsed": [
+        "workers-ai/@cf/deepseek-ai/deepseek-r1-distill-qwen-32b"
+      ],
+      "outputTokens": 167,
+      "sessionId": "ses_1ba953577ffegsyuJbNcstcgHY",
+      "totalCost": 0.00658846,
+      "totalTokens": 11714
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "inputTokens": 23123,
+      "modelsUsed": [
+        "anthropic/claude-haiku-4-5"
+      ],
+      "outputTokens": 16,
+      "sessionId": "ses_1ba97853fffeD9HdzxDbYJY3fh",
+      "totalCost": 0.023202999999999998,
+      "totalTokens": 23139
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "inputTokens": 4096,
+      "modelsUsed": [
+        "granite4:7b-a1b-h"
+      ],
+      "outputTokens": 10,
+      "sessionId": "ses_1baa07df6ffel1J6ukDFTdjvV7",
+      "totalCost": 0.0,
+      "totalTokens": 4106
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "inputTokens": 4096,
+      "modelsUsed": [
+        "qwen2.5-coder:7b-instruct-q4_K_M"
+      ],
+      "outputTokens": 26,
+      "sessionId": "ses_1baa82ff3ffeI2Nh6Gn9SZRlSU",
+      "totalCost": 0.0,
+      "totalTokens": 4122
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "inputTokens": 4096,
+      "modelsUsed": [
+        "qwen2.5-coder:7b-instruct-q4_K_M"
+      ],
+      "outputTokens": 30,
+      "sessionId": "ses_1baacf0b4ffeW2WisDswLUzx8v",
+      "totalCost": 0.0,
+      "totalTokens": 4126
+    },
+    {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 180608,
+      "inputTokens": 32096,
+      "modelsUsed": [
+        "gemma4",
+        "big-pickle"
+      ],
+      "outputTokens": 1128,
+      "sessionId": "ses_1c4399b2effepwAVU2NfU9zUpr",
+      "totalCost": 0.0,
+      "totalTokens": 214084
+    },
+    {
+      "cacheCreationTokens": 29803,
+      "cacheReadTokens": 90848,
+      "inputTokens": 20522,
+      "modelsUsed": [
+        "gemma4",
+        "big-pickle"
+      ],
+      "outputTokens": 7277,
+      "sessionId": "ses_21b8aff8dffe26WvtQfWmzjlUf",
+      "totalCost": 0.0,
+      "totalTokens": 148450
+    },
+    {
+      "cacheCreationTokens": 31344,
+      "cacheReadTokens": 73932,
+      "inputTokens": 37637,
+      "modelsUsed": [
+        "gemma4",
+        "big-pickle"
+      ],
+      "outputTokens": 2579,
+      "sessionId": "ses_2ac7acaa0ffeIfpuzFz6oyJMyR",
+      "totalCost": 0.0,
+      "totalTokens": 145492
+    },
+    {
+      "cacheCreationTokens": 13571,
+      "cacheReadTokens": 87128,
+      "inputTokens": 2290,
+      "modelsUsed": [
+        "big-pickle"
+      ],
+      "outputTokens": 894,
+      "sessionId": "ses_2aca6f440ffewLU3e44u2qt47N",
+      "totalCost": 0.0,
+      "totalTokens": 103883
+    }
+  ],
+  "totals": {
+    "cacheCreationTokens": 535818,
+    "cacheReadTokens": 40431355,
+    "inputTokens": 14662176,
+    "outputTokens": 677036,
+    "totalCost": 18.429953866000016,
+    "totalTokens": 56632461
+  }
+}
