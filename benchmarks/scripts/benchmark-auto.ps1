@@ -296,14 +296,14 @@ function New-InvocationScript {
         [Parameter(Mandatory)][string]$RequestedModel,
         [Parameter(Mandatory)][string]$PromptPath,
         [Parameter(Mandatory)][string]$WorkspaceDir,
-        [Parameter(Mandatory)][string]$ScriptPath
+        [Parameter(Mandatory)][string]$ScriptPath,
+        [string]$AppTag = (Split-Path -Leaf $repoRoot)
     )
 
-    $repoLeaf = Split-Path -Leaf $repoRoot
     $escapedPrompt = $PromptPath.Replace("'", "''")
     $escapedWorkspace = $WorkspaceDir.Replace("'", "''")
     $escapedModel = $RequestedModel.Replace("'", "''")
-    $escapedAppTag = $repoLeaf.Replace("'", "''")
+    $escapedAppTag = $AppTag.Replace("'", "''")
 
     $body = switch ($Tool) {
         "claude" {
@@ -543,7 +543,8 @@ foreach ($tool in $toolNames) {
             -RequestedModel $requestedModel `
             -PromptPath $promptCopyPath `
             -WorkspaceDir $workspaceDir `
-            -ScriptPath $invokeScriptPath
+            -ScriptPath $invokeScriptPath `
+            -AppTag "bench:${Benchmark}:${RunId}"
         $process = Invoke-LoggedProcess `
             -FilePath "pwsh" `
             -Arguments @("-File", $invokeScriptPath) `
