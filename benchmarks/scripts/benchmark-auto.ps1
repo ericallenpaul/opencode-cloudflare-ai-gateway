@@ -475,6 +475,9 @@ function Write-MarkdownSummary {
         $lines += "- RequestedModel: $($record.requestedModel)"
         $lines += "- ActualModels: $($record.actualModels -join ', ')"
         $lines += "- CostUSD: $($record.metrics.totalCost)"
+        if ($record.PSObject.Properties.Name -contains "costSource" -or ($record -is [System.Collections.IDictionary] -and $record.Contains("costSource"))) {
+            $lines += "- CostSource: $($record.costSource)"
+        }
         $lines += "- TotalTokens: $($record.metrics.totalTokens)"
         $lines += "- MissingOutputs: $($record.missingOutputs -join ', ')"
         $lines += "- InvalidationReasons: $($record.invalidationReasons -join '; ')"
