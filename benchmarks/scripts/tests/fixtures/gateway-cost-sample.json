@@ -1,0 +1,8 @@
+[
+  { "count": 12, "dimensions": { "model": "gpt-5", "provider": "openai" },
+    "sum": { "cost": 0.18, "uncachedTokensIn": 400000, "uncachedTokensOut": 6000, "cachedTokensIn": 100000, "cachedTokensOut": 0 } },
+  { "count": 4, "dimensions": { "model": "gpt-5-mini", "provider": "openai" },
+    "sum": { "cost": 0.02, "uncachedTokensIn": 50000, "uncachedTokensOut": 1500, "cachedTokensIn": 0, "cachedTokensOut": 0 } },
+  { "count": 3, "dimensions": { "model": "@cf/zai-org/glm-4.7-flash", "provider": "workers-ai" },
+    "sum": { "cost": 0.0047, "uncachedTokensIn": 59000, "uncachedTokensOut": 2800, "cachedTokensIn": 0, "cachedTokensOut": 0 } }
+]
