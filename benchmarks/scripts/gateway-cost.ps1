@@ -85,7 +85,7 @@ function Get-OpenCodeGatewayCost {
     if (-not $accountTag -or -not $gateway -or -not $apiKey) {
         return [ordered]@{ source = "gateway-unavailable"; error = "Missing CLOUDFLARE_ACCOUNT_ID/CF_ACCOUNT_ID, CF_GATEWAY_NAME, or CLOUDFLARE_API_KEY" }
     }
-    $startIso = $StartUtc.AddHours(-1).ToString("yyyy-MM-ddTHH:00:00Z")
+    $startIso = $StartUtc.ToUniversalTime().AddHours(-1).ToString("yyyy-MM-ddTHH:00:00Z")
     try {
         $prevReq = -1.0
         $result  = $null
@@ -108,6 +108,8 @@ function Get-OpenCodeGatewayCost {
         $result.queriedAt = (Get-Date).ToUniversalTime().ToString("o")
         return $result
     } catch {
-        return [ordered]@{ source = "gateway-unavailable"; error = "$($_.Exception.Message)" }
+        $msg = $_.Exception.Message
+        if ($_.ErrorDetails -and $_.ErrorDetails.Message) { $msg = "$msg | $($_.ErrorDetails.Message)" }
+        return [ordered]@{ source = "gateway-unavailable"; error = "$msg" }
     }
 }

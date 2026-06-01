@@ -25,6 +25,12 @@ Assert-Equal $result.total.tokensIn 609000 "tokensIn = uncached + cached in"
 Assert-Equal $result.total.tokensOut 10300 "tokensOut = uncached + cached out"
 Assert-Equal $result.models.Count 3 "three model rows"
 
+# Parser test: empty groups -> zero totals, no models
+$empty = Convert-GatewayCostResult -Groups @()
+Assert-Equal $empty.total.cost 0 "empty groups -> zero cost"
+Assert-Equal $empty.total.requests 0 "empty groups -> zero requests"
+Assert-Equal $empty.models.Count 0 "empty groups -> no model rows"
+
 # Query builder test
 $q = Get-GatewayCostQuery -AccountTag "ACC" -Gateway "GW" -StartIso "2026-06-01T00:00:00Z" -EndIso "2026-06-01T23:00:00Z" -MetadataLike "bench:tic-tac-toe:RUN1"
 Assert-Contains $q 'accountTag: "ACC"' "query has account tag"
