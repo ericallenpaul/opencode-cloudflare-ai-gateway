@@ -145,7 +145,7 @@ async function getStatus(page) {
 async function getRestartButton(page) {
   return page
     .locator('button, [role="button"]')
-    .filter({ hasText: /^restart$|^new game$/i })
+    .filter({ hasText: /restart|new game|play again|reset/i })
     .first();
 }
 
