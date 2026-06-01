@@ -26,18 +26,18 @@
       "requiredModels": [
         "claude-sonnet-4-5"
       ],
-      "allowAdditionalModels": false
+      "allowAdditionalModels": true
     },
     "codex": {
       "enabled": true,
-      "requestedModel": "gpt-5",
+      "requestedModel": "gpt-5.5",
       "expectedModels": [
-        "gpt-5"
+        "gpt-5.5"
       ],
       "requiredModels": [
-        "gpt-5"
+        "gpt-5.5"
       ],
-      "allowAdditionalModels": false
+      "allowAdditionalModels": true
     },
     "opencode": {
       "enabled": true,
