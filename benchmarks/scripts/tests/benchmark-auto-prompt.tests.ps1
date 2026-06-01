@@ -12,10 +12,11 @@ $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $repoRoot = (Resolve-Path (Join-Path $scriptDir "..\..\..")).Path
 $benchmarkScript = Join-Path $repoRoot "benchmarks\scripts\benchmark-auto.ps1"
 $runId = "prompt-regression-test"
-$scratchDir = Join-Path $repoRoot "benchmarks\runs\$runId"
+$runScratchRoot = Join-Path ([System.IO.Path]::GetTempPath()) "opencode-bench\$runId"
+$scratchDir = Join-Path $runScratchRoot "markdown-editor"
 $resultDir = Join-Path $repoRoot "benchmarks\markdown-editor\results\runs\$runId"
-$promptPath = Join-Path $scratchDir "markdown-editor\opencode\PROMPT.md"
-$workspaceDir = Join-Path $scratchDir "markdown-editor\opencode\workspace"
+$promptPath = Join-Path $scratchDir "opencode\PROMPT.md"
+$workspaceDir = Join-Path $scratchDir "opencode\workspace"
 
 function Assert-Contains {
     param(
@@ -40,7 +41,8 @@ function Assert-NotContains {
 }
 
 try {
-    Remove-Item -LiteralPath $scratchDir, $resultDir -Recurse -Force -ErrorAction SilentlyContinue
+    if (Test-Path $runScratchRoot) { Remove-Item -LiteralPath $runScratchRoot -Recurse -Force }
+    if (Test-Path $resultDir) { Remove-Item -LiteralPath $resultDir -Recurse -Force }
 
     & $benchmarkScript `
         -Benchmark markdown-editor `
@@ -65,5 +67,6 @@ try {
     Write-Host "PASS benchmark-auto prompt workspace regression"
 }
 finally {
-    Remove-Item -LiteralPath $scratchDir, $resultDir -Recurse -Force -ErrorAction SilentlyContinue
+    if (Test-Path $runScratchRoot) { Remove-Item -LiteralPath $runScratchRoot -Recurse -Force }
+    if (Test-Path $resultDir) { Remove-Item -LiteralPath $resultDir -Recurse -Force }
 }

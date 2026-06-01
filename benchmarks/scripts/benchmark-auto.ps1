@@ -532,7 +532,7 @@ Write-Host "  RunId:     $RunId"
 Write-Host "  Tools:     $($toolNames -join ', ')"
 Write-Host ""
 
-$runScratchRoot = Join-Path $repoRoot "benchmarks\runs\$RunId\$Benchmark"
+$runScratchRoot = Join-Path ([System.IO.Path]::GetTempPath()) "opencode-bench\$RunId\$Benchmark"
 $runResultsRoot = Join-Path $benchmarkDir "results\runs\$RunId"
 New-Item -ItemType Directory -Force -Path $runScratchRoot | Out-Null
 New-Item -ItemType Directory -Force -Path $runResultsRoot | Out-Null
