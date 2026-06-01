@@ -121,6 +121,19 @@ if (-not (Test-Path $nodeModules)) {
     exit 1
 }
 
+function Resolve-CmdShim {
+    param([Parameter(Mandatory)][string]$Name)
+    if ($IsWindows) {
+        $cmd = Get-Command "$Name.cmd" -ErrorAction SilentlyContinue
+        if ($cmd -and $cmd.Path) { return $cmd.Path }
+    }
+    $resolved = Get-Command $Name -ErrorAction Stop
+    return $resolved.Path
+}
+
+$npmCmd = Resolve-CmdShim "npm"
+$npxCmd = Resolve-CmdShim "npx"
+
 # ============================================================
 # Discover tools -- any subdir of the RunId dir that contains output/
 # ============================================================
@@ -186,9 +199,11 @@ foreach ($toolDir in $toolDirs) {
     # Find test file. Benchmark policies allow recursive output matching, so
     # the judge must accept tests in folders like output/tests/*.test.js too.
     $testFile = Get-ChildItem -Path $outputDir -Recurse -File -Filter "*.test.js" -ErrorAction SilentlyContinue |
+        Where-Object { $_.FullName -notmatch '[\\/](node_modules|\.git)[\\/]' } |
         Select-Object -First 1
     if (-not $testFile) {
         $testFile = Get-ChildItem -Path $outputDir -Recurse -File -Filter "*.test.mjs" -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -notmatch '[\\/](node_modules|\.git)[\\/]' } |
             Select-Object -First 1
     }
     if ($testFile) {
@@ -211,6 +226,9 @@ foreach ($toolDir in $toolDirs) {
     $env:MARKDOWN_HTML               = $htmlFile.FullName
     $env:MARKDOWN_TOOL_NAME          = $toolName
     $env:MARKDOWN_TESTS              = if ($testFile) { $testFile.FullName } else { '' }
+    $env:REACT_TODO_HTML             = $htmlFile.FullName
+    $env:REACT_TODO_TOOL_NAME        = $toolName
+    $env:REACT_TODO_TESTS            = if ($testFile) { $testFile.FullName } else { '' }
 
     # Initialize a minimal JSON so the spec can always merge
     if (-not (Test-Path $judgeJson)) {
@@ -227,15 +245,22 @@ foreach ($toolDir in $toolDirs) {
     # Run Playwright -- pass the specific spec file for this benchmark
     Write-Host "  Running Playwright tests ($specFile)..." -ForegroundColor DarkGray
     $pwExitCode = 0
+    $oldErrorActionPreference = $ErrorActionPreference
+    $hadNativePreference = $null -ne (Get-Variable -Name PSNativeCommandUseErrorActionPreference -Scope Global -ErrorAction SilentlyContinue)
+    if ($hadNativePreference) { $oldNativePreference = $global:PSNativeCommandUseErrorActionPreference }
     try {
+        $ErrorActionPreference = "Continue"
+        if ($hadNativePreference) { $global:PSNativeCommandUseErrorActionPreference = $false }
         Push-Location $judgeDir
-        & npx playwright test $specFile 2>&1 | ForEach-Object { Write-Host "    $_" -ForegroundColor DarkGray }
+        & $npxCmd playwright test $specFile 2>&1 | ForEach-Object { Write-Host "    $_" -ForegroundColor DarkGray }
         $pwExitCode = $LASTEXITCODE
     } catch {
         $pwExitCode = 99
         Write-Host "  Playwright invocation error: $_" -ForegroundColor Yellow
     } finally {
         Pop-Location
+        $ErrorActionPreference = $oldErrorActionPreference
+        if ($hadNativePreference) { $global:PSNativeCommandUseErrorActionPreference = $oldNativePreference }
     }
 
     if ($pwExitCode -ne 0) {
@@ -255,7 +280,47 @@ foreach ($toolDir in $toolDirs) {
     $r10Status = 'FAIL'
     $r10Reason = 'No test file found under output/'
 
-    if ($testFile) {
+    if ($Benchmark -eq "react-todo-api-db") {
+        $packageJson = Join-Path $outputDir "package.json"
+        if (Test-Path $packageJson) {
+            $r9Status = 'N/A'
+            $r9Reason = 'R9 is owned by the benchmark Playwright spec'
+            Write-Host "  Running npm test..." -ForegroundColor DarkGray
+
+            $nodeOutput = $null
+            $nodeExitCode = 0
+            $oldErrorActionPreference = $ErrorActionPreference
+            $hadNativePreference = $null -ne (Get-Variable -Name PSNativeCommandUseErrorActionPreference -Scope Global -ErrorAction SilentlyContinue)
+            if ($hadNativePreference) { $oldNativePreference = $global:PSNativeCommandUseErrorActionPreference }
+            try {
+                $ErrorActionPreference = "Continue"
+                if ($hadNativePreference) { $global:PSNativeCommandUseErrorActionPreference = $false }
+                Push-Location $outputDir
+                $nodeOutput = & $npmCmd test 2>&1 | Out-String
+                $nodeExitCode = $LASTEXITCODE
+            } catch {
+                $nodeExitCode = 99
+                $nodeOutput = "npm test invocation error: $_"
+            } finally {
+                Pop-Location
+                $ErrorActionPreference = $oldErrorActionPreference
+                if ($hadNativePreference) { $global:PSNativeCommandUseErrorActionPreference = $oldNativePreference }
+            }
+
+            if ($nodeExitCode -eq 0) {
+                $r10Status = 'PASS'
+                $r10Reason = "npm test exited 0"
+            } else {
+                $r10Status = 'FAIL'
+                $r10Reason = "npm test exited $nodeExitCode"
+            }
+            $nodeOutput | Set-Content -Path $nodeTestLog -Encoding utf8
+            Write-Host "  R10=$r10Status (exit $nodeExitCode)" -ForegroundColor DarkGray
+        } else {
+            Write-Host "  R10=FAIL (no package.json)" -ForegroundColor DarkGray
+            "No package.json found under output/." | Set-Content -Path $nodeTestLog -Encoding utf8
+        }
+    } elseif ($testFile) {
         $r9Status = 'PASS'
         $relativeTestPath = [System.IO.Path]::GetRelativePath($outputDir, $testFile.FullName)
         $r9Reason = "Test file found: $relativeTestPath"
@@ -263,7 +328,12 @@ foreach ($toolDir in $toolDirs) {
 
         $nodeOutput = $null
         $nodeExitCode = 0
+        $oldErrorActionPreference = $ErrorActionPreference
+        $hadNativePreference = $null -ne (Get-Variable -Name PSNativeCommandUseErrorActionPreference -Scope Global -ErrorAction SilentlyContinue)
+        if ($hadNativePreference) { $oldNativePreference = $global:PSNativeCommandUseErrorActionPreference }
         try {
+            $ErrorActionPreference = "Continue"
+            if ($hadNativePreference) { $global:PSNativeCommandUseErrorActionPreference = $false }
             Push-Location $outputDir
             $nodeOutput = & node --test $relativeTestPath 2>&1 | Out-String
             $nodeExitCode = $LASTEXITCODE
@@ -272,6 +342,8 @@ foreach ($toolDir in $toolDirs) {
             $nodeOutput = "node --test invocation error: $_"
         } finally {
             Pop-Location
+            $ErrorActionPreference = $oldErrorActionPreference
+            if ($hadNativePreference) { $global:PSNativeCommandUseErrorActionPreference = $oldNativePreference }
         }
 
         if ($nodeExitCode -eq 0) {
@@ -351,6 +423,9 @@ Remove-Item Env:\TICTACTOE_TESTS            -ErrorAction SilentlyContinue
 Remove-Item Env:\MARKDOWN_HTML              -ErrorAction SilentlyContinue
 Remove-Item Env:\MARKDOWN_TOOL_NAME         -ErrorAction SilentlyContinue
 Remove-Item Env:\MARKDOWN_TESTS             -ErrorAction SilentlyContinue
+Remove-Item Env:\REACT_TODO_HTML            -ErrorAction SilentlyContinue
+Remove-Item Env:\REACT_TODO_TOOL_NAME       -ErrorAction SilentlyContinue
+Remove-Item Env:\REACT_TODO_TESTS           -ErrorAction SilentlyContinue
 
 # ============================================================
 # Append v5 skipped tools (from _run-config.json) to $toolResults

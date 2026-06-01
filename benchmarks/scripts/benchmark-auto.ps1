@@ -40,6 +40,16 @@ $toolConfigs = @{
     opencode = @{ commandName = "opencode" }
 }
 
+function Resolve-CmdShim {
+    param([Parameter(Mandatory)][string]$Name)
+    if ($IsWindows) {
+        $cmd = Get-Command "$Name.cmd" -ErrorAction SilentlyContinue
+        if ($cmd -and $cmd.Path) { return $cmd.Path }
+    }
+    $resolved = Get-Command $Name -ErrorAction Stop
+    return $resolved.Path
+}
+
 function Get-Field {
     param(
         [Parameter(Mandatory)]$Obj,
@@ -78,9 +88,10 @@ function Invoke-CcusageSnapshot {
         [Parameter(Mandatory)][string]$JsonPath,
         [Parameter(Mandatory)][string]$TextPath
     )
-    & npx -y "ccusage@latest" $Tool "session" "--json" | Set-Content -Encoding utf8 $JsonPath
+    $npx = Resolve-CmdShim "npx"
+    & $npx -y "ccusage@latest" $Tool "session" "--json" | Set-Content -Encoding utf8 $JsonPath
     if ($LASTEXITCODE -ne 0) { throw "ccusage failed for $Tool (json)" }
-    & npx -y "ccusage@latest" $Tool "session" | Set-Content -Encoding utf8 $TextPath
+    & $npx -y "ccusage@latest" $Tool "session" | Set-Content -Encoding utf8 $TextPath
     if ($LASTEXITCODE -ne 0) { throw "ccusage failed for $Tool (text)" }
 }
 
@@ -157,7 +168,11 @@ function Find-Matches {
     )
     $matches = @()
     foreach ($pattern in $Patterns) {
-        $matches += Get-ChildItem -Path $BaseDir -Recurse -File -ErrorAction SilentlyContinue | Where-Object { $_.Name -like $pattern }
+        $matches += Get-ChildItem -Path $BaseDir -Recurse -File -ErrorAction SilentlyContinue |
+            Where-Object {
+                $_.FullName -notmatch '[\\/](node_modules|\.git)[\\/]' -and
+                $_.Name -like $pattern
+            }
     }
     return @($matches | Sort-Object FullName -Unique)
 }
@@ -189,6 +204,7 @@ function Copy-WorkspaceOutputs {
     New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null
     $items = Get-ChildItem -Path $WorkspaceDir -Force -ErrorAction SilentlyContinue
     foreach ($item in $items) {
+        if ($item.Name -in @("node_modules", ".git")) { continue }
         Copy-Item -Path $item.FullName -Destination (Join-Path $OutputDir $item.Name) -Recurse -Force
     }
 }
@@ -228,9 +244,11 @@ function Invoke-LoggedProcess {
             $timedOut = $true
             Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
         }
+        try { $proc.WaitForExit() } catch {}
         $proc.Refresh()
+        $exitCode = if ($timedOut) { 124 } elseif ($null -ne $proc.ExitCode) { [int]$proc.ExitCode } else { 0 }
         return @{
-            exitCode = if ($timedOut) { 124 } else { $proc.ExitCode }
+            exitCode = $exitCode
             timedOut = $timedOut
         }
     } finally {
@@ -617,7 +635,7 @@ if (-not $SkipJudge -and -not $DryRun) {
         Write-Host ""
         Write-Host "Running deterministic judge..." -ForegroundColor Cyan
         & $judgeScript -RunId $RunId -Benchmark $Benchmark
-        if ($LASTEXITCODE -ne 0) { throw "judge-run.ps1 failed with exit code $LASTEXITCODE" }
+        if (-not $?) { throw "judge-run.ps1 failed" }
     }
 }
 
