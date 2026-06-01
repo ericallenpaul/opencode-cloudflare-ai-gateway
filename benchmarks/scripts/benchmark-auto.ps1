@@ -297,9 +297,10 @@ function New-InvocationScript {
         [Parameter(Mandatory)][string]$PromptPath,
         [Parameter(Mandatory)][string]$WorkspaceDir,
         [Parameter(Mandatory)][string]$ScriptPath,
-        [string]$AppTag = (Split-Path -Leaf $repoRoot)
+        [string]$AppTag = ""
     )
 
+    if (-not $AppTag) { $AppTag = Split-Path -Leaf $repoRoot }
     $escapedPrompt = $PromptPath.Replace("'", "''")
     $escapedWorkspace = $WorkspaceDir.Replace("'", "''")
     $escapedModel = $RequestedModel.Replace("'", "''")
