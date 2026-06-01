@@ -170,8 +170,9 @@ function Find-Matches {
     foreach ($pattern in $Patterns) {
         $matches += Get-ChildItem -Path $BaseDir -Recurse -File -ErrorAction SilentlyContinue |
             Where-Object {
-                $_.FullName -notmatch '[\\/](node_modules|\.git)[\\/]' -and
-                $_.Name -like $pattern
+                $_.FullName -notmatch '[\\/](node_modules|\.git|\.opencode)[\\/]' -and
+                $_.Name -like $pattern -and
+                -not ($_.Name -eq "AGENTS.md" -and $_.FullName -eq (Join-Path $BaseDir "AGENTS.md"))
             }
     }
     return @($matches | Sort-Object FullName -Unique)
@@ -204,7 +205,7 @@ function Copy-WorkspaceOutputs {
     New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null
     $items = Get-ChildItem -Path $WorkspaceDir -Force -ErrorAction SilentlyContinue
     foreach ($item in $items) {
-        if ($item.Name -in @("node_modules", ".git")) { continue }
+        if ($item.Name -in @("node_modules", ".git", ".opencode", "AGENTS.md")) { continue }
         Copy-Item -Path $item.FullName -Destination (Join-Path $OutputDir $item.Name) -Recurse -Force
     }
 }
@@ -453,6 +454,35 @@ function Test-PolicyCompliance {
     return @($reasons | Sort-Object -Unique)
 }
 
+function Initialize-BenchmarkWorkspace {
+    param(
+        [Parameter(Mandatory)][string]$WorkspaceDir,
+        [Parameter(Mandatory)][string]$RepoRoot
+    )
+    try {
+        # Give the workspace its own git root so opencode's git-toplevel walk stops here.
+        & git init -q $WorkspaceDir 2>$null | Out-Null
+
+        # Copy .opencode/ so subagent discovery (coder/searcher/reader/planner) works locally.
+        $srcOpencode = Join-Path $RepoRoot ".opencode"
+        if (Test-Path $srcOpencode) {
+            Copy-Item -Path $srcOpencode -Destination (Join-Path $WorkspaceDir ".opencode") -Recurse -Force
+        }
+
+        # Copy AGENTS.md so the tool sees project context.
+        $srcAgents = Join-Path $RepoRoot "AGENTS.md"
+        if (Test-Path $srcAgents) {
+            Copy-Item -Path $srcAgents -Destination (Join-Path $WorkspaceDir "AGENTS.md") -Force
+        }
+
+        # opencode requires >= 1 commit to treat the dir as a project.
+        & git -C $WorkspaceDir -c user.email=bench@local -c user.name=benchmark add -A 2>$null | Out-Null
+        & git -C $WorkspaceDir -c user.email=bench@local -c user.name=benchmark commit -q -m "benchmark workspace baseline" 2>$null | Out-Null
+    } catch {
+        Write-Host "  [warn] workspace git init failed: $_" -ForegroundColor Yellow
+    }
+}
+
 function Write-MarkdownSummary {
     param(
         [Parameter(Mandatory)][string]$Path,
@@ -520,6 +550,7 @@ foreach ($tool in $toolNames) {
     $resultOutputDir = Join-Path $resultToolDir "output"
     New-Item -ItemType Directory -Force -Path $workspaceDir | Out-Null
     New-Item -ItemType Directory -Force -Path $resultToolDir | Out-Null
+    Initialize-BenchmarkWorkspace -WorkspaceDir $workspaceDir -RepoRoot $repoRoot
 
     $stdoutPath = Join-Path $scratchDir "stdout.log"
     $stderrPath = Join-Path $scratchDir "stderr.log"
