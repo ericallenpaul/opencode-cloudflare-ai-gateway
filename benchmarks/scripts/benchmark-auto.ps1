@@ -352,7 +352,7 @@ function Get-BenchmarkPrompt {
     )
 
     $mode = [string](Get-Field $Policy @("mode") "")
-    if ($Tool -ne "opencode" -or $mode -ne "architecture") {
+    if ($Tool -ne "opencode") {
         return $PromptText
     }
 
@@ -365,7 +365,8 @@ function Get-BenchmarkPrompt {
 "@
     }
 
-    return @"
+    if ($mode -eq "architecture") {
+        return @"
 AUTOMATED BENCHMARK CONTRACT
 
 This target policy mode is architecture. A valid OpenCode run must demonstrate the configured tiered architecture, not just solve the app in the primary GPT-5 session.
@@ -383,6 +384,18 @@ Canonical benchmark prompt follows.
 
 $PromptText
 "@
+    }
+
+    # opencode, non-architecture mode: inject workspace instruction only
+    if (-not [string]::IsNullOrWhiteSpace($workspaceInstruction)) {
+        return @"
+$workspaceInstruction
+
+$PromptText
+"@
+    }
+
+    return $PromptText
 }
 
 function Test-PolicyCompliance {
