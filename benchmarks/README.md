@@ -6,33 +6,27 @@ Reproducible benchmarks that measure **cost, time, and correctness** across Clau
 
 The harness is intentionally strict. It records model evidence, invalidates missing routing, captures command-line tests, runs deterministic browser checks, and preserves raw logs so a cheap run cannot pass merely by producing files.
 
-## Headline result so far
+## Publication snapshot
 
-Latest architecture result: `markdown-editor` run `2026-05-27-105622` compared each tool in its intended best-orchestrator setup.
+The current publishable snapshot has at least one successful functional comparison for each benchmark target. The goal of this snapshot is not to prove that every agent succeeds on every attempt. It is to compare cost and token use for quality outputs after each tool has produced a result that satisfies the same target prompt, SPEC, and deterministic judge.
 
-| Tool | Models observed | Cost | Functional result |
-|---|---|---:|---|
-| **OpenCode** | `gpt-5`, `gpt-5-mini` | **$0.3888** | Core R1-R10 pass; perf partial |
-| Codex | `gpt-5.5`, `gpt-5.4-mini` | $1.0080 | Core R1-R10 pass; perf partial |
-| Claude Code | `claude-opus-4-7`, `claude-haiku-4-5` | $1.2273 | Failed browser runtime rendering due JS regex error |
+| Benchmark | Selected artifact(s) | Claude Code | Codex CLI | OpenCode |
+|---|---|---:|---:|---:|
+| `markdown-editor` | [`2026-05-26-0829`](markdown-editor/results/runs/2026-05-26-0829/) | 9/10 | 10/10 | 10/10 |
+| `react-todo-api-db` | [`2026-05-31-164112`](react-todo-api-db/results/runs/2026-05-31-164112/) | 9/10 | 10/10 | 10/10 |
+| `tic-tac-toe` | [selected 2026-06-02 artifacts](tic-tac-toe/results/runs/2026-06-02-selected-functional.md) | 10/10 | 10/10 | 10/10 |
 
-This supersedes the earlier GLM-as-coder experiment. GLM 4.7 Flash routed successfully and is still useful for read/search/planning, but it failed the markdown-editor implementation target on parser features, XSS safety, and tests. The current OpenCode recommendation is `gpt-5` orchestrator plus `gpt-5-mini` coder, with GLM retained for bounded mechanical work.
+The final `tic-tac-toe` token/cost snapshot is the cleanest structured comparison:
 
-Two completed runs of `tic-tac-toe`, identical prompt and acceptance criteria each time. Models: opencode ran GPT-5 via this repo's gateway stack; codex ran GPT-5 (CLI mis-reports as "gpt-5.5" in session records); claude ran claude-opus-4-7.
+| Tool | Source artifact | Cost | Total tokens | Functional result |
+|---|---|---:|---:|---:|
+| **OpenCode** | [`2026-06-02-opencode-only-fixed`](tic-tac-toe/results/runs/2026-06-02-opencode-only-fixed/) | **$0.1753** | **805,731** | 10/10 |
+| Claude Code | [`2026-06-02-140953-claude-fixed`](tic-tac-toe/results/runs/2026-06-02-140953-claude-fixed/) | $3.0039 | 8,942,555 | 10/10 |
+| Codex CLI | [`2026-06-02-140953`](tic-tac-toe/results/runs/2026-06-02-140953/) | $3.0120 | 3,352,097 | 10/10 |
 
-| Tool | Run 1 (05-21) cost / wall / R1-R10 | Run 2 (05-22) cost / wall / R1-R10 | Quality avg (run 1 / run 2) |
-|---|---|---|---|
-| **opencode** | $0.28 / 5m18s / 10/10 | $0.25 / 7m02s / 10/10 | 3.0 / 3.2 |
-| codex | $1.97 / 9m48s / 10/10 | $2.18 / 11m06s / 10/10 | 4.8 / 4.6 |
-| claude | $2.91 / 9m34s / 10/10 | $1.60 / 8m56s / 9/10 | 4.8 / 4.4 |
+That result supports the current recommendation: `gpt-5` remains the OpenCode build/orchestration tier, `gpt-5-mini` is the implementation worker tier, and GLM 4.7 Flash remains useful for bounded read/search/planning work but not for the harder implementation target. OpenCode produced the selected successful `tic-tac-toe` output at roughly 17x lower cost than Claude/Codex and with materially fewer total tokens.
 
-**Effective Input** (per-run details linked below) = `inputTokens + cacheReadTokens + cacheWriteTokens` -- what the model actually saw, normalized across tools with different caching strategies.
-
-What stayed stable: opencode is cheapest by 6-10x in both runs, opencode and codex both held 10/10 functional R1-R10 both runs, opencode held composite rank #1 both runs. Frontier tools scored higher on quality (~4.4-4.8 vs opencode ~3.0-3.2).
-
-Where the numbers didn't stay stable run-over-run (the kind of nondeterminism the methodology warns about): claude got 45% cheaper but dropped one functional criterion, and claude vs codex flipped 2nd/3rd on the composite ranking as a result.
-
-Full per-run data: [`runs/2026-05-21-0818`](tic-tac-toe/results/runs/2026-05-21-0818/2026-05-21-0818.md), [`runs/2026-05-22-0745`](tic-tac-toe/results/runs/2026-05-22-0745/2026-05-22-0745.md). Cross-run ranking log: [`tic-tac-toe/results/comparisons.md`](tic-tac-toe/results/comparisons.md). See "Caveats and limitations" below before citing any of these numbers.
+The caveat is important enough to lead with: getting three different agent CLIs, plugin stacks, and LLMs to produce successful one-shot outputs consistently took days of harness work and reruns. The June 2 `tic-tac-toe` publication row is therefore a selected functional comparison, not a clean single uninterrupted all-tool batch run. That operational friction is part of the benchmark result.
 
 ## Prerequisites
 

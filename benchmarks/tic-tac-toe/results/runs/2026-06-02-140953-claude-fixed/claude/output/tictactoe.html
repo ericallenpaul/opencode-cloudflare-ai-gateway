@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tic-Tac-Toe</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .container {
+      text-align: center;
+      background: white;
+      padding: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+
+    h1 {
+      color: #333;
+      margin-bottom: 1.5rem;
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 100px);
+      grid-template-rows: repeat(3, 100px);
+      gap: 8px;
+      margin: 1.5rem auto;
+      background: #ddd;
+      padding: 8px;
+      border-radius: 8px;
+    }
+
+    .cell {
+      background: white;
+      border: none;
+      font-size: 2rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.2s;
+      border-radius: 4px;
+    }
+
+    .cell:hover:not(:disabled) {
+      background: #f0f0f0;
+    }
+
+    .cell:disabled {
+      cursor: not-allowed;
+    }
+
+    .cell.winner {
+      background: #4caf50;
+      color: white;
+    }
+
+    .status {
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: #333;
+      margin-bottom: 1rem;
+      min-height: 1.5rem;
+    }
+
+    .restart-btn {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 0.75rem 2rem;
+      font-size: 1rem;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 1rem;
+      transition: background 0.2s;
+    }
+
+    .restart-btn:hover {
+      background: #5568d3;
+    }
+
+    .scores {
+      margin-top: 1.5rem;
+      padding-top: 1.5rem;
+      border-top: 2px solid #eee;
+    }
+
+    .scores h2 {
+      font-size: 1.1rem;
+      color: #666;
+      margin-bottom: 0.75rem;
+    }
+
+    .score-grid {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+    }
+
+    .score-item {
+      text-align: center;
+    }
+
+    .score-label {
+      font-size: 0.9rem;
+      color: #888;
+      margin-bottom: 0.25rem;
+    }
+
+    .score-value {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Tic-Tac-Toe</h1>
+    <div class="status" id="status">Player X's turn</div>
+    <div class="board" id="board">
+      <button class="cell" data-index="0"></button>
+      <button class="cell" data-index="1"></button>
+      <button class="cell" data-index="2"></button>
+      <button class="cell" data-index="3"></button>
+      <button class="cell" data-index="4"></button>
+      <button class="cell" data-index="5"></button>
+      <button class="cell" data-index="6"></button>
+      <button class="cell" data-index="7"></button>
+      <button class="cell" data-index="8"></button>
+    </div>
+    <button class="restart-btn" id="restart">Restart Game</button>
+    <div class="scores">
+      <h2>Score</h2>
+      <div class="score-grid">
+        <div class="score-item">
+          <div class="score-label">Player X</div>
+          <div class="score-value" id="score-x">0</div>
+        </div>
+        <div class="score-item">
+          <div class="score-label">Player O</div>
+          <div class="score-value" id="score-o">0</div>
+        </div>
+        <div class="score-item">
+          <div class="score-label">Draws</div>
+          <div class="score-value" id="score-draws">0</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Game logic functions
+    function checkWinner(board) {
+      // Check horizontal wins
+      for (let row = 0; row < 3; row++) {
+        const start = row * 3;
+        if (board[start] &&
+            board[start] === board[start + 1] &&
+            board[start] === board[start + 2]) {
+          return board[start];
+        }
+      }
+
+      // Check vertical wins
+      for (let col = 0; col < 3; col++) {
+        if (board[col] &&
+            board[col] === board[col + 3] &&
+            board[col] === board[col + 6]) {
+          return board[col];
+        }
+      }
+
+      // Check diagonal wins
+      if (board[0] && board[0] === board[4] && board[0] === board[8]) {
+        return board[0];
+      }
+      if (board[2] && board[2] === board[4] && board[2] === board[6]) {
+        return board[2];
+      }
+
+      return null;
+    }
+
+    function checkDraw(board) {
+      // Not a draw if there's a winner
+      if (checkWinner(board)) return false;
+
+      // Draw if board is full and no winner
+      return board.every(cell => cell !== null);
+    }
+
+    function getWinningLine(board) {
+      // Check horizontal wins
+      for (let row = 0; row < 3; row++) {
+        const start = row * 3;
+        if (board[start] &&
+            board[start] === board[start + 1] &&
+            board[start] === board[start + 2]) {
+          return [start, start + 1, start + 2];
+        }
+      }
+
+      // Check vertical wins
+      for (let col = 0; col < 3; col++) {
+        if (board[col] &&
+            board[col] === board[col + 3] &&
+            board[col] === board[col + 6]) {
+          return [col, col + 3, col + 6];
+        }
+      }
+
+      // Check diagonal wins
+      if (board[0] && board[0] === board[4] && board[0] === board[8]) {
+        return [0, 4, 8];
+      }
+      if (board[2] && board[2] === board[4] && board[2] === board[6]) {
+        return [2, 4, 6];
+      }
+
+      return null;
+    }
+
+    function loadScores(storage = localStorage) {
+      const saved = storage.getItem('tictactoe-scores');
+      if (saved) {
+        return JSON.parse(saved);
+      }
+      return { X: 0, O: 0, draws: 0 };
+    }
+
+    function saveScores(storage = localStorage, scores) {
+      storage.setItem('tictactoe-scores', JSON.stringify(scores));
+    }
+
+    // Game state
+    let board = Array(9).fill(null);
+    let currentPlayer = 'X';
+    let gameOver = false;
+    let scores = loadScores();
+
+    // DOM elements
+    const cells = document.querySelectorAll('.cell');
+    const statusEl = document.getElementById('status');
+    const restartBtn = document.getElementById('restart');
+    const scoreXEl = document.getElementById('score-x');
+    const scoreOEl = document.getElementById('score-o');
+    const scoreDrawsEl = document.getElementById('score-draws');
+
+    // Initialize game
+    function init() {
+      updateScoreDisplay();
+      cells.forEach(cell => {
+        cell.addEventListener('click', handleCellClick);
+      });
+      restartBtn.addEventListener('click', restartGame);
+    }
+
+    function updateScoreDisplay() {
+      scoreXEl.textContent = scores.X;
+      scoreOEl.textContent = scores.O;
+      scoreDrawsEl.textContent = scores.draws;
+    }
+
+    function handleCellClick(e) {
+      const index = parseInt(e.target.dataset.index);
+
+      if (board[index] || gameOver) return;
+
+      board[index] = currentPlayer;
+      e.target.textContent = currentPlayer;
+      e.target.disabled = true;
+
+      const winner = checkWinner(board);
+      if (winner) {
+        gameOver = true;
+        const winningLine = getWinningLine(board);
+        winningLine.forEach(i => {
+          cells[i].classList.add('winner');
+        });
+        statusEl.textContent = `Player ${winner} wins!`;
+        scores[winner]++;
+        saveScores(localStorage, scores);
+        updateScoreDisplay();
+        return;
+      }
+
+      if (checkDraw(board)) {
+        gameOver = true;
+        statusEl.textContent = "It's a draw!";
+        scores.draws++;
+        saveScores(localStorage, scores);
+        updateScoreDisplay();
+        return;
+      }
+
+      currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+      statusEl.textContent = `Player ${currentPlayer}'s turn`;
+    }
+
+    function restartGame() {
+      board = Array(9).fill(null);
+      currentPlayer = 'X';
+      gameOver = false;
+      statusEl.textContent = "Player X's turn";
+
+      cells.forEach(cell => {
+        cell.textContent = '';
+        cell.disabled = false;
+        cell.classList.remove('winner');
+      });
+    }
+
+    // Start game when page loads
+    if (typeof document !== 'undefined') {
+      init();
+    }
+  </script>
+</body>
+</html>

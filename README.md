@@ -1,7 +1,6 @@
 # opencode-cloudflare-ai-gateway
 
-I wanted to see whether a tiered setup could save money without lowering quality. OpenCode supports a lot of different models, which made it the right tool for this experiment.
-This repo is the result of that experiment: OpenCode routed through [Cloudflare AI Gateway](https://developers.cloudflare.com/ai-gateway/), with a frontier model still responsible for orchestration and cheaper workers only used where the benchmarks show they can hold up.
+I wanted to see whether a tiered setup could save money without lowering quality. OpenCode supports a lot of different models, which made it the right tool for this experiment. This repo is the result of that experiment: OpenCode routed through [Cloudflare AI Gateway](https://developers.cloudflare.com/ai-gateway/), with a frontier model still responsible for orchestration and cheaper workers only used where the benchmarks show they can hold up.
 
 The first version of this idea was too naive: push more work to a very cheap hosted OSS model and enjoy the savings. GLM 4.7 Flash routed correctly and cost almost nothing, but it failed the harder markdown-editor benchmark on parser correctness, XSS safety, and self-tests. So the lesson was not "use the cheapest model." The lesson was "use the cheapest model that can reliably do this specific job."
 
@@ -40,14 +39,13 @@ More detail on the reasoning lives in [`docs/PROBLEM.md`](docs/PROBLEM.md).
 | Role | Current model | Why |
 |---|---|---|
 | `build` | `openai-via-gateway/gpt-5` | Owns judgment, integration, fallback, final verification |
-| `coder` | `openai-via-gateway/gpt-5-mini` | Passed the markdown-editor implementation benchmark with much lower cost than frontier-direct tools |
+| `coder` | `openai-via-gateway/gpt-5-mini` | Produces successful implementation artifacts at much lower cost than frontier-direct runs on the selected benchmark set |
 | `searcher` | `workers-ai-via-gateway/@cf/zai-org/glm-4.7-flash` | Cheap and reliable enough for bounded search/file discovery |
 | `reader` | `workers-ai-via-gateway/@cf/zai-org/glm-4.7-flash` | Cheap and reliable enough for local file summarization/extraction |
 | `planner` | `workers-ai-via-gateway/@cf/zai-org/glm-4.7-flash` | Useful for compact plans/risk lists when the primary gives narrow context |
-| `local` | manual experiment | Local models are still too slow on my hardware for daily use |
+| `local`, `oss`, `frontier` | manual override agents | Available for explicit experiments and escape hatches |
 
-Local models can reduce costs even further, but on my laptop they are too slow to be practical. Tool calling and context size heavily affect which local models are usable.
-I tried both Ollama and LM Studio, and LM Studio was more reliable for me. If you have a fast GPU with 16GB or more of VRAM, local models may reduce the cost further.
+Local models can reduce costs further, but on my laptop they are too slow to be practical for daily coding. Tool calling and context size heavily affect which local models are usable.
 
 See [`docs/CURRENT-STRATEGY.md`](docs/CURRENT-STRATEGY.md) for the routing table and evidence behind it.
 
@@ -80,19 +78,23 @@ Full walkthrough with screenshots and gotchas: [`docs/SETUP.md`](docs/SETUP.md).
 
 ## Evidence Snapshot
 
-Short answer: **yes, the tiered setup saves money when cheap workers are assigned to work they can actually do.**
+The selected benchmark snapshot now has at least one successful functional comparison for all three benchmark targets:
 
-The decisive target is `markdown-editor`, because it exercises parser correctness, XSS handling, live-preview event wiring, tests, docs, and model routing in one run.
+| Benchmark | Selected result | Claude Code | Codex CLI | OpenCode |
+|---|---|---:|---:|---:|
+| `markdown-editor` | [`2026-05-26-0829`](benchmarks/markdown-editor/results/runs/2026-05-26-0829/) | 9/10 | 10/10 | 10/10 |
+| `react-todo-api-db` | [`2026-05-31-164112`](benchmarks/react-todo-api-db/results/runs/2026-05-31-164112/) | 9/10 | 10/10 | 10/10 |
+| `tic-tac-toe` | [selected 2026-06-02 artifacts](benchmarks/tic-tac-toe/results/runs/2026-06-02-selected-functional.md) | 10/10 | 10/10 | 10/10 |
 
-Latest markdown-editor evidence (`2026-05-27-105622`, using each tool's best native orchestration setup):
+The clearest structured token comparison is the final `tic-tac-toe` selected snapshot:
 
-| Tool | Models observed | Cost | Deterministic judge |
-|---|---|---:|---|
-| **OpenCode** | `gpt-5`, `gpt-5-mini` | **$0.3888** | Core R1-R10 pass; perf partial |
-| Codex | `gpt-5.5`, `gpt-5.4-mini` | $1.0080 | Core R1-R10 pass; perf partial |
-| Claude Code | `claude-opus-4-7`, `claude-haiku-4-5` | $1.2273 | Failed browser runtime rendering despite passing its own `node --test` |
+| Tool | Cost | Total tokens | Functional result |
+|---|---:|---:|---:|
+| **OpenCode** | **$0.1753** | **805,731** | 10/10 |
+| Claude Code | $3.0039 | 8,942,555 | 10/10 |
+| Codex CLI | $3.0120 | 3,352,097 | 10/10 |
 
-That run makes the current recommendation concrete: OpenCode achieved comparable functional quality to Codex at about 39% of Codex cost on this target. The earlier GLM coder experiment routed correctly and was cheaper, but failed quality and security checks; it is not the recommended implementation tier.
+That is the useful underscore from this project: once all three agents produce quality outputs under the same target rules, the tiered OpenCode setup is dramatically cheaper. Getting three different agent CLIs, plugin stacks, and LLMs to behave consistently enough to produce those comparable outputs took days of harness work and reruns, so the caveat is part of the result rather than a footnote.
 
 The longer benchmark story, including invalidated runs, methodology caveats, and historical config iterations, lives in [`benchmarks/README.md`](benchmarks/README.md) and the per-target result folders.
 
@@ -121,7 +123,7 @@ The deeper gateway evaluation and architecture trade-offs are in [`docs/ARCHITEC
 - [`docs/SETUP.md`](docs/SETUP.md) -- full setup walkthrough
 - [`docs/CURRENT-STRATEGY.md`](docs/CURRENT-STRATEGY.md) -- current routing table and operating rule
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) -- provider setup, routing shape, and orchestration boundaries
-- [`benchmarks/README.md`](benchmarks/README.md) -- benchmark methodology, caveats, and historical results
+- [`benchmarks/README.md`](benchmarks/README.md) -- benchmark methodology, caveats, and selected results
 - [`docs/LEARNINGS.md`](docs/LEARNINGS.md) -- gotchas discovered while building this
 - [`docs/LSP-INTEGRATION.md`](docs/LSP-INTEGRATION.md) -- OpenCode LSP setup
 - [`docs/MCP-INTEGRATION.md`](docs/MCP-INTEGRATION.md) -- MCP tool choices and how they interact with the tiers
@@ -130,9 +132,9 @@ The deeper gateway evaluation and architecture trade-offs are in [`docs/ARCHITEC
 
 Working today:
 
-- All five providers reachable through the gateway
+- All configured providers reachable through the gateway
 - Reliability-based OpenCode orchestration: `gpt-5` primary `build`, `gpt-5-mini` `coder`, GLM-backed `searcher`/`reader`/`planner`
-- Automatic `app` + `user` metadata tagging on every gateway request
+- Automatic `app` + `user` metadata tagging on gateway requests
 - Baseline MCP integration: `context7`, `cloudflare-docs`, and `snyk`
 - LSP integration with `"lsp": {}` and the experimental agent-callable `lsp` tool
 - Included `searcher`, `reader`, `coder`, and `planner` subagents invoked through OpenCode's Task tool

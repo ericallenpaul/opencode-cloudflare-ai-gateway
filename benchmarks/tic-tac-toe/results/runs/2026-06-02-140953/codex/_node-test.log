@@ -1,0 +1,18 @@
+Γ£ö exposes evaluateBoard from the embedded HTML script (1.4913ms)
+Γ£ö detects a horizontal win and returns the winning line (0.9712ms)
+Γ£ö detects a vertical win (1.2313ms)
+Γ£ö detects a diagonal win (0.6856ms)
+Γ£ö detects a draw when the board is full with no winner (0.5416ms)
+Γ£ö reports an unfinished board as in progress (0.5237ms)
+Γ£ö loads default scores when localStorage is empty (0.6151ms)
+Γ£ö increments and saves the winner score once (0.5484ms)
+Γ£ö increments draw count when the outcome is a draw (0.625ms)
+Γ£ö saves scores to localStorage and loads them on the next read (0.6555ms)
+Γä╣ tests 10
+Γä╣ suites 0
+Γä╣ pass 10
+Γä╣ fail 0
+Γä╣ cancelled 0
+Γä╣ skipped 0
+Γä╣ todo 0
+Γä╣ duration_ms 91.2429

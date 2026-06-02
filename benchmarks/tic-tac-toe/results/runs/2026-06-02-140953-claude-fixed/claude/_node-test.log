@@ -1,0 +1,27 @@
+✔ test harness loads successfully (0.5436ms)
+✔ checkWinner detects horizontal win in row 0 (0.1212ms)
+✔ checkWinner detects horizontal win in row 1 (0.087ms)
+✔ checkWinner detects horizontal win in row 2 (0.0819ms)
+✔ checkWinner detects vertical win in column 0 (0.0734ms)
+✔ checkWinner detects vertical win in column 1 (0.0616ms)
+✔ checkWinner detects vertical win in column 2 (0.0492ms)
+✔ checkWinner detects diagonal win (top-left to bottom-right) (0.1975ms)
+✔ checkWinner detects diagonal win (top-right to bottom-left) (0.0856ms)
+✔ checkDraw returns false for incomplete game (0.1311ms)
+✔ checkDraw returns false when there is a winner (0.0694ms)
+✔ checkDraw returns true for a full board with no winner (0.0789ms)
+✔ getWinningLine returns horizontal line indices (0.599ms)
+✔ getWinningLine returns vertical line indices (0.104ms)
+✔ getWinningLine returns diagonal line indices (0.0612ms)
+✔ getWinningLine returns null for no winner (0.0572ms)
+✔ loadScores returns default scores when localStorage is empty (0.078ms)
+✔ loadScores parses scores from localStorage (0.0841ms)
+✔ saveScores writes scores to localStorage (0.1055ms)
+ℹ tests 19
+ℹ suites 0
+ℹ pass 19
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 90.8371

@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tic-Tac-Toe</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4efe6;
+      --panel: #fffaf2;
+      --grid: #3f3a34;
+      --accent: #d96c3d;
+      --accent-soft: #f1c8b7;
+      --win: #a6d49f;
+      --text: #1f1b18;
+      --muted: #6d6258;
+      --shadow: 0 18px 40px rgba(63, 58, 52, 0.14);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top, rgba(217, 108, 61, 0.18), transparent 38%),
+        linear-gradient(160deg, #f7f0e5 0%, #efe7da 100%);
+      color: var(--text);
+    }
+
+    .game-shell {
+      width: min(100%, 720px);
+      background: var(--panel);
+      border: 2px solid rgba(63, 58, 52, 0.14);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .hero {
+      padding: 28px 28px 20px;
+      background: linear-gradient(135deg, rgba(217, 108, 61, 0.18), rgba(166, 212, 159, 0.28));
+      border-bottom: 1px solid rgba(63, 58, 52, 0.12);
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: 2rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .status {
+      margin: 0;
+      font-size: 1rem;
+      color: var(--muted);
+      min-height: 1.5em;
+    }
+
+    .content {
+      display: grid;
+      grid-template-columns: minmax(0, 1.25fr) minmax(220px, 0.75fr);
+      gap: 24px;
+      padding: 24px 28px 28px;
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin: 0;
+      padding: 0;
+      border: 0;
+      min-width: 0;
+    }
+
+    .cell {
+      appearance: none;
+      border: 2px solid var(--grid);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--text);
+      aspect-ratio: 1;
+      font: inherit;
+      font-size: clamp(2rem, 7vw, 3.5rem);
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 120ms ease, background-color 120ms ease, box-shadow 120ms ease;
+    }
+
+    .cell:hover:not(:disabled),
+    .cell:focus-visible:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 18px rgba(63, 58, 52, 0.14);
+      outline: none;
+    }
+
+    .cell[data-mark="X"] {
+      color: #8c2f39;
+    }
+
+    .cell[data-mark="O"] {
+      color: #235789;
+    }
+
+    .cell.win {
+      background: var(--win);
+    }
+
+    .cell:disabled {
+      cursor: default;
+    }
+
+    .sidebar {
+      display: grid;
+      gap: 16px;
+      align-content: start;
+    }
+
+    .panel {
+      border: 1px solid rgba(63, 58, 52, 0.14);
+      border-radius: 8px;
+      padding: 18px;
+      background: rgba(255, 255, 255, 0.75);
+    }
+
+    .panel h2 {
+      margin: 0 0 12px;
+      font-size: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .score-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      gap: 10px;
+    }
+
+    .score-list li {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 8px;
+      border-bottom: 1px dashed rgba(63, 58, 52, 0.14);
+    }
+
+    .score-list li:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .score-value {
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .restart {
+      appearance: none;
+      border: 0;
+      border-radius: 8px;
+      padding: 14px 16px;
+      font: inherit;
+      font-weight: 700;
+      color: #fff;
+      background: linear-gradient(135deg, #d96c3d, #c6502a);
+      cursor: pointer;
+      box-shadow: 0 12px 24px rgba(217, 108, 61, 0.28);
+    }
+
+    .restart:hover,
+    .restart:focus-visible {
+      outline: none;
+      filter: brightness(1.04);
+    }
+
+    .legend {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    @media (max-width: 720px) {
+      .content {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="game-shell">
+    <section class="hero">
+      <h1>Tic-Tac-Toe</h1>
+      <p id="status" class="status" aria-live="polite">Player X to move.</p>
+    </section>
+    <section class="content">
+      <section aria-label="Tic-tac-toe board">
+        <div id="board" class="board">
+          <button class="cell" type="button" data-index="0" aria-label="Cell 1"></button>
+          <button class="cell" type="button" data-index="1" aria-label="Cell 2"></button>
+          <button class="cell" type="button" data-index="2" aria-label="Cell 3"></button>
+          <button class="cell" type="button" data-index="3" aria-label="Cell 4"></button>
+          <button class="cell" type="button" data-index="4" aria-label="Cell 5"></button>
+          <button class="cell" type="button" data-index="5" aria-label="Cell 6"></button>
+          <button class="cell" type="button" data-index="6" aria-label="Cell 7"></button>
+          <button class="cell" type="button" data-index="7" aria-label="Cell 8"></button>
+          <button class="cell" type="button" data-index="8" aria-label="Cell 9"></button>
+        </div>
+      </section>
+      <aside class="sidebar">
+        <section class="panel" aria-labelledby="score-heading">
+          <h2 id="score-heading">Scoreboard</h2>
+          <ul class="score-list">
+            <li><span>X wins</span><span id="score-x" class="score-value">0</span></li>
+            <li><span>O wins</span><span id="score-o" class="score-value">0</span></li>
+            <li><span>Draws</span><span id="score-draws" class="score-value">0</span></li>
+          </ul>
+        </section>
+        <button id="restart" class="restart" type="button">Restart Round</button>
+        <section class="panel">
+          <p class="legend">Two players share the same device. Win highlights stay visible until the next round.</p>
+        </section>
+      </aside>
+    </section>
+  </main>
+  <script>
+    (function () {
+      var STORAGE_KEY = "tic-tac-toe-scoreboard";
+      var WINNING_LINES = [
+        [0, 1, 2],
+        [3, 4, 5],
+        [6, 7, 8],
+        [0, 3, 6],
+        [1, 4, 7],
+        [2, 5, 8],
+        [0, 4, 8],
+        [2, 4, 6]
+      ];
+
+      function defaultScores() {
+        return { X: 0, O: 0, draws: 0 };
+      }
+
+      function normalizeScores(value) {
+        if (!value || typeof value !== "object") {
+          return defaultScores();
+        }
+
+        return {
+          X: Number.isFinite(value.X) ? value.X : 0,
+          O: Number.isFinite(value.O) ? value.O : 0,
+          draws: Number.isFinite(value.draws) ? value.draws : 0
+        };
+      }
+
+      function evaluateBoard(board) {
+        var lineIndex;
+        var line;
+        var first;
+
+        for (lineIndex = 0; lineIndex < WINNING_LINES.length; lineIndex += 1) {
+          line = WINNING_LINES[lineIndex];
+          first = board[line[0]];
+
+          if (first && first === board[line[1]] && first === board[line[2]]) {
+            return {
+              winner: first,
+              draw: false,
+              status: "win",
+              winningLine: line.slice()
+            };
+          }
+        }
+
+        if (board.every(function (cell) { return cell === "X" || cell === "O"; })) {
+          return {
+            winner: null,
+            draw: true,
+            status: "draw",
+            winningLine: []
+          };
+        }
+
+        return {
+          winner: null,
+          draw: false,
+          status: "in-progress",
+          winningLine: []
+        };
+      }
+
+      function loadScores() {
+        var raw;
+
+        try {
+          raw = globalThis.localStorage && globalThis.localStorage.getItem(STORAGE_KEY);
+        } catch (error) {
+          raw = null;
+        }
+
+        if (!raw) {
+          return defaultScores();
+        }
+
+        try {
+          return normalizeScores(JSON.parse(raw));
+        } catch (error) {
+          return defaultScores();
+        }
+      }
+
+      function saveScores(scores) {
+        var nextScores = normalizeScores(scores);
+
+        try {
+          if (globalThis.localStorage) {
+            globalThis.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextScores));
+          }
+        } catch (error) {
+          return nextScores;
+        }
+
+        return nextScores;
+      }
+
+      function recordOutcome(scores, result) {
+        var nextScores = normalizeScores(scores);
+
+        if (result.winner === "X") {
+          nextScores.X += 1;
+        } else if (result.winner === "O") {
+          nextScores.O += 1;
+        } else if (result.draw) {
+          nextScores.draws += 1;
+        }
+
+        return nextScores;
+      }
+
+      function createInitialState() {
+        return {
+          board: ["", "", "", "", "", "", "", "", ""],
+          currentPlayer: "X",
+          result: {
+            winner: null,
+            draw: false,
+            status: "in-progress",
+            winningLine: []
+          },
+          scores: loadScores(),
+          gameOver: false
+        };
+      }
+
+      function render(state, elements) {
+        var completed = state.gameOver;
+
+        elements.cells.forEach(function (cell, index) {
+          var mark = state.board[index];
+          var isWinner = state.result.winningLine.indexOf(index) !== -1;
+
+          cell.textContent = mark;
+          cell.dataset.mark = mark;
+          cell.disabled = completed || Boolean(mark);
+          cell.classList.toggle("win", isWinner);
+          cell.setAttribute("aria-label", "Cell " + (index + 1) + (mark ? ": " + mark : ""));
+        });
+
+        if (state.result.status === "win") {
+          elements.status.textContent = "Player " + state.result.winner + " wins.";
+        } else if (state.result.status === "draw") {
+          elements.status.textContent = "Round ends in a draw.";
+        } else {
+          elements.status.textContent = "Player " + state.currentPlayer + " to move.";
+        }
+
+        elements.scoreX.textContent = String(state.scores.X);
+        elements.scoreO.textContent = String(state.scores.O);
+        elements.scoreDraws.textContent = String(state.scores.draws);
+      }
+
+      function initGame() {
+        var boardElement = document.getElementById("board");
+        var statusElement = document.getElementById("status");
+        var restartButton = document.getElementById("restart");
+
+        if (!boardElement || !statusElement || !restartButton) {
+          return;
+        }
+
+        var elements = {
+          board: boardElement,
+          status: statusElement,
+          restart: restartButton,
+          cells: Array.prototype.slice.call(boardElement.querySelectorAll(".cell")),
+          scoreX: document.getElementById("score-x"),
+          scoreO: document.getElementById("score-o"),
+          scoreDraws: document.getElementById("score-draws")
+        };
+        var state = createInitialState();
+
+        function restartRound() {
+          state.board = ["", "", "", "", "", "", "", "", ""];
+          state.currentPlayer = "X";
+          state.result = {
+            winner: null,
+            draw: false,
+            status: "in-progress",
+            winningLine: []
+          };
+          state.gameOver = false;
+          render(state, elements);
+        }
+
+        function handleMove(index) {
+          if (state.gameOver || state.board[index]) {
+            return;
+          }
+
+          state.board[index] = state.currentPlayer;
+          state.result = evaluateBoard(state.board);
+
+          if (state.result.status === "win" || state.result.status === "draw") {
+            state.gameOver = true;
+            state.scores = recordOutcome(state.scores, state.result);
+            saveScores(state.scores);
+          } else {
+            state.currentPlayer = state.currentPlayer === "X" ? "O" : "X";
+          }
+
+          render(state, elements);
+        }
+
+        elements.cells.forEach(function (cell) {
+          cell.addEventListener("click", function () {
+            handleMove(Number(cell.dataset.index));
+          });
+        });
+
+        elements.restart.addEventListener("click", restartRound);
+        render(state, elements);
+      }
+
+      var TicTacToeLogic = {
+        evaluateBoard: evaluateBoard,
+        loadScores: loadScores,
+        saveScores: saveScores,
+        recordOutcome: recordOutcome,
+        defaultScores: defaultScores
+      };
+
+      globalThis.TicTacToeLogic = TicTacToeLogic;
+
+      if (globalThis.document && typeof globalThis.document.addEventListener === "function") {
+        globalThis.document.addEventListener("DOMContentLoaded", initGame);
+      }
+    }());
+  </script>
+</body>
+</html>

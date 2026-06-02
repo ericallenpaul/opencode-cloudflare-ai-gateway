@@ -1,6 +1,8 @@
 # Tic-Tac-Toe — run methodology
 
-The `bench-run.ps1` wrapper handles every step except the human ones: launching each tool, pasting the prompt, scoring the result. Below is what to do and what to watch for.
+The current primary path is the unattended `benchmark-auto.ps1` runner. The older
+manual `bench-run.ps1` flow is still documented below for debugging and historical
+runs.
 
 ## Prerequisites
 
@@ -20,7 +22,34 @@ Also: at least one prior session per tool helps ccusage's baseline diff. If a to
 
 ## Run procedure
 
-The simplest path: **one orchestrator command runs everything with two manual pauses.**
+The simplest current path: **one automated command runs the selected tool(s), copies
+outputs, and runs the deterministic judge.**
+
+```powershell
+cd "<repo>\benchmarks\scripts"
+.\benchmark-auto.ps1 -Benchmark tic-tac-toe -Tools claude,codex,opencode -RunId <RunId>
+```
+
+For one tool:
+
+```powershell
+.\benchmark-auto.ps1 -Benchmark tic-tac-toe -Tools opencode -RunId <RunId>
+```
+
+On Windows, unattended runs should be launched from a hidden process host when the
+operator is using the same desktop session for other work. The runner itself starts
+tool subprocesses with `CreateNoWindow = true`, `UseShellExecute = false`, redirected
+stdout/stderr, and `pwsh -NoProfile`. Claude is invoked with `--strict-mcp-config`
+and an empty benchmark-local MCP config so user/global MCP helpers such as `npx`,
+Snyk, or Context7 do not spawn extra console windows during benchmark execution.
+
+The selected 2026-06-02 `tic-tac-toe` publication snapshot is intentionally documented
+as selected successful artifacts rather than a single uninterrupted all-tool batch.
+Several same-day attempts exposed real operational nondeterminism across agent CLIs,
+plugins, and LLMs. See
+[`results/runs/2026-06-02-selected-functional.md`](results/runs/2026-06-02-selected-functional.md).
+
+The legacy guided path: **one orchestrator command runs everything with two manual pauses.**
 
 ```powershell
 cd "<repo>\benchmarks\scripts"

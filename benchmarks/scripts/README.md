@@ -13,6 +13,8 @@ cd "<repo>\benchmarks\scripts"
 
 Runs a benchmark target without manual checkpoints. It reads `benchmarks/<target>/policy.json`, launches each enabled CLI non-interactively, captures raw stdout/stderr, snapshots `ccusage` before and after, copies deliverables into `benchmarks/<target>/results/runs/<RunId>/<tool>/output/`, writes `_run-result.json`, and runs the deterministic Playwright judge.
 
+On Windows, use a hidden process host for long unattended runs if you are working in the same desktop session. The runner launches tool subprocesses with hidden/no-shell process settings and invokes Claude with a strict empty MCP config so user/global MCP helpers cannot spawn extra console windows during the benchmark.
+
 Policy modes:
 
 - `tool`: validates requested model and expected outputs. `tic-tac-toe` uses this mode as the quick harness smoke test.

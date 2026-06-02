@@ -1,0 +1,55 @@
+{
+  "tool": "claude",
+  "htmlPath": "C:\\Users\\eric.paul\\.config\\superpowers\\worktrees\\opencode-cloudflare-ai-gateway\\tic-tac-toe-full-20260602\\benchmarks\\tic-tac-toe\\results\\runs\\2026-06-02-140953\\claude\\output\\tictactoe.html",
+  "results": {
+    "R5": {
+      "reason": "Winning cell bg (rgb(76, 175, 80)) differs from non-winning (rgb(255, 255, 255))",
+      "status": "PASS"
+    },
+    "R8": {
+      "reason": "No external scripts or links; no resource failures; no console errors",
+      "status": "PASS"
+    },
+    "R1": {
+      "reason": "9 cells rendered, no console errors on load",
+      "status": "PASS"
+    },
+    "R7": {
+      "reason": "X score: 0 -> 1 after win, 1 after reload (persisted)",
+      "status": "PASS"
+    },
+    "R2": {
+      "reason": "X placed first, O second, X third; occupied cell blocked; status updates",
+      "status": "PASS"
+    },
+    "R6": {
+      "reason": "Board empty after restart; X score preserved",
+      "status": "PASS"
+    },
+    "R10": {
+      "reason": "node --test exited 0 (all tests passed)",
+      "status": "PASS"
+    },
+    "R4": {
+      "reason": "Draw correctly detected and announced",
+      "status": "PASS"
+    },
+    "R9": {
+      "reason": "Test file found: tictactoe.test.js",
+      "status": "PASS"
+    },
+    "R3": {
+      "reason": "X win announced in status, further clicks after win ignored",
+      "status": "PASS"
+    }
+  },
+  "consoleErrors": null,
+  "jsErrors": null,
+  "screenshots": [
+    "empty.png",
+    "mid-game.png",
+    "win.png",
+    "win-highlight.png",
+    "mobile.png"
+  ]
+}

@@ -2,6 +2,25 @@
 
 Every entry below cost real debugging time. Captured here so the next person doesn't relearn them.
 
+## Fair token comparisons require successful outputs, not just matching prompts
+
+The June 2026 benchmark pass made this painfully concrete. The goal was simple on paper:
+run the same one-shot project prompts through Claude Code, Codex CLI, and OpenCode, then
+compare token/cost usage for quality outputs. In practice, getting all three agents to
+produce comparable successful artifacts took days.
+
+The hard part was not the `tic-tac-toe` app. It was operational consistency:
+
+- agent CLIs inherit different plugin/config state;
+- MCP helpers can spawn unexpected child processes on Windows;
+- one tool may pause for a workflow skill while another runs unattended;
+- the same prompt can produce a broken artifact on one attempt and a 10/10 artifact on a rerun;
+- judge bugs can create false negatives if UI text formats differ, such as score labels like `X: 1`.
+
+The publishable result should therefore be framed as selected successful artifacts under the
+same specs and deterministic judges, not as proof that one uninterrupted all-tool batch is easy
+to reproduce. That caveat is part of the benchmark result.
+
 ## OpenCode sends the model **key**, not the `name` field
 
 In OpenCode's provider config:

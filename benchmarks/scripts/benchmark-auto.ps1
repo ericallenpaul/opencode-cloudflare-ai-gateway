@@ -387,6 +387,7 @@ function New-InvocationScript {
     $escapedWorkspace = $WorkspaceDir.Replace("'", "''")
     $escapedModel = $RequestedModel.Replace("'", "''")
     $escapedAppTag = $AppTag.Replace("'", "''")
+    $escapedClaudeMcpConfig = '{"mcpServers":{}}'.Replace("'", "''")
 
     $body = switch ($Tool) {
         "claude" {
@@ -394,7 +395,7 @@ function New-InvocationScript {
 Set-Location '$escapedWorkspace'
 `$ErrorActionPreference = 'Stop'
 `$prompt = Get-Content '$escapedPrompt' -Raw -Encoding utf8
-& claude -p --output-format json --permission-mode bypassPermissions --model '$escapedModel' `$prompt
+& claude -p --output-format json --permission-mode bypassPermissions --no-chrome --strict-mcp-config --mcp-config '$escapedClaudeMcpConfig' --model '$escapedModel' `$prompt
 exit `$LASTEXITCODE
 "@
         }
@@ -688,7 +689,7 @@ foreach ($tool in $toolNames) {
             -AppTag "bench:${Benchmark}:${RunId}"
         $process = Invoke-LoggedProcess `
             -FilePath "pwsh" `
-            -Arguments @("-File", $invokeScriptPath) `
+            -Arguments @("-NoProfile", "-File", $invokeScriptPath) `
             -WorkingDirectory $workspaceDir `
             -TimeoutSeconds $timeoutSeconds `
             -StdoutPath $stdoutPath `
