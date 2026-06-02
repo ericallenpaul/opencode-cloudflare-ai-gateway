@@ -1,0 +1,48 @@
+{
+  "tool": "opencode",
+  "benchmark": "tic-tac-toe",
+  "runId": "2026-06-02-opencode-only-fixed",
+  "requestedModel": "openai-via-gateway/gpt-5",
+  "actualModels": [
+    "gpt-5",
+    "gpt-5-mini"
+  ],
+  "exitCode": 0,
+  "timedOut": false,
+  "valid": true,
+  "invalidationReasons": [],
+  "outputs": {
+    "html": [
+      "C:\\Users\\eric.paul\\source\\repos\\opencode-cloudflare-ai-gateway\\benchmarks\\runs\\2026-06-02-opencode-only-fixed\\tic-tac-toe\\opencode\\workspace\\tictactoe.html"
+    ],
+    "tests": [
+      "C:\\Users\\eric.paul\\source\\repos\\opencode-cloudflare-ai-gateway\\benchmarks\\runs\\2026-06-02-opencode-only-fixed\\tic-tac-toe\\opencode\\workspace\\tictactoe.test.js"
+    ],
+    "docs": [
+      "C:\\Users\\eric.paul\\source\\repos\\opencode-cloudflare-ai-gateway\\benchmarks\\runs\\2026-06-02-opencode-only-fixed\\tic-tac-toe\\opencode\\workspace\\README.md"
+    ]
+  },
+  "missingOutputs": [],
+  "metrics": {
+    "inputTokens": 64257.0,
+    "outputTokens": 11874.0,
+    "cacheReadTokens": 722432.0,
+    "cacheCreationTokens": 0.0,
+    "cachedInputTokens": 0.0,
+    "reasoningOutputTokens": 0.0,
+    "totalTokens": 805731.0,
+    "totalCost": 0.17533445
+  },
+  "sessionCount": 4,
+  "sessionIds": [
+    "ses_1779a552affevKo7a2qaaeq8TY",
+    "ses_1779b6d0fffeOtO2FZWTcww7nq",
+    "ses_1779c9bbdffetUMYdX4TFqj6z7",
+    "ses_1779e0d0affeahMq5W5RRfAPTr"
+  ],
+  "scratchDir": "C:\\Users\\eric.paul\\source\\repos\\opencode-cloudflare-ai-gateway\\benchmarks\\runs\\2026-06-02-opencode-only-fixed\\tic-tac-toe\\opencode",
+  "resultDir": "C:\\Users\\eric.paul\\source\\repos\\opencode-cloudflare-ai-gateway\\benchmarks\\tic-tac-toe\\results\\runs\\2026-06-02-opencode-only-fixed\\opencode",
+  "stdoutPath": "C:\\Users\\eric.paul\\source\\repos\\opencode-cloudflare-ai-gateway\\benchmarks\\runs\\2026-06-02-opencode-only-fixed\\tic-tac-toe\\opencode\\stdout.log",
+  "stderrPath": "C:\\Users\\eric.paul\\source\\repos\\opencode-cloudflare-ai-gateway\\benchmarks\\runs\\2026-06-02-opencode-only-fixed\\tic-tac-toe\\opencode\\stderr.log",
+  "costSource": "gateway"
+}

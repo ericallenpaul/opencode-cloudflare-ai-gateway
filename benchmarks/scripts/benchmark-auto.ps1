@@ -210,6 +210,65 @@ function Copy-WorkspaceOutputs {
     }
 }
 
+function Get-ChildProcessIds {
+    param([Parameter(Mandatory)][int]$ParentProcessId)
+
+    if ($IsWindows) {
+        try {
+            return @(
+                Get-CimInstance -ClassName Win32_Process -Filter "ParentProcessId = $ParentProcessId" -ErrorAction SilentlyContinue |
+                    ForEach-Object { [int]$_.ProcessId }
+            )
+        } catch {
+            return @()
+        }
+    }
+
+    try {
+        $processList = & ps -eo pid=,ppid= 2>$null
+    } catch {
+        return @()
+    }
+
+    $childIds = New-Object System.Collections.Generic.List[int]
+    foreach ($line in @($processList)) {
+        $parts = ($line -as [string]).Trim() -split '\s+', 2
+        if ($parts.Count -ne 2) { continue }
+
+        $pid = 0
+        $ppid = 0
+        if ([int]::TryParse($parts[0], [ref]$pid) -and [int]::TryParse($parts[1], [ref]$ppid) -and $ppid -eq $ParentProcessId) {
+            [void]$childIds.Add($pid)
+        }
+    }
+
+    return @($childIds | Sort-Object -Unique)
+}
+
+function Stop-ProcessTree {
+    param([Parameter(Mandatory)][int]$ProcessId)
+
+    $descendants = New-Object System.Collections.Generic.List[int]
+    $seen = New-Object 'System.Collections.Generic.HashSet[int]'
+    $pending = [System.Collections.Generic.Queue[int]]::new()
+    [void]$pending.Enqueue($ProcessId)
+
+    while ($pending.Count -gt 0) {
+        $currentProcessId = $pending.Dequeue()
+        foreach ($childProcessId in @(Get-ChildProcessIds -ParentProcessId $currentProcessId)) {
+            if ($seen.Add($childProcessId)) {
+                [void]$descendants.Add($childProcessId)
+                [void]$pending.Enqueue($childProcessId)
+            }
+        }
+    }
+
+    foreach ($childProcessId in ($descendants | Sort-Object -Descending)) {
+        Stop-Process -Id $childProcessId -Force -ErrorAction SilentlyContinue
+    }
+    Stop-Process -Id $ProcessId -Force -ErrorAction SilentlyContinue
+}
+
 function Invoke-LoggedProcess {
     param(
         [Parameter(Mandatory)][string]$FilePath,
@@ -230,27 +289,49 @@ function Invoke-LoggedProcess {
     }
 
     try {
-        $proc = Start-Process -FilePath $FilePath `
-            -ArgumentList $Arguments `
-            -WorkingDirectory $WorkingDirectory `
-            -RedirectStandardOutput $StdoutPath `
-            -RedirectStandardError $StderrPath `
-            -PassThru `
-            -NoNewWindow
-
-        $timedOut = $false
-        try {
-            Wait-Process -Id $proc.Id -Timeout $TimeoutSeconds -ErrorAction Stop
-        } catch {
-            $timedOut = $true
-            Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+        $processStartInfo = [System.Diagnostics.ProcessStartInfo]::new()
+        $processStartInfo.FileName = $FilePath
+        foreach ($argument in $Arguments) {
+            [void]$processStartInfo.ArgumentList.Add($argument)
         }
-        try { $proc.WaitForExit() } catch {}
-        $proc.Refresh()
-        $exitCode = if ($timedOut) { 124 } elseif ($null -ne $proc.ExitCode) { [int]$proc.ExitCode } else { 0 }
-        return @{
-            exitCode = $exitCode
-            timedOut = $timedOut
+        $processStartInfo.WorkingDirectory = $WorkingDirectory
+        $processStartInfo.RedirectStandardOutput = $true
+        $processStartInfo.RedirectStandardError = $true
+        $processStartInfo.UseShellExecute = $false
+        $processStartInfo.CreateNoWindow = $true
+
+        $proc = [System.Diagnostics.Process]::new()
+        $proc.StartInfo = $processStartInfo
+        $stdoutStream = [System.IO.File]::Open($StdoutPath, [System.IO.FileMode]::Create, [System.IO.FileAccess]::Write, [System.IO.FileShare]::Read)
+        $stderrStream = [System.IO.File]::Open($StderrPath, [System.IO.FileMode]::Create, [System.IO.FileAccess]::Write, [System.IO.FileShare]::Read)
+        $stdoutTask = $null
+        $stderrTask = $null
+
+        try {
+            [void]$proc.Start()
+            $stdoutTask = $proc.StandardOutput.BaseStream.CopyToAsync($stdoutStream)
+            $stderrTask = $proc.StandardError.BaseStream.CopyToAsync($stderrStream)
+
+            $timedOut = -not $proc.WaitForExit([int]($TimeoutSeconds * 1000))
+            if ($timedOut) {
+                Stop-ProcessTree -ProcessId $proc.Id
+            }
+
+            try { $proc.WaitForExit() } catch {}
+            if ($stdoutTask) { try { $stdoutTask.Wait() } catch {} }
+            if ($stderrTask) { try { $stderrTask.Wait() } catch {} }
+            $proc.Refresh()
+            $exitCode = if ($timedOut) { 124 } elseif ($null -ne $proc.ExitCode) { [int]$proc.ExitCode } else { 0 }
+            return @{
+                exitCode = $exitCode
+                timedOut = $timedOut
+            }
+        } finally {
+            if ($stdoutTask) { try { $stdoutTask.Wait(1000) | Out-Null } catch {} }
+            if ($stderrTask) { try { $stderrTask.Wait(1000) | Out-Null } catch {} }
+            if ($stdoutStream) { $stdoutStream.Dispose() }
+            if ($stderrStream) { $stderrStream.Dispose() }
+            if ($proc) { $proc.Dispose() }
         }
     } finally {
         if ($EnvironmentOverrides) {
@@ -362,7 +443,7 @@ function Get-BenchmarkPrompt {
         $workspaceInstruction = @"
 - Benchmark workspace: $WorkspaceDir. Before writing files or running tests, verify the current directory is exactly this workspace. If it is not, change to this workspace first.
 - After changing to the benchmark workspace, create deliverables with bare filenames only, such as markdown.html, markdown.test.js, and README.md. Do not recreate the workspace path as nested directories.
-- When delegating via the Task tool, explicitly tell the subagent to work only in the benchmark workspace above, verify its current directory before writing files, and use bare filenames only after changing directory.
+- When delegating via the Task tool, explicitly tell the subagent to work only in the benchmark workspace above, verify its current directory before writing files, use bare filenames only after changing directory, do not invoke superpowers:brainstorming, do not pause for human approval or clarification, and do not use Playwright MCP, browser MCP tools, or browser smoke tests.
 "@
     }
 
@@ -373,6 +454,9 @@ This target policy mode is architecture. A valid OpenCode run must demonstrate t
 
 Required execution pattern:
 - Read the benchmark requirements first.
+- This automated benchmark contract is the complete approved design/spec for this run.
+- Do not invoke `superpowers:brainstorming`.
+- Skip any approval or clarification pauses because the benchmark spec is complete and user-approved; if any skill or workflow would normally pause for clarification, design approval, plan approval, or execution approval, treat this contract as the answer and continue unattended.
 - Delegate at least one concrete implementation, test, or documentation task to an OpenCode subagent through the Task tool.
 - Prefer the cheaper configured worker model for bounded mechanical work when the subagent config allows it.
 - Keep the primary build agent responsible for final integration, verification, and fixes.
@@ -469,6 +553,27 @@ function Initialize-BenchmarkWorkspace {
             Copy-Item -Path $srcOpencode -Destination (Join-Path $WorkspaceDir ".opencode") -Recurse -Force
         }
 
+        # Use a benchmark-local OpenCode config so global local MCP servers do not
+        # spawn extra console processes during generation.
+        $srcOpencodeConfig = Join-Path $RepoRoot "opencode.example.json"
+        if (Test-Path $srcOpencodeConfig) {
+            $workspaceOpencodeConfig = Join-Path $WorkspaceDir "opencode.json"
+            $opencodeConfig = Get-Content $srcOpencodeConfig -Raw -Encoding utf8 | ConvertFrom-Json
+            foreach ($metadataProperty in @($opencodeConfig.PSObject.Properties | Where-Object { $_.Name.StartsWith("_") })) {
+                $opencodeConfig.PSObject.Properties.Remove($metadataProperty.Name)
+            }
+            if ($opencodeConfig.PSObject.Properties["mcp"]) {
+                foreach ($mcpServer in $opencodeConfig.mcp.PSObject.Properties) {
+                    if ($mcpServer.Value.PSObject.Properties["enabled"]) {
+                        $mcpServer.Value.enabled = $false
+                    } else {
+                        Add-Member -InputObject $mcpServer.Value -NotePropertyName "enabled" -NotePropertyValue $false
+                    }
+                }
+            }
+            $opencodeConfig | ConvertTo-Json -Depth 100 | Set-Content -Path $workspaceOpencodeConfig -Encoding utf8
+        }
+
         # Copy AGENTS.md so the tool sees project context.
         $srcAgents = Join-Path $RepoRoot "AGENTS.md"
         if (Test-Path $srcAgents) {
@@ -532,7 +637,7 @@ Write-Host "  RunId:     $RunId"
 Write-Host "  Tools:     $($toolNames -join ', ')"
 Write-Host ""
 
-$runScratchRoot = Join-Path ([System.IO.Path]::GetTempPath()) "opencode-bench\$RunId\$Benchmark"
+$runScratchRoot = Join-Path $repoRoot "benchmarks\runs\$RunId\$Benchmark"
 $runResultsRoot = Join-Path $benchmarkDir "results\runs\$RunId"
 New-Item -ItemType Directory -Force -Path $runScratchRoot | Out-Null
 New-Item -ItemType Directory -Force -Path $runResultsRoot | Out-Null

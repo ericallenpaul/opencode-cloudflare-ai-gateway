@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Tic Tac Toe</title>
+  <style>
+    :root{--size:64px;--gap:8px;--win-color:#fffa8b}
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;margin:24px;background:#f7f7f8;color:#111}
+    h1{margin:0 0 12px;font-size:20px}
+    .container{max-width:360px}
+    .board{display:grid;grid-template-columns:repeat(3,var(--size));grid-template-rows:repeat(3,var(--size));gap:var(--gap);margin:12px 0}
+    .cell{width:var(--size);height:var(--size);display:flex;align-items:center;justify-content:center;background:#fff;border:1px solid #d0d0d3;font-size:32px;cursor:pointer;user-select:none}
+    .cell.filled{cursor:default;color:#222}
+    .status{margin:8px 0;font-weight:600}
+    .controls{display:flex;gap:8px;align-items:center}
+    button{padding:8px 10px;border-radius:6px;border:1px solid #cfcfcf;background:#fff;cursor:pointer}
+    .score{display:flex;gap:12px;margin-top:8px}
+    .score div{background:#fff;padding:6px 8px;border-radius:6px;border:1px solid #e2e2e5}
+    .win{background:linear-gradient(90deg,var(--win-color),#fff);box-shadow:0 0 0 3px rgba(255,250,139,0.15) inset}
+    .muted{color:#666;font-weight:400}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Tic Tac Toe</h1>
+    <div class="status" id="status">X to move</div>
+    <div class="board" id="board" role="grid" aria-label="Tic Tac Toe board">
+      <!-- 9 cells inserted by JS -->
+    </div>
+    <div class="controls">
+      <button id="restart">Restart</button>
+      <div class="muted">(Click a cell to play)</div>
+    </div>
+    <div class="score" id="scoreboard">
+      <div id="scoreX">X: 0</div>
+      <div id="scoreO">O: 0</div>
+      <div id="scoreD">Draws: 0</div>
+    </div>
+  </div>
+
+  <script>
+    // Pure exports for Node tests - do not reference DOM here
+    /* EXPORTS_START */
+    (function(root){
+      function calculateWinner(board){
+        if(!Array.isArray(board) || board.length !== 9) return null;
+        const lines = [
+          [0,1,2],[3,4,5],[6,7,8],
+          [0,3,6],[1,4,7],[2,5,8],
+          [0,4,8],[2,4,6]
+        ];
+        for(const [a,b,c] of lines){
+          const v = board[a];
+          if(v && v === board[b] && v === board[c]) return v;
+        }
+        return null;
+      }
+
+      function isDraw(board){
+        if(!Array.isArray(board) || board.length !== 9) return false;
+        if(calculateWinner(board)) return false;
+        return board.every(cell => cell === 'X' || cell === 'O');
+      }
+
+      root.calculateWinner = calculateWinner;
+      root.isDraw = isDraw;
+    })(typeof window !== 'undefined' ? window : globalThis);
+    /* EXPORTS_END */
+
+    // Application code (may use DOM)
+    (function(){
+      const boardEl = document.getElementById('board');
+      const statusEl = document.getElementById('status');
+      const restartBtn = document.getElementById('restart');
+      const scoreXEl = document.getElementById('scoreX');
+      const scoreOEl = document.getElementById('scoreO');
+      const scoreDEl = document.getElementById('scoreD');
+
+      let board = Array(9).fill(null);
+      let currentPlayer = 'X';
+      let gameOver = false;
+      const STORAGE_KEY = 'tic_tac_toe_scores_v1';
+
+      function createCells(){
+        boardEl.innerHTML = '';
+        for(let i=0;i<9;i++){
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+          cell.setAttribute('data-index', String(i));
+          cell.addEventListener('click', onCellClick);
+          boardEl.appendChild(cell);
+        }
+      }
+
+      function onCellClick(e){
+        if(gameOver) return;
+        const idx = Number(e.currentTarget.getAttribute('data-index'));
+        if(board[idx]) return; // ignore filled
+        board[idx] = currentPlayer;
+        renderBoard();
+        const winner = calculateWinner(board);
+        if(winner){
+          gameOver = true;
+          highlightWinningLine(board);
+          statusEl.textContent = winner + ' wins!';
+          updateScores(winner);
+          persistScores();
+          renderScores();
+          return;
+        }
+        if(isDraw(board)){
+          gameOver = true;
+          statusEl.textContent = 'Draw!';
+          updateScores('D');
+          persistScores();
+          renderScores();
+          return;
+        }
+        currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+        statusEl.textContent = currentPlayer + ' to move';
+      }
+
+      function renderBoard(){
+        for(let i=0;i<9;i++){
+          const cell = boardEl.children[i];
+          cell.textContent = board[i] || '';
+          cell.classList.toggle('filled', !!board[i]);
+          cell.classList.remove('win');
+        }
+      }
+
+      function getWinningLineIndices(board){
+        const lines = [
+          [0,1,2],[3,4,5],[6,7,8],
+          [0,3,6],[1,4,7],[2,5,8],
+          [0,4,8],[2,4,6]
+        ];
+        for(const [a,b,c] of lines){
+          const v = board[a];
+          if(v && v === board[b] && v === board[c]) return [a,b,c];
+        }
+        return null;
+      }
+
+      function highlightWinningLine(board){
+        const win = getWinningLineIndices(board);
+        if(!win) return;
+        for(const i of win){
+          boardEl.children[i].classList.add('win');
+        }
+      }
+
+      function resetBoard(){
+        board = Array(9).fill(null);
+        currentPlayer = 'X';
+        gameOver = false;
+        statusEl.textContent = currentPlayer + ' to move';
+        renderBoard();
+      }
+
+      function loadScores(){
+        try{
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if(!raw) return {X:0,O:0,D:0};
+          const parsed = JSON.parse(raw);
+          return {X:parsed.X||0,O:parsed.O||0,D:parsed.D||0};
+        }catch(e){return {X:0,O:0,D:0};}
+      }
+
+      function persistScores(){
+        try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(scores)); }catch(e){}
+      }
+
+      function renderScores(){
+        scoreXEl.textContent = 'X: ' + scores.X;
+        scoreOEl.textContent = 'O: ' + scores.O;
+        scoreDEl.textContent = 'Draws: ' + scores.D;
+      }
+
+      function updateScores(winner){
+        if(winner === 'X') scores.X++;
+        else if(winner === 'O') scores.O++;
+        else if(winner === 'D') scores.D++;
+      }
+
+      // Init
+      createCells();
+      let scores = loadScores();
+      renderScores();
+      renderBoard();
+
+      restartBtn.addEventListener('click', ()=>{
+        resetBoard();
+      });
+
+      // Expose some helpers for debugging in browser console
+      window.__ttt = {getBoard: ()=>board, reset: resetBoard, scores: ()=>scores};
+    })();
+  </script>
+</body>
+</html>

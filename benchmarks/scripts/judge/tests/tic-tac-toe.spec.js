@@ -192,6 +192,11 @@ async function getScoreElements(page) {
   return { x: null, o: null, draws: null };
 }
 
+function parseScoreText(text) {
+  const match = String(text || '').match(/-?\d+/);
+  return match ? parseInt(match[0], 10) : 0;
+}
+
 // ---------------------------------------------------------------------------
 // Helper: flush output JSON
 // ---------------------------------------------------------------------------
@@ -610,7 +615,7 @@ test('R7 -- scores increment and persist across reload', async ({ page }) => {
       const freshScores = await getScoreElements(page);
       if (!freshScores.x) return null;
       const txt = (await freshScores.x.textContent() || '0').trim();
-      return parseInt(txt, 10) || 0;
+      return parseScoreText(txt);
     };
 
     const xBefore = await readX();

@@ -1,0 +1,29 @@
+{
+  "total": {
+    "cost": 0.17533445,
+    "tokensIn": 393513.0,
+    "tokensOut": 14872.0,
+    "requests": 17.0
+  },
+  "models": [
+    {
+      "model": "gpt-5-2025-08-07",
+      "provider": "openai",
+      "requests": 12.0,
+      "tokensIn": 306529.0,
+      "tokensOut": 7891.0,
+      "cost": 0.15448725
+    },
+    {
+      "model": "gpt-5-mini-2025-08-07",
+      "provider": "openai",
+      "requests": 5.0,
+      "tokensIn": 86984.0,
+      "tokensOut": 6981.0,
+      "cost": 0.020847200000000003
+    }
+  ],
+  "source": "gateway",
+  "runTag": "bench:tic-tac-toe:2026-06-02-opencode-only-fixed",
+  "queriedAt": "2026-06-02T12:55:50.5937639Z"
+}
