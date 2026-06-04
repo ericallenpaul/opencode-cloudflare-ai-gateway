@@ -45,9 +45,9 @@ For each benchmark target, each tool runs the same prompt against the same accep
 
 | Metric | Source |
 |---|---|
-| Input tokens | [ccusage](https://github.com/ryoppippi/ccusage) (tracks all three tools) + CF AI Gateway analytics for OpenCode runs |
-| Output tokens | same |
-| Cost ($) | same |
+| Input tokens | [ccusage](https://github.com/ryoppippi/ccusage) tracks all three tools; CF AI Gateway analytics are captured for OpenCode auto runs when available |
+| Output tokens | ccusage |
+| Cost ($) | ccusage retail-equivalent by default; OpenCode auto runs use CF AI Gateway cost when `_gateway-cost.json` is present and `_run-result.json` says `"costSource": "gateway"` |
 | Wall-clock time | timestamp at prompt → final assistant response |
 | Tool invocations (count, by name) | session transcript |
 | Skills invoked (which, how many times) | session transcript |

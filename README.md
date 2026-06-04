@@ -29,6 +29,8 @@ The selected benchmark set now covers three targets: `markdown-editor`, `react-t
 
 The cleanest structured token snapshot is `tic-tac-toe`: OpenCode used about 4x fewer tokens than Codex and 11x fewer than Claude, while passing the same 10/10 deterministic judge. Selected cost snapshots range from 1.6x cheaper on the easiest completed row to roughly 17x cheaper on `tic-tac-toe`.
 
+Cost-source note: the current automated runner pulls OpenCode cost from Cloudflare AI Gateway analytics when available. The `tic-tac-toe` OpenCode cost is gateway-backed; the older selected `markdown-editor` and `react-todo-api-db` rows are `ccusage` retail-equivalent snapshots captured before that gateway artifact was added.
+
 Full details, source artifacts, and caveats live in [`benchmarks/RESULTS.md`](benchmarks/RESULTS.md).
 
 ## The Problem

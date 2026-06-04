@@ -20,6 +20,14 @@ Across the selected comparison set, OpenCode produced a 10/10 judged output for 
 | `react-todo-api-db` | 10.5x cheaper | 8.2x cheaper |
 | `tic-tac-toe` | 17.2x cheaper | 17.1x cheaper |
 
+## Cost Sources
+
+The current automated runner pulls OpenCode cost from Cloudflare AI Gateway analytics when the gateway query succeeds. In that path, it writes `_gateway-cost.json` and records `"costSource": "gateway"` in `_run-result.json`.
+
+The `tic-tac-toe` OpenCode row is gateway-backed. Its `_gateway-cost.json` records `source: "gateway"`, run tag `bench:tic-tac-toe:2026-06-02-opencode-only-fixed`, 17 gateway requests, and total cost `$0.17533445`.
+
+The older selected `markdown-editor` and `react-todo-api-db` rows are historical `ccusage` retail-equivalent snapshots, not direct gateway-cost artifacts. They remain useful cost comparisons, but they should not be described as Cloudflare-analytics-derived dollar amounts.
+
 ## Token Snapshot
 
 Comparable token totals are not equally clean for every historical selected row. The cleanest structured token comparison is the final `tic-tac-toe` selected snapshot:
