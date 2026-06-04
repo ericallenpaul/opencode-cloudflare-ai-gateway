@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Run a coding-agent benchmark and capture before/after ccusage deltas.
+  Run a coding-agent benchmark and capture before/after usage deltas.
 
 .DESCRIPTION
   Two-phase workflow for measuring a benchmark cleanly across multiple
@@ -15,6 +15,8 @@
   completed. Snapshots ccusage again for that tool, finds new sessions,
   computes totals (tokens/cost/wall-clock/models), writes JSON + summary,
   copies agent output into results/runs/<RunId>/<tool>/, stubs notes.md.
+  For OpenCode, finish queries Cloudflare AI Gateway analytics and uses the
+  gateway cost when the benchmark metadata tag is available.
 
 .PARAMETER Phase
   Either "start" or "finish".
@@ -53,8 +55,10 @@
   on the next invocation; no other changes required.
 
   Requirements: ccusage must be reachable. The script invokes it via
-  `npx -y ccusage@latest`, so Node.js / npm must be installed. See
-  benchmarks/README.md for the full prerequisite list.
+  `npx -y ccusage@latest`, so Node.js / npm must be installed. OpenCode
+  gateway cost capture also requires CF_ACCOUNT_ID or CLOUDFLARE_ACCOUNT_ID,
+  CF_GATEWAY_NAME, and CLOUDFLARE_API_KEY. See benchmarks/README.md for the
+  full prerequisite list.
 #>
 
 [CmdletBinding()]
@@ -385,6 +389,10 @@ if ($Phase -eq "start") {
         $runDir    = Join-Path $BaseDir "$RunId\$name"
         $header    = $name.ToUpper()
         $underline = "=" * $header.Length
+        if ($name -eq "opencode") {
+            $appTag = "bench:${Benchmark}:${RunId}"
+            $launch = "`$env:OPENCODE_APP_TAG = `"$appTag`"; $launch"
+        }
 
         Write-Host $header     -ForegroundColor Cyan
         Write-Host $underline  -ForegroundColor Cyan
@@ -688,6 +696,24 @@ function Finish-OneTool {
     $wall     = $endDt - $startDt
     $wallHuman = "{0:D2}m {1:D2}s" -f [int]$wall.TotalMinutes, $wall.Seconds
 
+    $costSource = "ccusage"
+    $gatewayCostPath = Join-Path $RunDir "_gateway-cost.json"
+    if ($Tool -eq "opencode") {
+        . (Join-Path $PSScriptRoot "gateway-cost.ps1")
+        $runTag = "bench:${Benchmark}:${RunId}"
+        Write-Host "  querying gateway analytics for $runTag ..." -ForegroundColor Cyan
+        $gwCost = Get-OpenCodeGatewayCost -RunTag $runTag -StartUtc $startDt.UtcDateTime
+        $gwCost | ConvertTo-Json -Depth 12 | Set-Content -Encoding utf8 -Path $gatewayCostPath
+        if ($gwCost.source -eq "gateway") {
+            $totals.costUsd = [double]$gwCost.total.cost
+            $costSource = "gateway"
+            Write-Host "  opencode cost (gateway): $($gwCost.total.cost)" -ForegroundColor Green
+        } else {
+            $costSource = "ccusage (gateway-unavailable: $($gwCost.error))"
+            Write-Host "  gateway unavailable, keeping ccusage cost: $($gwCost.error)" -ForegroundColor Yellow
+        }
+    }
+
     # Persist
     $delta = [PSCustomObject]@{
         tool             = $Tool
@@ -698,6 +724,7 @@ function Finish-OneTool {
         wallClockHuman   = $wallHuman
         newSessionCount  = $newSessions.Count
         totals           = $totals
+        costSource       = $costSource
         modelsUsed       = $modelsUsed
         newSessions      = $newSessions
     }
@@ -726,6 +753,7 @@ function Finish-OneTool {
     $summaryLines += ("  Cache read tokens:  {0:N0}" -f $totals.cacheReadTokens)
     $summaryLines += ("  Cache write tokens: {0:N0}" -f $totals.cacheWriteTokens)
     $summaryLines += ("  Total cost (USD):   `${0:F4}" -f $totals.costUsd)
+    $summaryLines += "  Cost source:        $costSource"
 
     if ($modelsUsed.Count -gt 0) {
         $summaryLines += ""
@@ -742,7 +770,7 @@ function Finish-OneTool {
         Write-Host "  WARNING: no new sessions detected for $Tool." -ForegroundColor Yellow
         Write-Host "    - Agent may have exited mid-run, or ccusage hasn't indexed yet." -ForegroundColor Yellow
     } else {
-        Write-Host "  Wall: $wallHuman | Cost: `$$($totals.costUsd.ToString('F4')) | In: $($totals.inputTokens.ToString('N0')) | Out: $($totals.outputTokens.ToString('N0')) | Sessions: $($newSessions.Count)" -ForegroundColor Green
+        Write-Host "  Wall: $wallHuman | Cost: `$$($totals.costUsd.ToString('F4')) ($costSource) | In: $($totals.inputTokens.ToString('N0')) | Out: $($totals.outputTokens.ToString('N0')) | Sessions: $($newSessions.Count)" -ForegroundColor Green
     }
 
     # ---------- Copy outputs into the repo and stub notes.md ----------------
@@ -765,7 +793,7 @@ function Finish-OneTool {
         # _screenshots/, etc. that other scripts own).
         $staleBenchPatterns = @(
             "_ccusage-*.json", "_ccusage-*.txt",
-            "_delta.json", "_delta-summary.txt",
+            "_delta.json", "_delta-summary.txt", "_gateway-cost.json",
             "_start-time.txt", "_end-time.txt", "_end-time-source.txt",
             "_run-id.txt"
         )
@@ -778,6 +806,10 @@ function Finish-OneTool {
         $agentFiles = Get-ChildItem -Path $RunDir -Force | Where-Object { -not $_.Name.StartsWith("_") }
         foreach ($f in $agentFiles) {
             Copy-Item -Recurse -Force -Path $f.FullName -Destination $outputDir
+        }
+
+        if (Test-Path $gatewayCostPath) {
+            Copy-Item -Force -Path $gatewayCostPath -Destination $resultsDir
         }
 
         # Best-effort session-transcript copy
@@ -855,7 +887,8 @@ function Finish-OneTool {
 - Output tokens (ccusage): $($totals.outputTokens.ToString("N0"))
 - Cache read tokens:       $($totals.cacheReadTokens.ToString("N0"))
 - Cache write tokens:      $($totals.cacheWriteTokens.ToString("N0"))
-- Cost (ccusage):          `$$($totals.costUsd.ToString("F4"))
+- Cost:                    `$$($totals.costUsd.ToString("F4"))
+- Cost source:             $costSource
 - Wall-clock time:         $wallHuman ($([int]$wall.TotalSeconds) seconds)
 - End-time source:         $endTimeSource
 - New sessions detected:   $($newSessions.Count)
@@ -891,6 +924,7 @@ function Finish-OneTool {
         WallSec              = [int]$wall.TotalSeconds
         WallHuman            = $wallHuman
         Cost                 = [double]$totals.costUsd
+        CostSource           = $costSource
         InputTokens          = [int64]$totals.inputTokens
         EffectiveInputTokens = [int64]$totals.effectiveInputTokens
         OutputTokens         = [int64]$totals.outputTokens
@@ -960,13 +994,15 @@ foreach ($t in $toolsToProcess) {
 Write-Host ""
 Write-Host "Run $RunId summary" -ForegroundColor Green
 Write-Host ("=" * 80) -ForegroundColor Green
-Write-Host ("{0,-10} {1,10} {2,12} {3,12} {4,12} {5,8}" -f "Tool", "Wall", "Cost(USD)", "InTokens", "OutTokens", "Sess")
-Write-Host ("{0,-10} {1,10} {2,12} {3,12} {4,12} {5,8}" -f "----", "----", "---------", "--------", "---------", "----")
+Write-Host ("{0,-10} {1,10} {2,12} {3,-18} {4,12} {5,12} {6,8}" -f "Tool", "Wall", "Cost(USD)", "CostSource", "InTokens", "OutTokens", "Sess")
+Write-Host ("{0,-10} {1,10} {2,12} {3,-18} {4,12} {5,12} {6,8}" -f "----", "----", "---------", "----------", "--------", "---------", "----")
 foreach ($r in $rows) {
-    Write-Host ("{0,-10} {1,10} {2,12} {3,12} {4,12} {5,8}" -f `
+    $costSourceCell = if ($r.CostSource) { $r.CostSource } else { "ccusage" }
+    Write-Host ("{0,-10} {1,10} {2,12} {3,-18} {4,12} {5,12} {6,8}" -f `
         $r.Tool, `
         $r.WallHuman, `
         ('$' + $r.Cost.ToString("F4")), `
+        $costSourceCell, `
         $r.InputTokens.ToString("N0"), `
         $r.OutputTokens.ToString("N0"), `
         $r.Sessions)
@@ -1011,13 +1047,14 @@ if ($rows.Count -gt 0) {
     $mdLines += ""
     $mdLines += "## Headline (sorted by cost ascending)"
     $mdLines += ""
-    $mdLines += "| Tool | Wall | Cost (USD) | Effective Input | Output | Models |"
-    $mdLines += "|---|---:|---:|---:|---:|---|"
+    $mdLines += "| Tool | Wall | Cost (USD) | Cost source | Effective Input | Output | Models |"
+    $mdLines += "|---|---:|---:|---|---:|---:|---|"
     $sortedByCost = $rows | Sort-Object Cost
     foreach ($r in $sortedByCost) {
         $modelsCell = if ($r.Models) { $r.Models } else { "_(not in ccusage JSON)_" }
-        $line = '| {0} | {1} | ${2:F4} | {3:N0} | {4:N0} | {5} |' -f `
-            $r.Tool, $r.WallHuman, $r.Cost, $r.EffectiveInputTokens, $r.OutputTokens, $modelsCell
+        $costSourceCell = if ($r.CostSource) { $r.CostSource } else { "ccusage" }
+        $line = '| {0} | {1} | ${2:F4} | {3} | {4:N0} | {5:N0} | {6} |' -f `
+            $r.Tool, $r.WallHuman, $r.Cost, $costSourceCell, $r.EffectiveInputTokens, $r.OutputTokens, $modelsCell
         $mdLines += $line
     }
     $mdLines += ""
@@ -1053,7 +1090,7 @@ if ($rows.Count -gt 0) {
     $mdLines += ""
     $mdLines += "## Notes on the metrics"
     $mdLines += ""
-    $mdLines += "- **Cost is API-retail-equivalent.** ``ccusage`` computes what you WOULD pay if billed by token at public API rates. If you're on a Claude Pro/Max subscription or have a Cloudflare AI Gateway with BYOK, your actual cost is your subscription fee + zero per-token charge from the gateway, not this number. The retail-equivalent figure is still the right benchmark axis because it normalizes across subscription tiers."
+    $mdLines += "- **Cost source.** For OpenCode, this script uses Cloudflare AI Gateway analytics when the tagged gateway rows are available and writes ``_gateway-cost.json``. For all other tools, and for OpenCode when the gateway query is unavailable, cost remains the ``ccusage`` API-retail-equivalent fallback."
     $mdLines += "- **Cache fields vary by tool.** Claude uses ``cacheReadTokens`` / ``cacheCreationTokens``. Codex uses ``cachedInputTokens`` for the same concept and doesn't expose cache-writes at all. Opencode uses ``cacheReadTokens`` / ``cacheCreationTokens``. The script handles all three; if a future tool exposes different field names, add them to the alias lists in bench-run.ps1's Finish-OneTool."
     $mdLines += "- **Wall**: end - start, where end is detected per tool (see Timing table). When end-time source is ``current time``, wall-clock overestimates."
     $mdLines += "- **Sessions**: count of new ccusage sessions detected for that tool. Should be 1 in a normal benchmark."
@@ -1064,7 +1101,7 @@ if ($rows.Count -gt 0) {
     $mdLines += "- [``../../comparisons.md``](../../comparisons.md) -- ongoing ranking log across all runs"
     $mdLines += "- [``../../../METHODOLOGY.md``](../../../METHODOLOGY.md) -- how runs are structured"
     $mdLines += "- [``../../../SPEC.md``](../../../SPEC.md) -- acceptance criteria"
-    $mdLines += "- Raw ccusage snapshots + deltas (gitignored scratch): ``<repo>/benchmarks/runs/$RunId/``"
+    $mdLines += "- Raw ccusage snapshots, gateway cost sidecars, and deltas (gitignored scratch): ``<repo>/benchmarks/runs/$RunId/``"
 
     ($mdLines -join "`n") | Set-Content -Encoding utf8 -Path $comparisonMd
 

@@ -22,7 +22,7 @@ Across the selected comparison set, OpenCode produced a 10/10 judged output for 
 
 ## Cost Sources
 
-The current automated runner pulls OpenCode cost from Cloudflare AI Gateway analytics when the gateway query succeeds. In that path, it writes `_gateway-cost.json` and records `"costSource": "gateway"` in `_run-result.json`.
+The current benchmark runners pull OpenCode cost from Cloudflare AI Gateway analytics when the gateway query succeeds. In that path, they write `_gateway-cost.json` and record the cost source as `gateway` in the run artifacts. `ccusage` remains the token/session source and the fallback cost source if Gateway analytics are unavailable.
 
 The `tic-tac-toe` OpenCode row is gateway-backed. Its `_gateway-cost.json` records `source: "gateway"`, run tag `bench:tic-tac-toe:2026-06-02-opencode-only-fixed`, 17 gateway requests, and total cost `$0.17533445`.
 

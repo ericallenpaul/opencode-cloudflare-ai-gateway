@@ -35,6 +35,7 @@ The caveat is important enough to lead with: getting three different agent CLIs,
 - **Node.js / npm** — `bench-run.ps1` shells out to `npx -y ccusage@latest`. Node 18+ is fine; npm pulls and caches ccusage on first call. (Alternatively, install ccusage globally: `npm i -g ccusage`.)
 - **PowerShell 7+** (`pwsh`) — the wrapper script is written for it.
 - **The coding agents you want to compare** — `claude`, `codex`, and `opencode` on your `$PATH`. Each tool's session log is read by ccusage from its standard local path; if you've never run a tool before, the script's baseline snapshot will be empty (still works, just no "before" history).
+- **Cloudflare Gateway analytics for OpenCode cost** — set `CF_ACCOUNT_ID` or `CLOUDFLARE_ACCOUNT_ID`, `CF_GATEWAY_NAME`, and `CLOUDFLARE_API_KEY`. OpenCode cost uses Gateway analytics when the tagged rows are available; `ccusage` remains the fallback.
 - **Optional: bun** — `bunx ccusage` works in place of `npx` if you have it.
 
 Scratch directories created by the script live in `benchmarks/runs/` inside this repo, which is gitignored. The curated, committed copies of each run live under `benchmarks/<target>/results/runs/`.
@@ -45,9 +46,9 @@ For each benchmark target, each tool runs the same prompt against the same accep
 
 | Metric | Source |
 |---|---|
-| Input tokens | [ccusage](https://github.com/ryoppippi/ccusage) tracks all three tools; CF AI Gateway analytics are captured for OpenCode auto runs when available |
+| Input tokens | [ccusage](https://github.com/ryoppippi/ccusage) tracks all three tools; CF AI Gateway analytics are captured for OpenCode runs when available |
 | Output tokens | ccusage |
-| Cost ($) | ccusage retail-equivalent by default; OpenCode auto runs use CF AI Gateway cost when `_gateway-cost.json` is present and `_run-result.json` says `"costSource": "gateway"` |
+| Cost ($) | ccusage retail-equivalent by default; OpenCode runs use CF AI Gateway cost when `_gateway-cost.json` is present and the run artifact says the source is `gateway` |
 | Wall-clock time | timestamp at prompt → final assistant response |
 | Tool invocations (count, by name) | session transcript |
 | Skills invoked (which, how many times) | session transcript |
@@ -73,7 +74,7 @@ Benchmarking has two distinct layers, each handled by a separate script.
 
 **Layer 1 -- deterministic functional scoring (`bench-run.ps1` + `judge-run.ps1` Playwright tests)**
 
-`bench-run.ps1` handles the cost and time capture: it snapshots ccusage before and after each tool run, computes deltas, and writes per-tool metric files. `judge-run.ps1` handles functional correctness: it runs a Playwright suite (R1-R10) against each tool's HTML output, producing `_judge-functional.json` and screenshots for each tool, plus a cross-tool `<RunId>-judge.md` summary. These two layers together give you objective numbers -- what the tool cost, how long it took, and whether its output passes the acceptance criteria.
+`bench-run.ps1` handles the cost and time capture: it snapshots ccusage before and after each tool run, computes deltas, pulls OpenCode cost from Cloudflare AI Gateway when tagged analytics are available, and writes per-tool metric files. `judge-run.ps1` handles functional correctness: it runs a Playwright suite (R1-R10) against each tool's HTML output, producing `_judge-functional.json` and screenshots for each tool, plus a cross-tool `<RunId>-judge.md` summary. These two layers together give you objective numbers -- what the tool cost, how long it took, and whether its output passes the acceptance criteria.
 
 **Layer 2 -- qualitative AI judgment (`JUDGE-PROMPT.md`)**
 
@@ -100,7 +101,7 @@ cd "<repo>\benchmarks\scripts"
 .\benchmark-auto.ps1 -Benchmark markdown-editor -Tools claude,codex,opencode
 ```
 
-`benchmark-auto.ps1` launches each CLI non-interactively, captures raw stdout/stderr, snapshots `ccusage` before and after, copies deliverables into `results/runs/<RunId>/<tool>/output/`, writes `_run-result.json`, and runs the deterministic Playwright judge. A tool run is marked invalid if it violates `policy.json`: wrong model, missing expected outputs, auth/model rejection, or required OpenCode routing that did not happen.
+`benchmark-auto.ps1` launches each CLI non-interactively, captures raw stdout/stderr, snapshots `ccusage` before and after, pulls OpenCode cost from Cloudflare AI Gateway when tagged analytics are available, copies deliverables into `results/runs/<RunId>/<tool>/output/`, writes `_run-result.json`, and runs the deterministic Playwright judge. A tool run is marked invalid if it violates `policy.json`: wrong model, missing expected outputs, auth/model rejection, or required OpenCode routing that did not happen.
 
 There are two benchmark modes:
 
@@ -153,7 +154,7 @@ These are real fairness and measurement limitations. Don't ignore them when citi
 
 2. **Different plugin stacks per tool.** Claude Code ran with claude-mem + context-mode + superpowers v5.1.0 + MCPs (snyk, context7, cloudflare-docs). Codex ran base + superpowers via cloudflare/skills. OpenCode ran this repo's full tiered stack + LSP + MCPs + per-agent prompt nudges. Plugin overhead inflates Claude's effective input: claude-mem pre-loads a memory blob on the first turn. "OpenCode is cheaper" partly reflects "OpenCode's stack uses less startup context," not only "cheaper models." This is not unfair -- it's how each tool actually runs for users -- but it should be understood.
 
-3. **ccusage cost is API-retail-equivalent.** It computes what you would pay if billed by token at public API rates. If you're on Claude Pro/Max, actual cost is a flat subscription fee. If using BYOK through the Cloudflare gateway, actual cost is whatever the upstream provider charged. The retail-equivalent figure normalizes across billing models but is not what shows up on your card.
+3. **Cost source differs by tool and era.** Current OpenCode runs use Cloudflare AI Gateway analytics for exact Gateway-observed cost when the tagged rows are available, with `ccusage` as fallback. Claude and Codex costs are still `ccusage` API-retail-equivalent figures. Older OpenCode rows captured before `_gateway-cost.json` was added are also `ccusage` retail-equivalent.
 
 4. **Codex CLI mis-reports its model name.** Session records show `"gpt-5.5"` instead of `"gpt-5"`. ccusage propagates the name as-is. The actual model is GPT-5. Cosmetic, but worth noting.
 

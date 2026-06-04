@@ -11,7 +11,7 @@ cd "<repo>\benchmarks\scripts"
 .\benchmark-auto.ps1 -Benchmark tic-tac-toe -Tools opencode  # one tool only
 ```
 
-Runs a benchmark target without manual checkpoints. It reads `benchmarks/<target>/policy.json`, launches each enabled CLI non-interactively, captures raw stdout/stderr, snapshots `ccusage` before and after, copies deliverables into `benchmarks/<target>/results/runs/<RunId>/<tool>/output/`, writes `_run-result.json`, and runs the deterministic Playwright judge.
+Runs a benchmark target without manual checkpoints. It reads `benchmarks/<target>/policy.json`, launches each enabled CLI non-interactively, captures raw stdout/stderr, snapshots `ccusage` before and after, pulls OpenCode cost from Cloudflare AI Gateway when tagged analytics are available, copies deliverables into `benchmarks/<target>/results/runs/<RunId>/<tool>/output/`, writes `_run-result.json`, and runs the deterministic Playwright judge.
 
 On Windows, use a hidden process host for long unattended runs if you are working in the same desktop session. The runner launches tool subprocesses with hidden/no-shell process settings and invokes Claude with a strict empty MCP config so user/global MCP helpers cannot spawn extra console windows during the benchmark.
 
@@ -47,7 +47,9 @@ The underlying scripts (`bench-run.ps1`, `judge-run.ps1`, `judge-summarize.ps1`)
 
 ## bench-run.ps1
 
-Two-phase wrapper around `ccusage`. **One** `start` call sets up scratch directories and captures baselines for **every** tool configured at the top of the script. You then run each tool. After they've all finished, **one** `finish` call (with the same RunId) processes them all, computes deltas, copies outputs into the repo, and stubs notes.md per tool.
+Two-phase wrapper around `ccusage` plus Cloudflare AI Gateway cost capture for OpenCode. **One** `start` call sets up scratch directories and captures baselines for **every** tool configured at the top of the script. You then run each tool. After they've all finished, **one** `finish` call (with the same RunId) processes them all, computes deltas, pulls OpenCode Gateway cost when available, copies outputs into the repo, and stubs notes.md per tool.
+
+For OpenCode, the `start` phase prefixes the printed launch command with `OPENCODE_APP_TAG=bench:<benchmark>:<RunId>`. The `finish` phase uses that same tag to filter Cloudflare AI Gateway analytics.
 
 ### Tool configuration
 
@@ -105,6 +107,7 @@ cd "C:\path\to\opencode-cloudflare-ai-gateway\benchmarks\scripts"
 |---|---|
 | `_ccusage-before.json` / `.txt` | Full ccusage session list before the run |
 | `_ccusage-after.json` / `.txt` | Same, after the run |
+| `_gateway-cost.json` | OpenCode-only Cloudflare AI Gateway cost sidecar when Gateway analytics are available or queried |
 | `_start-time.txt` / `_end-time.txt` | ISO timestamps |
 | `_run-id.txt` | The RunId that ties this tool's session to its sibling tools' sessions |
 | `_delta.json` | Computed delta: new sessions, totals, models used, wall clock |
