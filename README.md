@@ -17,6 +17,20 @@ The goal is cost-per-correct-result, not lowest sticker price per token. The ben
 
 > **About pricing in this doc:** all dollar figures are "as of May 2026" and provided for rough magnitude comparison only. Provider pricing moves constantly. Always confirm current pricing against each provider's published rate card before making cost decisions.
 
+## Benchmark Takeaway
+
+The selected benchmark set now covers three targets: `markdown-editor`, `react-todo-api-db`, and `tic-tac-toe`. OpenCode produced a 10/10 judged output on all three. Codex also reached 10/10 on all three selected rows; Claude reached 10/10 on `tic-tac-toe` and 9/10 on the other two. The cost pattern is the important result: OpenCode was cheaper on every selected row.
+
+| Benchmark | OpenCode | Codex CLI | Claude Code |
+|---|---:|---:|---:|
+| `markdown-editor` | **10/10, $0.83** | 10/10, $1.35 | 9/10, $4.93 |
+| `react-todo-api-db` | **10/10, $0.193** | 10/10, $2.032 | 9/10, $1.580 |
+| `tic-tac-toe` | **10/10, $0.1753, 805,731 tokens** | 10/10, $3.0120, 3,352,097 tokens | 10/10, $3.0039, 8,942,555 tokens |
+
+The cleanest structured token snapshot is `tic-tac-toe`: OpenCode used about 4x fewer tokens than Codex and 11x fewer than Claude, while passing the same 10/10 deterministic judge. Selected cost snapshots range from 1.6x cheaper on the easiest completed row to roughly 17x cheaper on `tic-tac-toe`.
+
+Full details, source artifacts, and caveats live in [`benchmarks/RESULTS.md`](benchmarks/RESULTS.md).
+
 ## The Problem
 
 I do not think local models are going to make paid tokens disappear for serious coding work. Local models keep getting better, but the frontier keeps moving too. For the hard parts of the job -- ambiguous requirements, architecture, debugging, review -- I still want a frontier model in the loop.
@@ -76,27 +90,9 @@ The manual setup path is:
 
 Full walkthrough with screenshots and gotchas: [`docs/SETUP.md`](docs/SETUP.md).
 
-## Evidence Snapshot
+## Benchmark Evidence
 
-The selected benchmark snapshot now has at least one successful functional comparison for all three benchmark targets:
-
-| Benchmark | Selected result | Claude Code | Codex CLI | OpenCode |
-|---|---|---:|---:|---:|
-| `markdown-editor` | [`2026-05-26-0829`](benchmarks/markdown-editor/results/runs/2026-05-26-0829/) | 9/10 | 10/10 | 10/10 |
-| `react-todo-api-db` | [`2026-05-31-164112`](benchmarks/react-todo-api-db/results/runs/2026-05-31-164112/) | 9/10 | 10/10 | 10/10 |
-| `tic-tac-toe` | [selected 2026-06-02 artifacts](benchmarks/tic-tac-toe/results/runs/2026-06-02-selected-functional.md) | 10/10 | 10/10 | 10/10 |
-
-The clearest structured token comparison is the final `tic-tac-toe` selected snapshot:
-
-| Tool | Cost | Total tokens | Functional result |
-|---|---:|---:|---:|
-| **OpenCode** | **$0.1753** | **805,731** | 10/10 |
-| Claude Code | $3.0039 | 8,942,555 | 10/10 |
-| Codex CLI | $3.0120 | 3,352,097 | 10/10 |
-
-That is the useful underscore from this project: once all three agents produce quality outputs under the same target rules, the tiered OpenCode setup is dramatically cheaper. Getting three different agent CLIs, plugin stacks, and LLMs to behave consistently enough to produce those comparable outputs took days of harness work and reruns, so the caveat is part of the result rather than a footnote.
-
-The longer benchmark story, including invalidated runs, methodology caveats, and historical config iterations, lives in [`benchmarks/README.md`](benchmarks/README.md) and the per-target result folders.
+The front-page summary is intentionally short. The selected result tables, source artifact links, cost ratios, token caveats, invalidated-run notes, and methodology context live in [`benchmarks/RESULTS.md`](benchmarks/RESULTS.md) and [`benchmarks/README.md`](benchmarks/README.md).
 
 ## Why One Gateway
 

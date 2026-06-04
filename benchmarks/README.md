@@ -6,6 +6,8 @@ Reproducible benchmarks that measure **cost, time, and correctness** across Clau
 
 The harness is intentionally strict. It records model evidence, invalidates missing routing, captures command-line tests, runs deterministic browser checks, and preserves raw logs so a cheap run cannot pass merely by producing files.
 
+For the reader-facing result summary across all published benchmark targets, start with [`RESULTS.md`](RESULTS.md). This file documents the harness, methodology, scripts, and historical config iterations.
+
 ## Publication snapshot
 
 The current publishable snapshot has at least one successful functional comparison for each benchmark target. The goal of this snapshot is not to prove that every agent succeeds on every attempt. It is to compare cost and token use for quality outputs after each tool has produced a result that satisfies the same target prompt, SPEC, and deterministic judge.
