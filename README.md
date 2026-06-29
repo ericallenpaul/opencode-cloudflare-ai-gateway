@@ -79,14 +79,14 @@ The fastest way to know whether you have everything in place is to run the diagn
 ./scripts/check-setup.sh
 ```
 
-It checks the important prerequisites: OpenCode, environment variables, `opencode.json`, Superpowers plugin wiring, MCP servers, and optional local-model setup. Pass `-InstallConfig` / `--install-config` and it will copy `opencode.example.json` into place with a backup of any existing config.
+It checks the important prerequisites: OpenCode, environment variables, `opencode.json`, Superpowers plugin wiring, MCP servers, and optional local-model setup. Pass `-InstallConfig` / `--install-config` and it will copy `opencode.example.json` plus local plugins into place with a backup of any existing config.
 
 The manual setup path is:
 
 1. Install OpenCode: `npm install -g opencode-ai`
 2. Create a Cloudflare AI Gateway and store provider API keys in BYOK / bring-your-own-key.
 3. Set `CF_ACCOUNT_ID`, `CF_GATEWAY_NAME`, and `CF_AIG_TOKEN` environment variables.
-4. Copy `opencode.example.json` to `~/.config/opencode/opencode.json`.
+4. Copy `opencode.example.json` and `plugins/` under `~/.config/opencode`.
 5. Copy `.opencode\agents\` from this repo to `%USERPROFILE%\.config\opencode\agents\`, next to `opencode.json`, so the included orchestrator and worker subagents are available globally.
 6. Verify model reachability with `.\scripts\verify-models.ps1` or `./scripts/verify-models.sh`.
 
@@ -101,7 +101,7 @@ The front-page summary is intentionally short. The selected result tables, sourc
 Cloudflare AI Gateway gives me one control plane in front of Anthropic, OpenAI, Google, Workers AI, and anything else I route through it:
 
 - Provider keys stay server-side in BYOK.
-- Every request can carry `cf-aig-metadata` such as `{app, user}`.
+- Every request can carry `cf-aig-metadata` such as `{app, user}`, which makes Cloudflare analytics filterable by project and developer.
 - Spend and usage show up in one analytics view.
 - Identical requests can be cached.
 - Rate limits and fallbacks can live outside the client.

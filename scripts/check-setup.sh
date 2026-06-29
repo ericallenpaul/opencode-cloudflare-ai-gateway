@@ -6,8 +6,9 @@
 # opencode-cloudflare-ai-gateway. Runs 12 checks (9 required, 3 optional)
 # and prints a per-check result line plus a summary.
 #
-# Pure diagnostic by default -- no side effects. Pass --install-config to
-# copy opencode.example.json into place when check 7 (opencode.json exists) fails.
+# Pure diagnostic by default -- no side effects. Pass --install-config to copy
+# opencode.example.json and local plugins into place when check 7
+# (opencode.json exists) fails.
 #
 # Equivalent to scripts/check-setup.ps1 for Windows hosts.
 #
@@ -28,8 +29,8 @@ check-setup.sh -- diagnose opencode-cloudflare-ai-gateway prerequisites
 Usage: $0 [--install-config] [-h|--help]
 
   --install-config   If opencode.json is missing, copy opencode.example.json
-                     into ~/.config/opencode/opencode.json. The only side
-                     effect this script can produce.
+                     into ~/.config/opencode/opencode.json and copy repo plugins
+                     into ~/.config/opencode/plugins.
   -h, --help         Show this help and exit.
 EOF
 }
@@ -76,6 +77,8 @@ HOME_DIR="$HOME"
 CONFIG_DIR="$HOME_DIR/.config/opencode"
 CONFIG_FILE="$CONFIG_DIR/opencode.json"
 EXAMPLE_CFG="$REPO_ROOT/opencode.example.json"
+PLUGIN_SRC="$REPO_ROOT/plugins"
+PLUGIN_DST="$CONFIG_DIR/plugins"
 
 TOTAL_CHECKS=12
 
@@ -578,6 +581,12 @@ if [[ "$INSTALL_CONFIG" == "true" ]]; then
     cp "$EXAMPLE_CFG" "$CONFIG_FILE"
     info_line "Copied: $EXAMPLE_CFG"
     info_line "    to: $CONFIG_FILE"
+    if [[ -d "$PLUGIN_SRC" ]]; then
+      rm -rf "$PLUGIN_DST"
+      cp -R "$PLUGIN_SRC" "$PLUGIN_DST"
+      info_line "Copied: $PLUGIN_SRC"
+      info_line "    to: $PLUGIN_DST"
+    fi
     info_line ""
     info_line "Review the file, fill in your env var references, then re-run check-setup.sh."
   fi

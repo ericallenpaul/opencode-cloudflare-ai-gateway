@@ -2,7 +2,7 @@
 
 End-to-end setup, ~30 minutes if you already have a Cloudflare account. Most of that is dashboard clicks and putting the config in the right place. Tested on Windows 11 with PowerShell 7; the steps translate cleanly to macOS/Linux -- the only Windows-specific bits are env var commands.
 
-> **Shortcut**: at any point during this walkthrough -- and especially when you think you're done -- run `scripts/check-setup.ps1` (or `.sh`) to confirm every prerequisite is in place. It checks the required gateway/OpenCode setup, plus optional local-model pieces, and prints exact fix commands for anything missing. Pass `-InstallConfig` (or `--install-config`) to also copy `opencode.example.json` into your opencode config dir with a backup of any existing file. The included orchestrator workers live under this repo's `.opencode/agents/`; copy that folder into your OpenCode config directory next to `opencode.json` so the workers are available globally. See [`scripts/README.md`](../scripts/README.md) for details.
+> **Shortcut**: at any point during this walkthrough -- and especially when you think you're done -- run `scripts/check-setup.ps1` (or `.sh`) to confirm every prerequisite is in place. It checks the required gateway/OpenCode setup, plus optional local-model pieces, and prints exact fix commands for anything missing. Pass `-InstallConfig` (or `--install-config`) to also copy `opencode.example.json` and local plugins into your opencode config dir with a backup of any existing file. The included orchestrator workers live under this repo's `.opencode/agents/`; copy that folder into your OpenCode config directory next to `opencode.json` so the workers are available globally. See [`scripts/README.md`](../scripts/README.md) for details.
 
 ## Prerequisites
 
@@ -80,12 +80,14 @@ All three should report "set".
 # Windows
 New-Item -ItemType Directory -Force "$env:USERPROFILE\.config\opencode" | Out-Null
 Copy-Item .\opencode.example.json "$env:USERPROFILE\.config\opencode\opencode.json"
+Copy-Item .\plugins "$env:USERPROFILE\.config\opencode\plugins" -Recurse -Force
 ```
 
 ```bash
 # macOS/Linux
 mkdir -p ~/.config/opencode
 cp ./opencode.example.json ~/.config/opencode/opencode.json
+cp -R ./plugins ~/.config/opencode/plugins
 ```
 
 If you already have an opencode.json, **back it up first**: the example config wholesale replaces the `provider` and `agent` sections.
@@ -156,7 +158,15 @@ If `oss` or `frontier` fails, the most common cause is a BYOK key not being stor
 
 ## 6. (Recommended) Automatic per-user and per-project attribution
 
-The example config attaches a `cf-aig-metadata` header to every gateway-routed request, tagging it with `app` (the directory you launched opencode from) and `user` (you). Both come from env vars: `OPENCODE_APP_TAG` and `OPENCODE_USER_TAG`. If neither is set, the header still works but values come through as empty strings -- your gateway analytics will be harder to filter.
+The example config includes `plugins/sync-user-env.js`, which attaches a `cf-aig-metadata` header to every gateway-routed request. The metadata keys are `app` (the repo or directory where OpenCode started) and `user` (you), so Cloudflare Gateway analytics can filter by project and developer.
+
+The plugin does three things at OpenCode startup:
+
+1. Promotes Windows User-scoped environment variables into the OpenCode process.
+2. Computes `OPENCODE_APP_TAG` from the nearest git root if it is missing.
+3. Writes the final `cf-aig-metadata` header directly into each Cloudflare Gateway provider.
+
+The PowerShell profile hook below is still useful. It keeps `OPENCODE_APP_TAG` visible in your interactive shell and gives child shell commands a useful tag. The plugin is the safety net for OpenCode provider requests.
 
 Two small bits of one-time setup make this automatic for every future opencode invocation:
 
@@ -181,7 +191,7 @@ Once opencode launches, the env var is captured into the opencode process and st
 .\scripts\install-opencode-app-tag.ps1
 ```
 
-That script adds a small managed block to `$PROFILE.CurrentUserAllHosts`, sets `OPENCODE_APP_TAG` for the current shell, and makes future PowerShell sessions keep it updated on each `cd`.
+That script adds a small managed block to your PowerShell profile, sets `OPENCODE_APP_TAG` for the current shell, and makes future PowerShell sessions keep it updated on each `cd`.
 
 If you prefer to install it manually, the script writes this block:
 
@@ -238,11 +248,11 @@ After reloading your shell, `cd ~/code/auth-api/src/components` still sets `OPEN
 
 ### Verify the tags are reaching CF
 
-Run a quick query in any directory, then go to the CF dashboard -> AI Gateway -> your gateway -> Analytics. Filter by `metadata.app`. You should see the directory name show up. If you see empty values instead, your shell wrapper isn't being applied -- confirm with `env | grep OPENCODE_` (Unix) or `$env:OPENCODE_APP_TAG` (PowerShell).
+Run a quick query in any directory, then go to the CF dashboard -> AI Gateway -> your gateway -> Analytics. Filter by `metadata.app` or `metadata.user`. You should see the directory/repo name and user tag show up. If app values are empty, confirm the plugin was copied next to the installed `opencode.json` and is present in the top-level `plugin` array.
 
 ### Caveats
 
-- **Config-load timing is what we want.** OpenCode resolves `{env:...}` substitutions when it starts, captures the values into its process environment, and never re-reads them. That means once opencode is running, even if you `cd` elsewhere in your terminal, the session keeps its original tag — which is what we want. Each opencode session = one project tag.
+- **Config-load timing is intentional.** The plugin computes and injects metadata when OpenCode starts. Once OpenCode is running, even if you `cd` elsewhere in your terminal, the session keeps its original tag — which is what we want. Each OpenCode session = one project tag.
 - **Outside a git repo, the tag is just the current directory's basename.** One-off use of opencode in `~` or `/tmp` will produce noisy tags. If you care about clean analytics, run opencode from inside a git-tracked project.
 - **Project root = nearest `.git`.** Works for normal repos, git submodules (`.git` is a file pointing at the parent), and git worktrees. If your project uses a different convention (e.g., no git, just a `package.json` at root), you can extend the hook function to look for that marker too.
 

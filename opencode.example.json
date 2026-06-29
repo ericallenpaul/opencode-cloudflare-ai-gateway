@@ -3,7 +3,8 @@
   "model": "openai-via-gateway/gpt-5",
   "lsp": {},
   "plugin": [
-    "~/.config/opencode/node_modules/superpowers"
+    "~/.config/opencode/node_modules/superpowers",
+    "./plugins/sync-user-env.js"
   ],
   "mcp": {
     "context7": { "type": "remote", "url": "https://mcp.context7.com/mcp", "enabled": true },

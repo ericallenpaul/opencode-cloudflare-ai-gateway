@@ -5,11 +5,13 @@
 .DESCRIPTION
   Runs 12 checks (9 required, 3 optional) and prints a per-check result line plus a
   summary. Pure diagnostic by default -- no side effects. Pass -InstallConfig to
-  copy opencode.example.json into place when check 7 (opencode.json exists) fails.
+  copy opencode.example.json and local plugins into place when check 7
+  (opencode.json exists) fails.
 
 .PARAMETER InstallConfig
   If opencode.json does not exist, copy the repo's opencode.example.json into
-  ~/.config/opencode/opencode.json. The only side effect this script can produce.
+  ~/.config/opencode/opencode.json and copy repo plugins into ~/.config/opencode/plugins.
+  The only side effect this script can produce.
 
 .EXAMPLE
   .\check-setup.ps1
@@ -108,6 +110,8 @@ $CONFIG_DIR  = Join-Path $HOME_DIR ".config\opencode"
 $CONFIG_FILE = Join-Path $CONFIG_DIR "opencode.json"
 $REPO_ROOT   = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $EXAMPLE_CFG = Join-Path $REPO_ROOT "opencode.example.json"
+$PLUGIN_SRC  = Join-Path $REPO_ROOT "plugins"
+$PLUGIN_DST  = Join-Path $CONFIG_DIR "plugins"
 
 # ---------------------------------------------------------------------------
 # Header
@@ -597,6 +601,11 @@ if ($InstallConfig) {
         Copy-Item $EXAMPLE_CFG $CONFIG_FILE
         Write-Info "Copied: $EXAMPLE_CFG"
         Write-Info "    to: $CONFIG_FILE"
+        if (Test-Path $PLUGIN_SRC) {
+            Copy-Item -Recurse -Force $PLUGIN_SRC $PLUGIN_DST
+            Write-Info "Copied: $PLUGIN_SRC"
+            Write-Info "    to: $PLUGIN_DST"
+        }
         Write-Info ""
         Write-Info "Review the file, fill in your env var references, then re-run check-setup.ps1."
     }

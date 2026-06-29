@@ -1,13 +1,16 @@
 <#
 .SYNOPSIS
-  Installs an idempotent PowerShell profile hook that keeps OPENCODE_APP_TAG
-  aligned to the nearest git-root basename.
+  Installs an idempotent PowerShell profile hook that keeps the current shell's
+  OPENCODE_APP_TAG aligned to the nearest git-root basename.
 
 .DESCRIPTION
   Writes a marked block into the current user's PowerShell profile. The block:
   - defines Get-OpencodeAppTag
   - updates OPENCODE_APP_TAG once for the current shell
   - registers LocationChangedAction so future `cd` operations keep the tag current
+
+  OpenCode provider metadata is finalized by plugins/sync-user-env.js at startup.
+  This profile hook is still useful for interactive shells and child processes.
 
   Safe to run multiple times. If the managed block already exists, the script
   leaves the profile unchanged and just refreshes OPENCODE_APP_TAG in the
@@ -90,5 +93,6 @@ if ($installed) {
 else {
     Write-Host "PowerShell OPENCODE_APP_TAG hook already present."
 }
-Write-Host "Current OPENCODE_APP_TAG: $env:OPENCODE_APP_TAG"
+Write-Host "Current shell OPENCODE_APP_TAG: $env:OPENCODE_APP_TAG"
+Write-Host "OpenCode provider metadata is finalized by plugins/sync-user-env.js at startup."
 Write-Host "Open a new terminal to make the hook available in future shells."

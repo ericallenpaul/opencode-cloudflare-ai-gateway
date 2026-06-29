@@ -4,7 +4,7 @@ Two diagnostic tools, plus one PowerShell helper for automatic app tagging.
 
 ## check-setup -- "am I ready to use this repo?"
 
-`check-setup.ps1` (Windows) / `check-setup.sh` (macOS / Linux / Git Bash) walks every prerequisite in order and prints a PASS/FAIL per item with the exact fix command for anything missing. Pure diagnostic by default -- no env-var writes, no npm installs, no system changes. Pass `-InstallConfig` (PS) / `--install-config` (Bash) to ALSO copy `opencode.example.json` into place at `~/.config/opencode/opencode.json` (with a backup of any existing file).
+`check-setup.ps1` (Windows) / `check-setup.sh` (macOS / Linux / Git Bash) walks every prerequisite in order and prints a PASS/FAIL per item with the exact fix command for anything missing. Pure diagnostic by default -- no env-var writes, no npm installs, no system changes. Pass `-InstallConfig` (PS) / `--install-config` (Bash) to ALSO copy `opencode.example.json` and repo plugins into place under `~/.config/opencode` (with a backup of any existing config).
 
 Checks performed (in order):
 
@@ -26,20 +26,20 @@ Exit code 0 only if all REQUIRED checks pass. Optional failures emit warnings bu
 ```powershell
 # Windows
 .\check-setup.ps1                  # diagnostic only
-.\check-setup.ps1 -InstallConfig   # also copy opencode.example.json into place (with backup)
+.\check-setup.ps1 -InstallConfig   # also copy opencode.example.json + plugins into place
 ```
 
 ```bash
 # macOS / Linux / Git Bash
 ./check-setup.sh                   # diagnostic only
-./check-setup.sh --install-config  # also copy opencode.example.json into place (with backup)
+./check-setup.sh --install-config  # also copy opencode.example.json + plugins into place
 ```
 
 Run this FIRST before `verify-models` -- `check-setup` confirms the environment is in place; `verify-models` confirms the configured models are actually reachable through the gateway.
 
 ## install-opencode-app-tag -- "make app attribution automatic in PowerShell"
 
-`install-opencode-app-tag.ps1` writes a small managed block into your PowerShell profile that keeps `OPENCODE_APP_TAG` aligned to the nearest git-root basename.
+`install-opencode-app-tag.ps1` writes a small managed block into your PowerShell profile that keeps the current shell's `OPENCODE_APP_TAG` aligned to the nearest git-root basename.
 
 What it does:
 - sets `OPENCODE_APP_TAG` once for the current shell
@@ -49,7 +49,7 @@ What it does:
 What it does **not** do:
 - it does not modify your OpenCode config
 - it does not affect already-running terminal windows other than the current process
-- it does not re-run on every OpenCode request; OpenCode captures the env var when it starts
+- it is not the only attribution path; `plugins/sync-user-env.js` finalizes Gateway metadata when OpenCode starts
 
 ```powershell
 .\install-opencode-app-tag.ps1
@@ -60,6 +60,8 @@ After running it once, open a new PowerShell window and confirm:
 ```powershell
 $env:OPENCODE_APP_TAG
 ```
+
+The profile hook is for interactive shells and child processes. OpenCode provider requests use `plugins/sync-user-env.js` to compute `app` / `user` metadata and inject the final `cf-aig-metadata` header at startup.
 
 ## verify-models -- "are the models I configured reachable?"
 

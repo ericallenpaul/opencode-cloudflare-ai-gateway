@@ -80,20 +80,20 @@ Do **not** also send `cf-aig-authorization`. The gateway can forward unknown aut
 
 ## Attribution
 
-The example config attaches a `cf-aig-metadata` header to every gateway-routed request:
+The example config includes `plugins/sync-user-env.js`, which injects a `cf-aig-metadata` header into every gateway-routed provider at OpenCode startup:
 
 ```json
 "headers": {
-  "cf-aig-metadata": "{\"app\":\"{env:OPENCODE_APP_TAG}\",\"user\":\"{env:OPENCODE_USER_TAG}\"}"
+  "cf-aig-metadata": "{\"app\":\"<repo-or-directory>\",\"user\":\"<user-tag>\"}"
 }
 ```
 
-Two environment variables drive that metadata:
+The setup uses two local environment variables as inputs:
 
 - `OPENCODE_USER_TAG`: set once, usually to your OS username or short handle.
-- `OPENCODE_APP_TAG`: set by the shell hook from [SETUP.md](SETUP.md#6-recommended-automatic-per-user-and-per-project-attribution).
+- `OPENCODE_APP_TAG`: set by the shell hook from [SETUP.md](SETUP.md#6-recommended-automatic-per-user-and-per-project-attribution), or computed by the plugin from the nearest git root when missing.
 
-The app tag walks up to the nearest `.git` directory and uses that directory name. So `~/code/auth-api/src/components` still reports as `auth-api`. Once OpenCode starts, the value is captured for that session.
+The app tag walks up to the nearest `.git` directory and uses that directory name. So `~/code/auth-api/src/components` still reports as `auth-api`. Once OpenCode starts, the plugin writes the final metadata header for that session.
 
 This is intentionally simple. If org-scale attribution ever matters, a hook or plugin could record a git remote slug such as `myorg/auth-api` instead.
 
