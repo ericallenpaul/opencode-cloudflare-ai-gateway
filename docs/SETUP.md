@@ -256,7 +256,71 @@ Run a quick query in any directory, then go to the CF dashboard -> AI Gateway ->
 - **Outside a git repo, the tag is just the current directory's basename.** One-off use of opencode in `~` or `/tmp` will produce noisy tags. If you care about clean analytics, run opencode from inside a git-tracked project.
 - **Project root = nearest `.git`.** Works for normal repos, git submodules (`.git` is a file pointing at the parent), and git worktrees. If your project uses a different convention (e.g., no git, just a `package.json` at root), you can extend the hook function to look for that marker too.
 
-## 7. (Optional) Local models
+## 7. (Optional) Benchmark cost analytics
+
+`benchmarks/scripts/gateway-cost.ps1` queries the Cloudflare AI Gateway GraphQL analytics endpoint to attribute real USD cost — including Workers AI — to each benchmark run. `ccusage` does not capture Workers AI spend, so gateway analytics is the authoritative source for full cost attribution.
+
+### Required env vars
+
+| Var | Purpose |
+|---|---|
+| `CLOUDFLARE_API_TOKEN` | **Preferred.** Bearer token for `https://api.cloudflare.com/client/v4/graphql`. |
+| `CLOUDFLARE_API_KEY` | Accepted as a fallback if `CLOUDFLARE_API_TOKEN` is unset. |
+| `CF_ACCOUNT_ID` or `CLOUDFLARE_ACCOUNT_ID` | The 32-char account ID. `CLOUDFLARE_ACCOUNT_ID` is checked first; falls back to `CF_ACCOUNT_ID`. |
+| `CF_GATEWAY_NAME` | Same gateway slug used for routing — no extra setup needed. |
+
+### Required token scopes
+
+When creating the Cloudflare API token, set **both** of these permissions:
+
+- **Account Analytics: Read** — grants access to `aiGatewayRequestsAdaptiveGroups` (the cost dataset)
+- **AI Gateway: Read** — grants access to gateway logs
+
+The token must be **bound to the specific account** that owns the gateway. Do not use "All accounts the user has access to" — the GraphQL filter is by `accountTag` and a loose binding causes a `not authorized for that account` error.
+
+### Creating the token
+
+1. Go to the Cloudflare dashboard → click your avatar (top-right) → **My Profile**.
+2. Navigate to **API Tokens** → **Create Token**.
+3. Choose **Custom Token**.
+4. Under **Permissions**, add:
+   - `Account` / `Account Analytics` / `Read`
+   - `Account` / `AI Gateway` / `Read`
+5. Under **Account Resources**, select your specific account (not "All accounts").
+6. Click **Continue to summary** → **Create Token**.
+7. Copy the token value — it is shown only once.
+
+### Setting the env var
+
+**Windows (PowerShell, User scope — persistent):**
+
+```powershell
+[Environment]::SetEnvironmentVariable("CLOUDFLARE_API_TOKEN", "<token>", "User")
+```
+
+> Existing shells and Claude Code must be restarted to inherit the new User-scope variable.
+
+**macOS/Linux (add to `~/.zshrc` or `~/.bashrc`):**
+
+```bash
+export CLOUDFLARE_API_TOKEN="<token>"
+```
+
+Then `source ~/.zshrc` (or restart the shell) to pick it up.
+
+**Or: set in `.env` for project-scoped use** (`.env` is gitignored — confirmed in `.gitignore`):
+
+```
+CLOUDFLARE_API_TOKEN=<token>
+```
+
+### Troubleshooting
+
+- **`not authorized for that account` on `aiGatewayRequestsAdaptiveGroups`** — the token is missing one of the two required scopes, or is bound to the wrong account. Re-create it with the exact scopes and account binding above.
+- **Script reports `gateway-unavailable`** — `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_API_KEY` are both unset. Set at least one.
+- **Cost shows `$0.00` for Workers AI** — the gateway analytics API is the only source for Workers AI cost; confirm the token has `Account Analytics: Read` and the benchmark ran with a tagged `OPENCODE_APP_TAG` so the gateway rows are filterable.
+
+## 8. (Optional) Local models
 
 Local models are no longer part of the required setup. I tried hard to make the local tier useful because "free local workers" sounds like the cleanest version of the cost-saving story. I did get local tool-calling working, but only with the right runtime, model, context size, and tool-call format. On my hardware, it was still too slow to be my daily driver.
 
@@ -304,7 +368,7 @@ The `"tools": true` flag matters. Without it, OpenCode may not route tool-call t
 
 See [`LEARNINGS.md` -> "Local LLM tool-calling with opencode is real, hard, and runtime-sensitive"](LEARNINGS.md) for the longer debug story.
 
-## 8. (Optional) Customize the default model
+## 9. (Optional) Customize the default model
 
 The `model` field at the top of `opencode.json` is the boot default when no `--agent` flag is passed. The example config defaults to `openai-via-gateway/gpt-5` because the primary workflow is frontier orchestration with cheaper subagents, not direct cheap-model coding.
 

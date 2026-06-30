@@ -62,7 +62,7 @@ function Convert-GatewayCostResult {
 function Invoke-GatewayGraphQL {
     param(
         [Parameter(Mandatory)][string]$Query,
-        [Parameter(Mandatory)][string]$ApiKey
+        [Parameter(Mandatory)][string]$ApiKey  # value of CLOUDFLARE_API_TOKEN (preferred) or CLOUDFLARE_API_KEY
     )
     $body = @{ query = $Query } | ConvertTo-Json -Depth 4
     $headers = @{ Authorization = "Bearer $ApiKey" }
@@ -83,10 +83,20 @@ function Get-OpenCodeGatewayCost {
     )
     $accountTag = if ($env:CLOUDFLARE_ACCOUNT_ID) { $env:CLOUDFLARE_ACCOUNT_ID } else { $env:CF_ACCOUNT_ID }
     $gateway    = $env:CF_GATEWAY_NAME
-    $apiKey     = $env:CLOUDFLARE_API_KEY
-    if (-not $accountTag -or -not $gateway -or -not $apiKey) {
-        return [ordered]@{ source = "gateway-unavailable"; error = "Missing CLOUDFLARE_ACCOUNT_ID/CF_ACCOUNT_ID, CF_GATEWAY_NAME, or CLOUDFLARE_API_KEY" }
+    # Prefer CLOUDFLARE_API_TOKEN (Account Analytics: Read + AI Gateway: Read); fall back to CLOUDFLARE_API_KEY.
+    if ($env:CLOUDFLARE_API_TOKEN) {
+        $apiKey   = $env:CLOUDFLARE_API_TOKEN
+        $apiKeySource = "CLOUDFLARE_API_TOKEN"
+    } elseif ($env:CLOUDFLARE_API_KEY) {
+        $apiKey   = $env:CLOUDFLARE_API_KEY
+        $apiKeySource = "CLOUDFLARE_API_KEY"
+    } else {
+        return [ordered]@{ source = "gateway-unavailable"; error = "Missing auth: set CLOUDFLARE_API_TOKEN (preferred) or CLOUDFLARE_API_KEY" }
     }
+    if (-not $accountTag -or -not $gateway) {
+        return [ordered]@{ source = "gateway-unavailable"; error = "Missing CLOUDFLARE_ACCOUNT_ID/CF_ACCOUNT_ID or CF_GATEWAY_NAME" }
+    }
+    Write-Host "  gateway auth source: $apiKeySource" -ForegroundColor DarkGray
     $startIso = $StartUtc.ToUniversalTime().AddHours(-1).ToString("yyyy-MM-ddTHH:00:00Z")
     try {
         $prevReq = -1.0
