@@ -2,6 +2,9 @@
 // OpenCode attribution tags, inject Cloudflare AI Gateway metadata headers,
 // and pass the hydrated env to spawned shell commands.
 
+// User-scope OPENCODE_APP_TAG floor that the plugin should still override with the per-cwd value when computed.
+const APP_TAG_SENTINEL = '__opencode_floor__'
+
 export default async () => {
   async function getUserEnvAll() {
     try {
@@ -55,7 +58,7 @@ export default async () => {
   async function ensureAttributionEnv() {
     await ensureProcessEnvFromUser()
 
-    if (!process.env.OPENCODE_APP_TAG) {
+    if (!process.env.OPENCODE_APP_TAG || process.env.OPENCODE_APP_TAG === APP_TAG_SENTINEL) {
       process.env.OPENCODE_APP_TAG = await computeAppTag()
     }
 
