@@ -84,14 +84,22 @@ function Get-OpenCodeGatewayCost {
     $accountTag = if ($env:CLOUDFLARE_ACCOUNT_ID) { $env:CLOUDFLARE_ACCOUNT_ID } else { $env:CF_ACCOUNT_ID }
     $gateway    = $env:CF_GATEWAY_NAME
     # Prefer CLOUDFLARE_API_TOKEN (Account Analytics: Read + AI Gateway: Read); fall back to CLOUDFLARE_API_KEY.
+    # Also check User-scope registry directly: Windows subprocesses (Claude Code, IDE terminals,
+    # long-lived shells) don't inherit User-scope env vars set after the parent process started.
     if ($env:CLOUDFLARE_API_TOKEN) {
         $apiKey   = $env:CLOUDFLARE_API_TOKEN
-        $apiKeySource = "CLOUDFLARE_API_TOKEN"
+        $apiKeySource = "CLOUDFLARE_API_TOKEN (process)"
+    } elseif ([Environment]::GetEnvironmentVariable('CLOUDFLARE_API_TOKEN', 'User')) {
+        $apiKey   = [Environment]::GetEnvironmentVariable('CLOUDFLARE_API_TOKEN', 'User')
+        $apiKeySource = "CLOUDFLARE_API_TOKEN (user-scope)"
     } elseif ($env:CLOUDFLARE_API_KEY) {
         $apiKey   = $env:CLOUDFLARE_API_KEY
-        $apiKeySource = "CLOUDFLARE_API_KEY"
+        $apiKeySource = "CLOUDFLARE_API_KEY (process)"
+    } elseif ([Environment]::GetEnvironmentVariable('CLOUDFLARE_API_KEY', 'User')) {
+        $apiKey   = [Environment]::GetEnvironmentVariable('CLOUDFLARE_API_KEY', 'User')
+        $apiKeySource = "CLOUDFLARE_API_KEY (user-scope)"
     } else {
-        return [ordered]@{ source = "gateway-unavailable"; error = "Missing auth: set CLOUDFLARE_API_TOKEN (preferred) or CLOUDFLARE_API_KEY" }
+        return [ordered]@{ source = "gateway-unavailable"; error = "Missing auth: set CLOUDFLARE_API_TOKEN (preferred) or CLOUDFLARE_API_KEY as a process env var or Windows User-scope env var" }
     }
     if (-not $accountTag -or -not $gateway) {
         return [ordered]@{ source = "gateway-unavailable"; error = "Missing CLOUDFLARE_ACCOUNT_ID/CF_ACCOUNT_ID or CF_GATEWAY_NAME" }
