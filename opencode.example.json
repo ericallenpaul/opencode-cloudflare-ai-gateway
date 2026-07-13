@@ -19,9 +19,7 @@
       "options": {
         "baseURL": "https://gateway.ai.cloudflare.com/v1/{env:CF_ACCOUNT_ID}/{env:CF_GATEWAY_NAME}/anthropic",
         "apiKey": "{env:CF_AIG_TOKEN}",
-        "headers": {
-          "cf-aig-metadata": "{\"app\":\"{env:OPENCODE_APP_TAG}\",\"user\":\"{env:OPENCODE_USER_TAG}\"}"
-        }
+        "headers": {}
       },
       "models": {
         "claude-sonnet-4-6": { "name": "claude-sonnet-4-6" },
@@ -37,9 +35,7 @@
       "options": {
         "baseURL": "https://gateway.ai.cloudflare.com/v1/{env:CF_ACCOUNT_ID}/{env:CF_GATEWAY_NAME}/openai",
         "apiKey": "{env:CF_AIG_TOKEN}",
-        "headers": {
-          "cf-aig-metadata": "{\"app\":\"{env:OPENCODE_APP_TAG}\",\"user\":\"{env:OPENCODE_USER_TAG}\"}"
-        }
+        "headers": {}
       },
       "models": {
         "gpt-5.5": {
@@ -74,9 +70,7 @@
       "options": {
         "baseURL": "https://gateway.ai.cloudflare.com/v1/{env:CF_ACCOUNT_ID}/{env:CF_GATEWAY_NAME}/google-ai-studio/v1beta",
         "apiKey": "{env:CF_AIG_TOKEN}",
-        "headers": {
-          "cf-aig-metadata": "{\"app\":\"{env:OPENCODE_APP_TAG}\",\"user\":\"{env:OPENCODE_USER_TAG}\"}"
-        }
+        "headers": {}
       },
       "models": {
         "gemini-2.5-pro": { "name": "gemini-2.5-pro" },
@@ -89,9 +83,7 @@
       "options": {
         "baseURL": "https://gateway.ai.cloudflare.com/v1/{env:CF_ACCOUNT_ID}/{env:CF_GATEWAY_NAME}/workers-ai/v1",
         "apiKey": "{env:CF_AIG_TOKEN}",
-        "headers": {
-          "cf-aig-metadata": "{\"app\":\"{env:OPENCODE_APP_TAG}\",\"user\":\"{env:OPENCODE_USER_TAG}\"}"
-        }
+        "headers": {}
       },
       "models": {
         "@cf/zai-org/glm-4.7-flash": { "name": "@cf/zai-org/glm-4.7-flash" },
