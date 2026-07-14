@@ -233,8 +233,8 @@ for (let page = 1; page <= totalLogPages; page++) {
 
   for (const entry of entries) {
     const app      = parseAppFromMeta(entry.metadata);
-    const tokensIn = entry.tokens_in ?? 0;
-    const cached   = entry.usage?.input_cached_tokens ?? 0;
+    const tokensIn = entry.usage_metadata?.input_tokens ?? entry.tokens_in ?? 0;
+    const cached   = entry.usage_metadata?.input_cached_tokens ?? 0;
 
     const cur = providerCacheMap.get(app) ?? { sumTokensIn: 0, sumCachedTokens: 0, count: 0 };
     cur.sumTokensIn     += tokensIn;
