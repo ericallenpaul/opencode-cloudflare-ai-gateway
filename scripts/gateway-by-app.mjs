@@ -186,7 +186,7 @@ const LOGS_BASE = `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai
 const providerCacheMap = new Map();
 
 async function fetchLogsPage(page) {
-  const url = `${LOGS_BASE}?per_page=100&order_by=created_at&direction=desc&page=${page}`;
+  const url = `${LOGS_BASE}?per_page=50&order_by=created_at&direction=desc&page=${page}`;
   const r = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
   if (!r.ok) {
     process.stderr.write(`/logs HTTP ${r.status} page=${page} — aborting cache sample.\n`);
@@ -218,7 +218,7 @@ function parseAppFromMeta(meta) {
   return 'unknown';
 }
 
-const totalLogPages = Math.ceil(opts.cacheSample / 100);
+const totalLogPages = Math.ceil(opts.cacheSample / 50);
 let fetched   = 0;
 let pagesRead = 0;
 let logsOk    = true;
@@ -244,13 +244,13 @@ for (let page = 1; page <= totalLogPages; page++) {
     fetched++;
   }
 
-  if (entries.length < 100) break; // exhausted available entries
+  if (entries.length < 50) break; // exhausted available entries
 }
 
 if (logsOk) {
   process.stderr.write(`Provider cache sample: ${fetched} entries, ${pagesRead} page(s).\n`);
 } else {
-  process.stderr.write(`Provider cache sample unavailable — all apps will show —.\n`);
+  process.stderr.write(`/logs fetch stopped early — using ${fetched} entries collected so far (${pagesRead} page(s) ok).\n`);
 }
 
 // ── attach provider cache stats to rows ───────────────────────────────────────
