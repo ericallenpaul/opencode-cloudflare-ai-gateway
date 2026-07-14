@@ -6,9 +6,13 @@
  * self-contained interactive HTML chart of gateway traffic broken down by
  * app (from cf-aig-metadata), ranked by total tokens.
  *
+ * Token & cost totals come from GraphQL (full window, ALL gateways on the account).
+ * Provider cache % comes from REST /logs (recent sample, scoped to --gateway only).
+ * These two sources have different scopes — see the header note in the output HTML.
+ *
  * Usage:
  *   node scripts/gateway-by-app.mjs [--days 14] [--gateway <name>] \
- *        [--out ./gateway-by-app.html] [--top 10]
+ *        [--out ./gateway-by-app.html] [--top 10] [--cache-sample 2000]
  *
  * Required env:
  *   CLOUDFLARE_API_TOKEN   — Cloudflare API token with AI Gateway read access
@@ -17,7 +21,8 @@
  *   CLOUDFLARE_ACCOUNT_ID  — Account ID (falls back to built-in constant)
  *
  * Note: The aiGatewayRequestsAdaptiveGroups dataset returns data for ALL
- * gateways on the account; the --gateway flag is used for labeling only.
+ * gateways on the account; --gateway is used for labeling and for the
+ * /logs cache-sample endpoint (which IS gateway-scoped).
  */
 
 import { writeFileSync } from 'node:fs';
@@ -35,17 +40,18 @@ const GRAY          = '#898781'; // "Other" bucket — neutral, not a categorica
 
 // ── CLI args ─────────────────────────────────────────────────────────────────
 const args = process.argv.slice(2);
-const opts = { days: 14, gateway: DEFAULT_GATEWAY, out: './gateway-by-app.html', top: 10 };
+const opts = { days: 14, gateway: DEFAULT_GATEWAY, out: './gateway-by-app.html', top: 10, cacheSample: 2000 };
 
 for (let i = 0; i < args.length; i++) {
   switch (args[i]) {
-    case '--days':    opts.days    = parseInt(args[++i], 10); break;
-    case '--gateway': opts.gateway = args[++i]; break;
-    case '--out':     opts.out     = args[++i]; break;
-    case '--top':     opts.top     = parseInt(args[++i], 10); break;
+    case '--days':         opts.days        = parseInt(args[++i], 10); break;
+    case '--gateway':      opts.gateway     = args[++i]; break;
+    case '--out':          opts.out         = args[++i]; break;
+    case '--top':          opts.top         = parseInt(args[++i], 10); break;
+    case '--cache-sample': opts.cacheSample = parseInt(args[++i], 10); break;
     default:
       process.stderr.write(`Unknown argument: ${args[i]}\n`);
-      process.stderr.write('Usage: node gateway-by-app.mjs [--days N] [--gateway <name>] [--out <path>] [--top N]\n');
+      process.stderr.write('Usage: node gateway-by-app.mjs [--days N] [--gateway <name>] [--out <path>] [--top N] [--cache-sample N]\n');
       process.exit(2);
   }
 }
@@ -71,12 +77,13 @@ const dateGeq = toISO(start);
 const dateLeq = toISO(now);
 
 // ── GraphQL query ─────────────────────────────────────────────────────────────
-// Compact form embedded as a variable — see the query string below for the full
-// structure. The dataset groups by metadataRaw (raw JSON string containing app,
-// user, etc.) and sums token counts split by cache status.
+// Compact form embedded as a variable. The dataset groups by metadataRaw (raw
+// JSON string containing app, user, etc.) and sums token counts split by cache
+// status. Note: cachedTokensIn here is the CF gateway-layer cache, NOT provider
+// prompt caching — it is unused for cache-rate display (see /logs below).
 const QUERY = `query GatewayByApp($accountTag:String!,$dateGeq:Time!,$dateLeq:Time!){viewer{accounts(filter:{accountTag:$accountTag}){aiGatewayRequestsAdaptiveGroups(limit:5000 filter:{datetime_geq:$dateGeq,datetime_leq:$dateLeq}){dimensions{metadataRaw}sum{cost cachedTokensIn cachedTokensOut uncachedTokensIn uncachedTokensOut erroredRequests}count}}}}`;
 
-// ── fetch ─────────────────────────────────────────────────────────────────────
+// ── GraphQL fetch ─────────────────────────────────────────────────────────────
 process.stderr.write(`Querying ${opts.days}d window: ${dateGeq} → ${dateLeq}\n`);
 
 const res = await fetch(GQL_ENDPOINT, {
@@ -104,9 +111,9 @@ if (payload.errors?.length) {
 }
 
 const groups = payload.data?.viewer?.accounts?.[0]?.aiGatewayRequestsAdaptiveGroups ?? [];
-process.stderr.write(`Received ${groups.length} group(s) from API.\n`);
+process.stderr.write(`Received ${groups.length} group(s) from GraphQL.\n`);
 
-// ── aggregate per app ─────────────────────────────────────────────────────────
+// ── aggregate per app (GraphQL — token/cost totals only) ─────────────────────
 // metadataRaw is a raw JSON string (may be truncated); parse app best-effort.
 const appMap = new Map();
 
@@ -124,10 +131,8 @@ for (const g of groups) {
     }
   }
 
-  const cur = appMap.get(app) ?? { app, tokensIn: 0, tokensOut: 0, cachedTokensIn: 0, uncachedTokensIn: 0, requests: 0, cost: 0, errors: 0 };
+  const cur = appMap.get(app) ?? { app, tokensIn: 0, tokensOut: 0, requests: 0, cost: 0, errors: 0 };
   const s = g.sum ?? {};
-  cur.cachedTokensIn   += s.cachedTokensIn   ?? 0;
-  cur.uncachedTokensIn += s.uncachedTokensIn ?? 0;
   cur.tokensIn  += (s.cachedTokensIn   ?? 0) + (s.uncachedTokensIn   ?? 0);
   cur.tokensOut += (s.cachedTokensOut  ?? 0) + (s.uncachedTokensOut  ?? 0);
   cur.requests  += g.count ?? 0;
@@ -137,32 +142,138 @@ for (const g of groups) {
 }
 
 // ── sort, top-N, Other bucket ─────────────────────────────────────────────────
-let rows = [...appMap.values()].map(r => {
-  const totalIn = r.cachedTokensIn + r.uncachedTokensIn;
-  const inputCacheHitRate = totalIn > 0 ? (r.cachedTokensIn / totalIn * 100) : null;
-  return { ...r, total: r.tokensIn + r.tokensOut, inputCacheHitRate };
-});
+let rows = [...appMap.values()].map(r => ({ ...r, total: r.tokensIn + r.tokensOut }));
 rows.sort((a, b) => b.total - a.total);
+
+// Capture named top-N app names BEFORE the Other bucket is appended, so /logs
+// entries from overflow apps can be correctly rolled into Other.
+const topNAppNames = new Set(rows.slice(0, opts.top).map(r => r.app));
 
 if (rows.length > opts.top) {
   const rest  = rows.slice(opts.top);
   const other = rest.reduce(
     (acc, r) => {
-      acc.tokensIn         += r.tokensIn;
-      acc.tokensOut        += r.tokensOut;
-      acc.cachedTokensIn   += r.cachedTokensIn;
-      acc.uncachedTokensIn += r.uncachedTokensIn;
-      acc.total            += r.total;
-      acc.requests         += r.requests;
-      acc.cost             += r.cost;
-      acc.errors           += r.errors;
+      acc.tokensIn  += r.tokensIn;
+      acc.tokensOut += r.tokensOut;
+      acc.total     += r.total;
+      acc.requests  += r.requests;
+      acc.cost      += r.cost;
+      acc.errors    += r.errors;
       return acc;
     },
-    { app: 'Other', tokensIn: 0, tokensOut: 0, cachedTokensIn: 0, uncachedTokensIn: 0, total: 0, requests: 0, cost: 0, errors: 0 }
+    { app: 'Other', tokensIn: 0, tokensOut: 0, total: 0, requests: 0, cost: 0, errors: 0 }
   );
-  const otherTotalIn = other.cachedTokensIn + other.uncachedTokensIn;
-  other.inputCacheHitRate = otherTotalIn > 0 ? (other.cachedTokensIn / otherTotalIn * 100) : null;
   rows = [...rows.slice(0, opts.top), other];
+}
+
+// ── REST /logs — real provider-side prompt-cache sample ──────────────────────
+// GraphQL cachedTokensIn measures the Cloudflare gateway-layer cache (cf-aig-cache-*),
+// which is NOT enabled here and always returns 0. The actual provider prompt-cache
+// hit count lives in per-request log entries under usage.input_cached_tokens.
+//
+// /logs IS gateway-scoped (unlike GraphQL which spans all gateways), so the cache
+// sample only reflects the configured --gateway. This scope difference is noted in
+// the HTML header.
+//
+// Expected field paths (confirmed against API shape):
+//   entry.tokens_in                    — total input tokens for the request
+//   entry.usage.input_cached_tokens    — provider-cached input tokens (0 if absent)
+//   entry.metadata                     — object or JSON string containing app name
+
+const LOGS_BASE = `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai-gateway/gateways/${opts.gateway}/logs`;
+
+// providerCacheMap: appName → { sumTokensIn, sumCachedTokens, count }
+const providerCacheMap = new Map();
+
+async function fetchLogsPage(page) {
+  const url = `${LOGS_BASE}?per_page=100&order_by=created_at&direction=desc&page=${page}`;
+  const r = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+  if (!r.ok) {
+    process.stderr.write(`/logs HTTP ${r.status} page=${page} — aborting cache sample.\n`);
+    return null;
+  }
+  const j = await r.json();
+  if (j.success === false) {
+    process.stderr.write(`/logs API error page=${page}: ${JSON.stringify(j.errors ?? [])}\n`);
+    return null;
+  }
+  return j.result ?? [];
+}
+
+function parseAppFromMeta(meta) {
+  if (!meta) return 'unknown';
+  if (typeof meta === 'object') {
+    return (meta.app ? String(meta.app).trim() : '') || 'unknown';
+  }
+  if (typeof meta === 'string') {
+    try {
+      const parsed = JSON.parse(meta);
+      if (parsed?.app) return String(parsed.app).trim() || 'unknown';
+    } catch {
+      // Truncated JSON — regex fallback (mirrors metadataRaw handling above)
+      const m = meta.match(/"app"\s*:\s*"([^"]+)"/);
+      if (m?.[1]) return m[1].trim();
+    }
+  }
+  return 'unknown';
+}
+
+const totalLogPages = Math.ceil(opts.cacheSample / 100);
+let fetched   = 0;
+let pagesRead = 0;
+let logsOk    = true;
+
+process.stderr.write(`Fetching up to ${opts.cacheSample} log entries for provider cache sample (gateway: ${opts.gateway})...\n`);
+
+for (let page = 1; page <= totalLogPages; page++) {
+  const entries = await fetchLogsPage(page);
+  if (entries === null) { logsOk = false; break; }
+  if (entries.length === 0) break;
+  pagesRead = page;
+
+  for (const entry of entries) {
+    const app      = parseAppFromMeta(entry.metadata);
+    const tokensIn = entry.tokens_in ?? 0;
+    const cached   = entry.usage?.input_cached_tokens ?? 0;
+
+    const cur = providerCacheMap.get(app) ?? { sumTokensIn: 0, sumCachedTokens: 0, count: 0 };
+    cur.sumTokensIn     += tokensIn;
+    cur.sumCachedTokens += cached;
+    cur.count           += 1;
+    providerCacheMap.set(app, cur);
+    fetched++;
+  }
+
+  if (entries.length < 100) break; // exhausted available entries
+}
+
+if (logsOk) {
+  process.stderr.write(`Provider cache sample: ${fetched} entries, ${pagesRead} page(s).\n`);
+} else {
+  process.stderr.write(`Provider cache sample unavailable — all apps will show —.\n`);
+}
+
+// ── attach provider cache stats to rows ───────────────────────────────────────
+for (const row of rows) {
+  if (row.app === 'Other') {
+    // Roll up all /logs entries that belong to overflow apps (not in top-N)
+    let sumIn = 0, sumCached = 0, count = 0;
+    for (const [appName, stats] of providerCacheMap) {
+      if (!topNAppNames.has(appName)) {
+        sumIn    += stats.sumTokensIn;
+        sumCached += stats.sumCachedTokens;
+        count    += stats.count;
+      }
+    }
+    row.providerCacheHitRate = (sumIn > 0) ? (sumCached / sumIn * 100) : null;
+    row.providerSampleN      = count;
+  } else {
+    const stats = providerCacheMap.get(row.app);
+    row.providerCacheHitRate = (stats && stats.sumTokensIn > 0)
+      ? (stats.sumCachedTokens / stats.sumTokensIn * 100)
+      : null;
+    row.providerSampleN = stats?.count ?? 0;
+  }
 }
 
 // ── number formatting (Node-side, for header) ─────────────────────────────────
@@ -190,21 +301,21 @@ const toDate     = now.toISOString().slice(0, 10);
 // and the gateway label string (which is a config value, not a secret) are embedded.
 
 const embedData = JSON.stringify(colorData.map(r => ({
-  app:                r.app,
-  tokensIn:           r.tokensIn,
-  tokensOut:          r.tokensOut,
-  cachedTokensIn:     r.cachedTokensIn,
-  uncachedTokensIn:   r.uncachedTokensIn,
-  inputCacheHitRate:  r.inputCacheHitRate,
-  total:              r.total,
-  requests:           r.requests,
-  cost:               r.cost,
-  colorLight:         r.colorLight,
-  colorDark:          r.colorDark,
+  app:                  r.app,
+  tokensIn:             r.tokensIn,
+  tokensOut:            r.tokensOut,
+  total:                r.total,
+  requests:             r.requests,
+  cost:                 r.cost,
+  colorLight:           r.colorLight,
+  colorDark:            r.colorDark,
+  providerCacheHitRate: r.providerCacheHitRate ?? null,
+  providerSampleN:      r.providerSampleN ?? 0,
 })));
 
-// Inner JS uses ${} template literals — those are NOT Node interpolations;
-// they are literal strings for the browser. Marked with // <browser-js> comments.
+// Inner JS uses string concatenation — NOT Node template literal interpolations.
+// Node-side ${} interpolations (opts.*, grandTotal, etc.) are resolved before
+// the HTML string is written. Browser-side values use '+' concatenation.
 const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -324,7 +435,7 @@ tbody tr:hover td { background: var(--s0); }
       <span>Gateway label: <strong>${opts.gateway}</strong></span>
       <span>Total tokens: <strong>${fmtNum(grandTotal)}</strong></span>
     </div>
-    <div class="hdr-note">Data spans all AI Gateway gateways on the account — the API does not expose a gateway filter field.</div>
+    <div class="hdr-note">Token &amp; cost totals: full ${opts.days}-day window, all gateways (GraphQL). Provider cache %: recent sample of last ${opts.cacheSample} requests on gateway <strong>${opts.gateway}</strong> (REST /logs).</div>
   </div>
 
   <div class="ctrl">
@@ -346,7 +457,7 @@ tbody tr:hover td { background: var(--s0); }
         <th class="r">Tokens In</th>
         <th class="r">Tokens Out</th>
         <th class="r">Total Tokens</th>
-        <th class="r">Cache Hit %</th>
+        <th class="r">Provider cache % (sample)</th>
         <th class="r">Requests</th>
         <th class="r">Cost (USD)</th>
       </tr></thead>
@@ -481,15 +592,15 @@ function drawChart() {
       }
     }
 
-    // value label
+    // value label: total token count
     const wTot = wIn + wOut;
     if (wTot > 0) {
       s += '<text x="'+(L+wTot+6)+'" y="'+(cy+1)+'"'
         +' fill="'+ink2+'" font-size="11">'+fmt(d.total)+'</text>';
-      // cache hit rate label — muted, secondary, below the total
-      if (d.inputCacheHitRate !== null) {
+      // provider cache rate label — muted, secondary, sourced from /logs sample
+      if (d.providerCacheHitRate !== null) {
         s += '<text x="'+(L+wTot+6)+'" y="'+(cy+13)+'"'
-          +' fill="'+muted+'" font-size="10">'+d.inputCacheHitRate.toFixed(1)+'%</text>';
+          +' fill="'+muted+'" font-size="10">'+d.providerCacheHitRate.toFixed(1)+'%</text>';
       }
     }
   }
@@ -520,11 +631,13 @@ function escHtml(s) {
 // ── tooltip ────────────────────────────────────────────────────────────────────
 const tip = document.getElementById('tip');
 function showTip(e, d) {
-  const cacheHitLine = d.inputCacheHitRate !== null
-    ? '<div class="tr"><span>Cache hit (input)</span><span class="tv">'
-      + d.inputCacheHitRate.toFixed(1)+'% ('+fmt(d.cachedTokensIn)+' cached / '+fmt(d.uncachedTokensIn)+' uncached)'
-      +'</span></div>'
-    : '';
+  const cacheHitLine = d.providerCacheHitRate !== null
+    ? '<div class="tr"><span>Provider cache (input)</span><span class="tv">'
+      + d.providerCacheHitRate.toFixed(1)+'% — sampled from last ${opts.cacheSample} reqs (n='+d.providerSampleN+')'
+      + '</span></div>'
+    : (d.providerSampleN > 0
+        ? '<div class="tr"><span>Provider cache (input)</span><span class="tv">— (n='+d.providerSampleN+')</span></div>'
+        : '');
   tip.innerHTML =
     '<b>'+escHtml(d.app)+'</b>'
     +'<div class="tr"><span>Tokens In</span><span class="tv">'+fmt(d.tokensIn)+'</span></div>'
@@ -545,8 +658,11 @@ function moveTip(e) {
 function hideTip() { tip.style.display = 'none'; }
 
 // ── table ──────────────────────────────────────────────────────────────────────
-function fmtCacheRate(r) {
-  return r !== null ? r.toFixed(1)+'%' : '—';
+function fmtProviderCache(d) {
+  if (d.providerCacheHitRate !== null) {
+    return d.providerCacheHitRate.toFixed(1)+'% (n='+d.providerSampleN+')';
+  }
+  return '— (n='+d.providerSampleN+')';
 }
 function buildTable() {
   document.getElementById('tb').innerHTML = DATA.map(d =>
@@ -554,7 +670,7 @@ function buildTable() {
     +'<td class="r">'+fmt(d.tokensIn)+'</td>'
     +'<td class="r">'+fmt(d.tokensOut)+'</td>'
     +'<td class="r">'+fmt(d.total)+'</td>'
-    +'<td class="r">'+fmtCacheRate(d.inputCacheHitRate)+'</td>'
+    +'<td class="r">'+fmtProviderCache(d)+'</td>'
     +'<td class="r">'+fmt(d.requests)+'</td>'
     +'<td class="r">'+fmtCost(d.cost)+'</td></tr>'
   ).join('');
