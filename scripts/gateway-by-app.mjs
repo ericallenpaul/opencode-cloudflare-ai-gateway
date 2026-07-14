@@ -124,8 +124,10 @@ for (const g of groups) {
     }
   }
 
-  const cur = appMap.get(app) ?? { app, tokensIn: 0, tokensOut: 0, requests: 0, cost: 0, errors: 0 };
+  const cur = appMap.get(app) ?? { app, tokensIn: 0, tokensOut: 0, cachedTokensIn: 0, uncachedTokensIn: 0, requests: 0, cost: 0, errors: 0 };
   const s = g.sum ?? {};
+  cur.cachedTokensIn   += s.cachedTokensIn   ?? 0;
+  cur.uncachedTokensIn += s.uncachedTokensIn ?? 0;
   cur.tokensIn  += (s.cachedTokensIn   ?? 0) + (s.uncachedTokensIn   ?? 0);
   cur.tokensOut += (s.cachedTokensOut  ?? 0) + (s.uncachedTokensOut  ?? 0);
   cur.requests  += g.count ?? 0;
@@ -135,23 +137,31 @@ for (const g of groups) {
 }
 
 // ── sort, top-N, Other bucket ─────────────────────────────────────────────────
-let rows = [...appMap.values()].map(r => ({ ...r, total: r.tokensIn + r.tokensOut }));
+let rows = [...appMap.values()].map(r => {
+  const totalIn = r.cachedTokensIn + r.uncachedTokensIn;
+  const inputCacheHitRate = totalIn > 0 ? (r.cachedTokensIn / totalIn * 100) : null;
+  return { ...r, total: r.tokensIn + r.tokensOut, inputCacheHitRate };
+});
 rows.sort((a, b) => b.total - a.total);
 
 if (rows.length > opts.top) {
   const rest  = rows.slice(opts.top);
   const other = rest.reduce(
     (acc, r) => {
-      acc.tokensIn  += r.tokensIn;
-      acc.tokensOut += r.tokensOut;
-      acc.total     += r.total;
-      acc.requests  += r.requests;
-      acc.cost      += r.cost;
-      acc.errors    += r.errors;
+      acc.tokensIn         += r.tokensIn;
+      acc.tokensOut        += r.tokensOut;
+      acc.cachedTokensIn   += r.cachedTokensIn;
+      acc.uncachedTokensIn += r.uncachedTokensIn;
+      acc.total            += r.total;
+      acc.requests         += r.requests;
+      acc.cost             += r.cost;
+      acc.errors           += r.errors;
       return acc;
     },
-    { app: 'Other', tokensIn: 0, tokensOut: 0, total: 0, requests: 0, cost: 0, errors: 0 }
+    { app: 'Other', tokensIn: 0, tokensOut: 0, cachedTokensIn: 0, uncachedTokensIn: 0, total: 0, requests: 0, cost: 0, errors: 0 }
   );
+  const otherTotalIn = other.cachedTokensIn + other.uncachedTokensIn;
+  other.inputCacheHitRate = otherTotalIn > 0 ? (other.cachedTokensIn / otherTotalIn * 100) : null;
   rows = [...rows.slice(0, opts.top), other];
 }
 
@@ -180,14 +190,17 @@ const toDate     = now.toISOString().slice(0, 10);
 // and the gateway label string (which is a config value, not a secret) are embedded.
 
 const embedData = JSON.stringify(colorData.map(r => ({
-  app:        r.app,
-  tokensIn:   r.tokensIn,
-  tokensOut:  r.tokensOut,
-  total:      r.total,
-  requests:   r.requests,
-  cost:       r.cost,
-  colorLight: r.colorLight,
-  colorDark:  r.colorDark,
+  app:                r.app,
+  tokensIn:           r.tokensIn,
+  tokensOut:          r.tokensOut,
+  cachedTokensIn:     r.cachedTokensIn,
+  uncachedTokensIn:   r.uncachedTokensIn,
+  inputCacheHitRate:  r.inputCacheHitRate,
+  total:              r.total,
+  requests:           r.requests,
+  cost:               r.cost,
+  colorLight:         r.colorLight,
+  colorDark:          r.colorDark,
 })));
 
 // Inner JS uses ${} template literals — those are NOT Node interpolations;
@@ -333,6 +346,7 @@ tbody tr:hover td { background: var(--s0); }
         <th class="r">Tokens In</th>
         <th class="r">Tokens Out</th>
         <th class="r">Total Tokens</th>
+        <th class="r">Cache Hit %</th>
         <th class="r">Requests</th>
         <th class="r">Cost (USD)</th>
       </tr></thead>
@@ -470,8 +484,13 @@ function drawChart() {
     // value label
     const wTot = wIn + wOut;
     if (wTot > 0) {
-      s += '<text x="'+(L+wTot+6)+'" y="'+(cy+4.5)+'"'
+      s += '<text x="'+(L+wTot+6)+'" y="'+(cy+1)+'"'
         +' fill="'+ink2+'" font-size="11">'+fmt(d.total)+'</text>';
+      // cache hit rate label — muted, secondary, below the total
+      if (d.inputCacheHitRate !== null) {
+        s += '<text x="'+(L+wTot+6)+'" y="'+(cy+13)+'"'
+          +' fill="'+muted+'" font-size="10">'+d.inputCacheHitRate.toFixed(1)+'%</text>';
+      }
     }
   }
 
@@ -501,11 +520,17 @@ function escHtml(s) {
 // ── tooltip ────────────────────────────────────────────────────────────────────
 const tip = document.getElementById('tip');
 function showTip(e, d) {
+  const cacheHitLine = d.inputCacheHitRate !== null
+    ? '<div class="tr"><span>Cache hit (input)</span><span class="tv">'
+      + d.inputCacheHitRate.toFixed(1)+'% ('+fmt(d.cachedTokensIn)+' cached / '+fmt(d.uncachedTokensIn)+' uncached)'
+      +'</span></div>'
+    : '';
   tip.innerHTML =
     '<b>'+escHtml(d.app)+'</b>'
     +'<div class="tr"><span>Tokens In</span><span class="tv">'+fmt(d.tokensIn)+'</span></div>'
     +'<div class="tr"><span>Tokens Out</span><span class="tv">'+fmt(d.tokensOut)+'</span></div>'
     +'<div class="tr"><span>Total</span><span class="tv">'+fmt(d.total)+'</span></div>'
+    + cacheHitLine
     +'<div class="tr"><span>Requests</span><span class="tv">'+fmt(d.requests)+'</span></div>'
     +'<div class="tr"><span>Cost</span><span class="tv">'+fmtCost(d.cost)+'</span></div>';
   tip.style.display = 'block';
@@ -520,12 +545,16 @@ function moveTip(e) {
 function hideTip() { tip.style.display = 'none'; }
 
 // ── table ──────────────────────────────────────────────────────────────────────
+function fmtCacheRate(r) {
+  return r !== null ? r.toFixed(1)+'%' : '—';
+}
 function buildTable() {
   document.getElementById('tb').innerHTML = DATA.map(d =>
     '<tr><td>'+escHtml(d.app)+'</td>'
     +'<td class="r">'+fmt(d.tokensIn)+'</td>'
     +'<td class="r">'+fmt(d.tokensOut)+'</td>'
     +'<td class="r">'+fmt(d.total)+'</td>'
+    +'<td class="r">'+fmtCacheRate(d.inputCacheHitRate)+'</td>'
     +'<td class="r">'+fmt(d.requests)+'</td>'
     +'<td class="r">'+fmtCost(d.cost)+'</td></tr>'
   ).join('');
