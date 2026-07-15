@@ -52,6 +52,20 @@
             "output": ["text"]
           }
         },
+        "gpt-5.6-luna": {
+          "name": "gpt-5.6-luna",
+          "modalities": {
+            "input": ["text", "image"],
+            "output": ["text"]
+          }
+        },
+        "gpt-5.6-terra": {
+          "name": "gpt-5.6-terra",
+          "modalities": {
+            "input": ["text", "image"],
+            "output": ["text"]
+          }
+        },
         "gpt-5": {
           "name": "gpt-5",
           "modalities": {
