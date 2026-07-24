@@ -79,6 +79,8 @@ snyk config get org      # verify
 
 The auth token is stored at `~/.config/configstore/snyk.json` (Unix) or `%APPDATA%\configstore\snyk.json` (Windows) and is **shared across tools** — once you've authed, Claude Code, opencode, and any other Snyk-aware tool all use the same token.
 
+**Optional — avoid repeated re-auth (CI / SSO-enforced orgs):** interactive `snyk auth` sessions can expire (especially under enterprise SSO). To skip daily re-login, set a `SNYK_TOKEN` environment variable to a Snyk API or service-account token (Account Settings → Auth Token, or a Service Account). `SNYK_TOKEN` overrides the interactive auth cache. On Windows: `setx SNYK_TOKEN "<token>"` (persists across reboots; restart the app to pick it up). Keep the token in an env var only — never commit it.
+
 If you don't want Snyk, set `"enabled": false` on the entry in `opencode.json`.
 
 **MCP vs. Snyk's web dashboard:** the MCP integration gives the AI agent on-demand scanning (you ask, it scans). Snyk's web dashboard at `app.snyk.io` is a separate concern — that's where you register repos for continuous scanning via SCM integration (GitHub, Bitbucket, etc.). The two share the same auth but solve different problems. Most teams want both.
