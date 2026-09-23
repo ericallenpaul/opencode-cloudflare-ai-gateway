@@ -22,7 +22,6 @@
         "headers": {}
       },
       "models": {
-        "claude-sonnet-4-8": { "name": "claude-sonnet-4-8" },
         "claude-sonnet-4-6": { "name": "claude-sonnet-4-6" },
         "claude-sonnet-4-5": { "name": "claude-sonnet-4-5" },
         "claude-opus-4-6": { "name": "claude-opus-4-6" },
@@ -30,7 +29,11 @@
         "claude-haiku-4-5": { "name": "claude-haiku-4-5" },
         "claude-opus-5": { "name": "claude-opus-5" },
         "claude-sonnet-5": { "name": "claude-sonnet-5" },
-        "claude-fable-5": { "name": "claude-fable-5" }
+        "claude-opus-5-5": { "name": "claude-opus-5-5" },
+        "claude-fable-5-1": { "name": "claude-fable-5-1" },
+        "claude-fable-5": { "name": "claude-fable-5" },
+        "claude-opus-4-8": { "name": "claude-opus-4-8" },
+        "claude-opus-4-7": { "name": "claude-opus-4-7" }
       }
     },
     "openai-via-gateway": {
@@ -42,6 +45,27 @@
         "headers": {}
       },
       "models": {
+        "gpt-6-astra": {
+          "name": "gpt-6-astra",
+          "modalities": {
+            "input": ["text", "image"],
+            "output": ["text"]
+          }
+        },
+        "gpt-6-sol": {
+          "name": "gpt-6-sol",
+          "modalities": {
+            "input": ["text", "image"],
+            "output": ["text"]
+          }
+        },
+        "gpt-6-luna": {
+          "name": "gpt-6-luna",
+          "modalities": {
+            "input": ["text", "image"],
+            "output": ["text"]
+          }
+        },
         "gpt-5.5": {
           "name": "gpt-5.5",
           "modalities": {
